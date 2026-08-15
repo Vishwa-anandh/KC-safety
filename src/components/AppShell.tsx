@@ -232,28 +232,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
         <SideNav collapsed={collapsed} role={role} />
         <div className="sidebar-footer">
-          <div className="sidebar-footer__row">
-            <IconButton label="Help and guided setup" onClick={openHelp} tooltipPlacement="right" data-tour="help">
-              <CircleHelp size={20} />
-            </IconButton>
-            <ProfileMenu menuPlacement="up" />
-          </div>
-          <button
-            className="collapse-control"
-            onClick={() => setCollapsed((value) => !value)}
-            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-            aria-describedby={collapseTooltipId}
-            aria-expanded={!collapsed}
-          >
-            <span className="collapse-control__icons" aria-hidden="true">
-              <PanelLeftClose className="collapse-control__icon collapse-control__icon--close" size={19} />
-              <PanelLeftOpen className="collapse-control__icon collapse-control__icon--open" size={19} />
-            </span>
-            <span id={collapseTooltipId} className="app-tooltip app-tooltip--right" role="tooltip">
-              {collapsed ? "Expand navigation" : "Collapse navigation"}
-            </span>
-          </button>
+          <IconButton label="Help and guided setup" onClick={openHelp} tooltipPlacement="right" data-tour="help">
+            <CircleHelp size={20} />
+          </IconButton>
+          <ProfileMenu menuPlacement="up" />
         </div>
+        <button
+          className="collapse-control"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          aria-describedby={collapseTooltipId}
+          aria-expanded={!collapsed}
+        >
+          <span className="collapse-control__icons" aria-hidden="true">
+            <PanelLeftClose className="collapse-control__icon collapse-control__icon--close" size={19} />
+            <PanelLeftOpen className="collapse-control__icon collapse-control__icon--open" size={19} />
+          </span>
+          <span id={collapseTooltipId} className="app-tooltip app-tooltip--right" role="tooltip">
+            {collapsed ? "Expand navigation" : "Collapse navigation"}
+          </span>
+        </button>
       </aside>
 
       {mobileOpen && (
