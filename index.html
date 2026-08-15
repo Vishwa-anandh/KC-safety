@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f8fafc" />
+    <script>
+      (() => {
+        const savedTheme = window.localStorage.getItem("ehss-theme");
+        const preference = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "system";
+        const resolvedTheme = preference === "system"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : preference;
+
+        document.documentElement.dataset.theme = resolvedTheme;
+        document.documentElement.dataset.themePreference = preference;
+        document.querySelector('meta[name="theme-color"]').setAttribute(
+          "content",
+          resolvedTheme === "dark" ? "#0c2a3e" : "#f8fafc",
+        );
+
+        const savedMotion = window.localStorage.getItem("ehss-motion");
+        const motionPreference = savedMotion === "reduced" || savedMotion === "full" ? savedMotion : "system";
+        const reduceMotion = motionPreference === "reduced" || (
+          motionPreference === "system" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        );
+        document.documentElement.dataset.motion = reduceMotion ? "reduced" : "full";
+        document.documentElement.dataset.motionPreference = motionPreference;
+      })();
+    </script>
+    <meta name="description" content="Kimberly-Clark EHS&S self-assessment" />
+    <link rel="preload" href="/fonts/google-sans-flex-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <title>KC EHS&S Self-Assessment</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
