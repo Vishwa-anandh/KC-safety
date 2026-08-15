@@ -14,7 +14,8 @@
 - Reuse existing collapse/tooltip patterns (the ones nav items already use) for new collapsed-state elements — do not invent new interaction patterns.
 - Icon-only controls must keep a custom `role="tooltip"` panel with `aria-describedby` (no native `title` attributes) — this app's design system forbids native browser tooltips (`design.md` §33, "Do not use native browser `title` bubbles for product controls").
 - `npx tsc -b` and `npx eslint .` must stay clean after every task.
-- The project is not a git repository — skip all `git add`/`git commit` steps below; instead, after each task, state in your response that the task is complete and describe what changed, so the user can review before continuing.
+- The project is now a git repository on branch `main` (initialized after this plan was written; `origin` is `https://github.com/Vishwa-anandh/KC-safety.git`) — commit normally per task as the subagent-driven-development process expects.
+- This project has no automated test suite (no `test` script or test framework in `package.json`) — verification is `npx tsc -b`, `npx eslint .`, and the manual browser checks each task specifies. Do not add a test framework as part of this plan; it's out of scope.
 
 ---
 
