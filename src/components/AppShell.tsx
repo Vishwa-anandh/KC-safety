@@ -102,18 +102,104 @@ function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: Us
   );
 }
 
-export default function AppShell({ children }: { children: ReactNode }) {
-  const { role, profile, changeRole, startTour, openHelp } = useGuidedSetup();
+function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: boolean; menuPlacement?: "down" | "up" }) {
+  const { role, profile, changeRole, startTour } = useGuidedSetup();
   const { user, demoEnabled, signOut } = useAuth();
   const { preference, resolvedTheme } = useTheme();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="profile-menu-wrap" ref={wrapRef}>
+      <button
+        className={cx("profile-button", compact && "profile-button--compact")}
+        aria-label="Open profile menu"
+        aria-controls={menuId}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="avatar">{profile.initials}</span>
+        <span className="profile-button__copy">
+          <strong>{profile.name}</strong>
+          <small>{profile.label}</small>
+        </span>
+        <ChevronDown className={cx("profile-button__chevron", open && "profile-button__chevron--open")} size={16} />
+      </button>
+
+      {open && (
+        <div id={menuId} className={cx("profile-menu", menuPlacement === "up" && "profile-menu--up")} role="dialog" aria-label="Profile and appearance">
+          <div className="profile-menu__identity">
+            <span className="avatar">{profile.initials}</span>
+            <div>
+              <strong>{profile.name}</strong>
+              <span>{profile.label}</span>
+            </div>
+          </div>
+          <div className="profile-menu__section">
+            <div className="profile-menu__section-heading">
+              <span>Appearance</span>
+              <small>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>
+            </div>
+            <ThemeSelector compact />
+          </div>
+          {demoEnabled && (
+            <div className="profile-menu__section profile-role-section">
+              <div className="profile-menu__section-heading"><span>Preview role</span><small>Local demonstration</small></div>
+              <div className="profile-role-options">
+                {(Object.values(roleProfiles) as Array<(typeof roleProfiles)[UserRole]>).map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <button key={option.id} className={cx(role === option.id && "profile-role-option--selected")} onClick={() => { changeRole(option.id); setOpen(false); }} aria-pressed={role === option.id}>
+                      <Icon size={16} />
+                      <span>{option.shortLabel}</span>
+                      {role === option.id && <span className="profile-role-check">Current</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <button className="profile-setup-action" onClick={() => { startTour(role, true); setOpen(false); }}>
+                <PlayCircle size={17} />
+                <span>Replay guided setup</span>
+              </button>
+            </div>
+          )}
+          <div className="profile-menu__section profile-menu__session">
+            <Link to="/settings" onClick={() => setOpen(false)}><Settings size={17} /><span>Open settings</span></Link>
+            <button type="button" onClick={() => { signOut(); setOpen(false); navigate("/login", { replace: true }); }}>
+              <LogOut size={17} />
+              <span>Sign out {user?.name ? `as ${user.name}` : ""}</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  const { role, profile, openHelp } = useGuidedSetup();
   const [collapsed, setCollapsed] = useState(() => window.localStorage.getItem("ehss-navigation-collapsed") === "true");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const collapseTooltipId = useId();
-  const profileMenuId = useId();
-  const profileMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const navigate = useNavigate();
   const moreTabActive = mobileOpen || ["/site-information", "/owners", "/admin/", "/settings"].some((path) => location.pathname.startsWith(path));
   const availableBottomTabs = bottomTabs.filter((tab) => tab.roles.includes(role));
   const ScopeIcon = role === "site-contributor" ? Building2 : role === "enterprise-viewer" ? BarChart3 : ShieldCheck;
@@ -121,24 +207,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem("ehss-navigation-collapsed", String(collapsed));
   }, [collapsed]);
-
-  useEffect(() => {
-    if (!profileOpen) return;
-
-    const closeOnOutsidePress = (event: PointerEvent) => {
-      if (!profileMenuRef.current?.contains(event.target as Node)) setProfileOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setProfileOpen(false);
-    };
-
-    document.addEventListener("pointerdown", closeOnOutsidePress);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePress);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [profileOpen]);
 
   return (
     <div className={cx("app-shell", collapsed && "app-shell--collapsed")}>
@@ -209,53 +277,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <IconButton label="Help and guided setup" onClick={openHelp} data-tour="help">
             <CircleHelp size={20} />
           </IconButton>
-          <div className="profile-menu-wrap" ref={profileMenuRef}>
-            <button
-              className="profile-button"
-              aria-label="Open profile menu"
-              aria-controls={profileMenuId}
-              aria-expanded={profileOpen}
-              onClick={() => setProfileOpen((open) => !open)}
-            >
-              <span className="avatar">{profile.initials}</span>
-              <span className="profile-button__copy">
-                <strong>{profile.name}</strong>
-                <small>{profile.label}</small>
-              </span>
-              <ChevronDown className={cx("profile-button__chevron", profileOpen && "profile-button__chevron--open")} size={16} />
-            </button>
-
-            {profileOpen && (
-              <div id={profileMenuId} className="profile-menu" role="dialog" aria-label="Profile and appearance">
-                <div className="profile-menu__identity">
-                  <span className="avatar">{profile.initials}</span>
-                  <div>
-                    <strong>{profile.name}</strong>
-                    <span>{profile.label}</span>
-                  </div>
-                </div>
-                <div className="profile-menu__section">
-                  <div className="profile-menu__section-heading">
-                    <span>Appearance</span>
-                    <small>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>
-                  </div>
-                  <ThemeSelector compact />
-                </div>
-                {demoEnabled && <div className="profile-menu__section profile-role-section">
-                  <div className="profile-menu__section-heading"><span>Preview role</span><small>Local demonstration</small></div>
-                  <div className="profile-role-options">{(Object.values(roleProfiles) as Array<(typeof roleProfiles)[UserRole]>).map((option) => {
-                    const Icon = option.icon;
-                    return <button key={option.id} className={cx(role === option.id && "profile-role-option--selected")} onClick={() => { changeRole(option.id); setProfileOpen(false); }} aria-pressed={role === option.id}><Icon size={16} /><span>{option.shortLabel}</span>{role === option.id && <span className="profile-role-check">Current</span>}</button>;
-                  })}</div>
-                  <button className="profile-setup-action" onClick={() => { startTour(role, true); setProfileOpen(false); }}><PlayCircle size={17} /><span>Replay guided setup</span></button>
-                </div>}
-                <div className="profile-menu__section profile-menu__session">
-                  <Link to="/settings" onClick={() => setProfileOpen(false)}><Settings size={17} /><span>Open settings</span></Link>
-                  <button type="button" onClick={() => { signOut(); setProfileOpen(false); navigate("/login", { replace: true }); }}><LogOut size={17} /><span>Sign out {user?.name ? `as ${user.name}` : ""}</span></button>
-                </div>
-              </div>
-            )}
-          </div>
+          <ProfileMenu />
         </div>
       </header>
 
