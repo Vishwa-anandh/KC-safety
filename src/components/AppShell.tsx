@@ -11,7 +11,6 @@ import {
   FileText,
   LogOut,
   LayoutDashboard,
-  Menu,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
@@ -220,22 +219,41 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <span>Self-Assessment</span>
           </div>
         </div>
+        <div className="site-context sidebar-context" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
+          <ScopeIcon size={17} />
+          <div>
+            <span>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
+            <strong>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
+          </div>
+          {role === "site-contributor" && <span className="site-context__code">{assignedSite.code}</span>}
+          <span className="nav-item__tooltip" role="tooltip">
+            {role === "site-contributor" ? `${assignedSite.name} · ${assignedSite.code}` : profile.scope}
+          </span>
+        </div>
         <SideNav collapsed={collapsed} role={role} />
-        <button
-          className="collapse-control"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-          aria-describedby={collapseTooltipId}
-          aria-expanded={!collapsed}
-        >
-          <span className="collapse-control__icons" aria-hidden="true">
-            <PanelLeftClose className="collapse-control__icon collapse-control__icon--close" size={19} />
-            <PanelLeftOpen className="collapse-control__icon collapse-control__icon--open" size={19} />
-          </span>
-          <span id={collapseTooltipId} className="app-tooltip app-tooltip--right" role="tooltip">
-            {collapsed ? "Expand navigation" : "Collapse navigation"}
-          </span>
-        </button>
+        <div className="sidebar-footer">
+          <div className="sidebar-footer__row">
+            <IconButton label="Help and guided setup" onClick={openHelp} tooltipPlacement="right" data-tour="help">
+              <CircleHelp size={20} />
+            </IconButton>
+            <ProfileMenu menuPlacement="up" />
+          </div>
+          <button
+            className="collapse-control"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            aria-describedby={collapseTooltipId}
+            aria-expanded={!collapsed}
+          >
+            <span className="collapse-control__icons" aria-hidden="true">
+              <PanelLeftClose className="collapse-control__icon collapse-control__icon--close" size={19} />
+              <PanelLeftOpen className="collapse-control__icon collapse-control__icon--open" size={19} />
+            </span>
+            <span id={collapseTooltipId} className="app-tooltip app-tooltip--right" role="tooltip">
+              {collapsed ? "Expand navigation" : "Collapse navigation"}
+            </span>
+          </button>
+        </div>
       </aside>
 
       {mobileOpen && (
@@ -259,27 +277,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <header className="top-bar">
-        <div className="top-bar__left">
-          <IconButton className="mobile-menu" label="Open navigation" onClick={() => setMobileOpen(true)}>
-            <Menu size={21} />
-          </IconButton>
-          <div className="site-context" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
-            <ScopeIcon size={17} />
-            <div>
-              <span>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
-              <strong>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
-            </div>
-            {role === "site-contributor" && <span className="site-context__code">{assignedSite.code}</span>}
-          </div>
+      <div className="mobile-shell-strip">
+        <div className="mobile-shell-strip__badge" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"}>
+          <ScopeIcon size={16} />
+          <span>{role === "site-contributor" ? assignedSite.code : profile.scope}</span>
         </div>
-        <div className="top-bar__actions">
+        <div className="mobile-shell-strip__actions">
           <IconButton label="Help and guided setup" onClick={openHelp} data-tour="help">
-            <CircleHelp size={20} />
+            <CircleHelp size={18} />
           </IconButton>
-          <ProfileMenu />
+          <ProfileMenu compact />
         </div>
-      </header>
+      </div>
 
       <main id="main-content" className="main-content">
         {children}
