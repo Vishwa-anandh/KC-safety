@@ -5506,8 +5506,7 @@ h3 {
 /* Expanded settings workspace */
 
 
-.settings-saved,
-.settings-card__saved {
+.settings-saved {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -5517,6 +5516,11 @@ h3 {
   padding: 0.38rem 0.6rem;
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+.settings-page-state {
+  color: var(--neutral-500);
+  font-size: 0.68rem;
 }
 
 .settings-shell {
@@ -5575,7 +5579,7 @@ h3 {
 
 .settings-index nav { display: grid; gap: 0.18rem; }
 
-.settings-index nav > button {
+.settings-index nav > a {
   display: flex;
   min-width: 0;
   min-height: 54px;
@@ -5590,12 +5594,12 @@ h3 {
   transition: border-color 130ms ease, background 130ms ease, color 130ms ease, transform 100ms ease;
 }
 
-.settings-index nav > button:hover { background: var(--neutral-50); color: var(--neutral-900); }
-.settings-index nav > button:active { transform: scale(0.99); }
+.settings-index nav > a:hover { background: var(--neutral-50); color: var(--neutral-900); }
+.settings-index nav > a:active { transform: scale(0.99); }
 .settings-index nav > .settings-index__item--active { border-color: var(--kc-200); background: var(--kc-50); color: var(--kc-800); }
-.settings-index nav > button > span:first-child { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 9px; background: var(--neutral-50); color: var(--neutral-500); }
+.settings-index nav > a > span:first-child { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 9px; background: var(--neutral-50); color: var(--neutral-500); }
 .settings-index nav > .settings-index__item--active > span:first-child { background: var(--surface-panel); color: var(--kc-700); box-shadow: var(--shadow-1); }
-.settings-index nav > button > span:last-child { display: grid; min-width: 0; }
+.settings-index nav > a > span:last-child { display: grid; min-width: 0; }
 .settings-index nav strong { overflow: hidden; font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
 .settings-index nav small { overflow: hidden; color: var(--neutral-500); font-size: 0.64rem; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -5616,8 +5620,6 @@ h3 {
 
 .settings-content { display: grid; min-width: 0; gap: 0.85rem; }
 .settings-content > .inline-message { margin: 0; }
-.settings-section { scroll-margin-top: calc(var(--content-offset) + 1rem); }
-.settings-section__eyebrow { color: var(--kc-700) !important; font-size: 0.64rem !important; font-weight: 720; }
 
 .managed-badge,
 .device-readiness,
@@ -5765,11 +5767,11 @@ h3 {
 .support-note strong { color: var(--neutral-800); font-size: 0.72rem; }
 .support-note span { font-size: 0.65rem; line-height: 1.45; }
 
-.settings-empty { display: grid; min-height: 320px; place-items: center; align-content: center; gap: 0.45rem; border: 1px dashed var(--neutral-300); border-radius: var(--radius-xl); background: var(--surface-panel); color: var(--neutral-500); text-align: center; }
-.settings-empty svg { color: var(--kc-600); }
-.settings-empty h2 { color: var(--neutral-800); font-size: 1rem; }
-.settings-empty p { font-size: 0.72rem; }
-.settings-empty .button { margin-top: 0.35rem; }
+.settings-index-empty { display: grid; place-items: center; gap: 0.4rem; padding: 1.75rem 0.75rem; border: 1px dashed var(--neutral-300); border-radius: var(--radius-lg); color: var(--neutral-500); text-align: center; }
+.settings-index-empty svg { color: var(--kc-600); }
+.settings-index-empty strong { color: var(--neutral-800); font-size: 0.82rem; }
+.settings-index-empty p { font-size: 0.7rem; }
+.settings-index-empty .button { margin-top: 0.3rem; }
 
 @media (max-width: 1180px) {
   .access-summary { grid-template-columns: 1fr; }
@@ -5787,11 +5789,10 @@ h3 {
   .settings-index { z-index: 15; top: calc(var(--content-offset) + 0.5rem); display: grid; max-height: none; overflow: visible; border-radius: 16px; }
   .settings-index nav { display: flex; overflow-x: auto; padding-bottom: 0.15rem; scrollbar-width: none; }
   .settings-index nav::-webkit-scrollbar { display: none; }
-  .settings-index nav > button { min-width: max-content; min-height: 42px; flex: 0 0 auto; padding: 0.35rem 0.55rem; }
-  .settings-index nav > button > span:first-child { width: 30px; height: 30px; flex-basis: 30px; }
+  .settings-index nav > a { min-width: max-content; min-height: 42px; flex: 0 0 auto; padding: 0.35rem 0.55rem; }
+  .settings-index nav > a > span:first-child { width: 30px; height: 30px; flex-basis: 30px; }
   .settings-index nav small,
   .settings-index__account { display: none; }
-  .settings-section { scroll-margin-top: calc(var(--content-offset) + 145px); }
   .settings-identity--expanded { grid-template-columns: auto minmax(0, 1fr); }
   .settings-identity--expanded dl { grid-column: 1 / -1; }
   .setup-progress-card { grid-template-columns: 1fr; }
@@ -5801,10 +5802,9 @@ h3 {
   .settings-workspace .page-header__actions { width: 100%; }
   .settings-shell { gap: 0.7rem; }
   .settings-index { top: calc(var(--content-offset) + 0.35rem); border-radius: 14px; padding: 0.55rem; }
-  .settings-index nav > button { min-height: 40px; }
-  .settings-index nav > button > span:first-child { display: none; }
+  .settings-index nav > a { min-height: 40px; }
+  .settings-index nav > a > span:first-child { display: none; }
   .settings-index nav strong { font-size: 0.69rem; }
-  .settings-section { scroll-margin-top: calc(var(--content-offset) + 130px); }
   .managed-badge,
   .setup-state { margin-left: 0; }
   .settings-identity--expanded { grid-template-columns: auto minmax(0, 1fr); }

@@ -8,7 +8,15 @@ import { AdminImportsScreen, AdminRequirementsScreen } from "./screens/AdminScre
 import { DashboardScreen, SiteDrilldownScreen } from "./screens/DashboardScreens";
 import RequirementWorkspace from "./screens/RequirementWorkspace";
 import LoginScreen from "./screens/LoginScreen";
-import SettingsScreen from "./screens/SettingsScreen";
+import {
+  AccountSettings,
+  AppearanceSettings,
+  GuidanceSettings,
+  NotificationsSettings,
+  SecuritySettings,
+  SettingsLayout,
+  SupportSettings,
+} from "./screens/SettingsScreen";
 import {
   ActionsScreen,
   AssessmentHomeScreen,
@@ -84,7 +92,15 @@ export default function App() {
               <Route path="admin/imports" element={<AdminImportsScreen />} />
               <Route path="admin/requirements" element={<AdminRequirementsScreen />} />
             </Route>
-            <Route path="settings" element={<SettingsScreen />} />
+            <Route path="settings" element={<SettingsLayout />}>
+              <Route index element={<Navigate to="account" replace />} />
+              <Route path="account" element={<AccountSettings />} />
+              <Route path="appearance" element={<AppearanceSettings />} />
+              <Route path="notifications" element={<NotificationsSettings />} />
+              <Route path="security" element={<SecuritySettings />} />
+              <Route path="guidance" element={<GuidanceSettings />} />
+              <Route path="support" element={<SupportSettings />} />
+            </Route>
           </Route>
         </Route>
         <Route path="no-assignment" element={<NoAssignmentScreen />} />
