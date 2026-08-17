@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -21,7 +20,7 @@ import { requirementRoute, useAppState } from "../AppState";
 import { useGuidedSetup } from "../GuidedSetup";
 import { performanceLabel, sections as seedSections } from "../data";
 import type { DashboardSite, Performance, SectionSummary } from "../types";
-import { Button, CompletionBadge, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar } from "../components/UI";
+import { Button, CompletionBadge, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
 import { cx } from "../utils";
 
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
@@ -96,11 +95,38 @@ export function DashboardScreen() {
       <section className="table-card">
         <div className="dashboard-filter-bar dashboard-filter-bar--expanded" data-tour="dashboard-filters">
           <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search site name or code" /></label>
-          <label className="select-control"><span className="sr-only">Region</span><select value={region} onChange={(event) => setRegion(event.target.value)}><option>All regions</option>{regions.map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={16} /></label>
-          <label className="select-control"><span className="sr-only">Segment</span><select value={segment} onChange={(event) => setSegment(event.target.value)}><option>All segments</option>{segments.map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={16} /></label>
-          <label className="select-control"><span className="sr-only">Completion</span><select value={completion} onChange={(event) => setCompletion(event.target.value as CompletionFilter)}><option value="all">All completion states</option><option value="complete">Complete</option><option value="in-progress">In progress</option><option value="not-started">Not started</option></select><ChevronDown size={16} /></label>
-          <label className="select-control"><span className="sr-only">Performance</span><select value={performance} onChange={(event) => setPerformance(event.target.value as "All levels" | Performance)}><option>All levels</option><option value="initial">Initial</option><option value="emerging">Emerging</option><option value="performing">Performing</option><option value="not-assessed">Not assessed</option></select><ChevronDown size={16} /></label>
-          <label className="select-control select-control--focus"><span className="sr-only">Assessment area</span><select value={focus} onChange={(event) => setFocus(event.target.value)}><option>All assessment areas</option>{sectionSummaries.map((section) => <option key={section.id}>{section.name}</option>)}</select><ChevronDown size={16} /></label>
+          <Select label="Region" value={region} onChange={setRegion} options={["All regions", ...regions].map((value) => ({ value, label: value }))} />
+          <Select label="Segment" value={segment} onChange={setSegment} options={["All segments", ...segments].map((value) => ({ value, label: value }))} />
+          <Select
+            label="Completion"
+            value={completion}
+            onChange={(value) => setCompletion(value as CompletionFilter)}
+            options={[
+              { value: "all", label: "All completion states" },
+              { value: "complete", label: "Complete" },
+              { value: "in-progress", label: "In progress" },
+              { value: "not-started", label: "Not started" },
+            ]}
+          />
+          <Select
+            label="Performance"
+            value={performance}
+            onChange={(value) => setPerformance(value as "All levels" | Performance)}
+            options={[
+              { value: "All levels", label: "All levels" },
+              { value: "initial", label: "Initial" },
+              { value: "emerging", label: "Emerging" },
+              { value: "performing", label: "Performing" },
+              { value: "not-assessed", label: "Not assessed" },
+            ]}
+          />
+          <Select
+            className="select-control--focus"
+            label="Assessment area"
+            value={focus}
+            onChange={setFocus}
+            options={["All assessment areas", ...sectionSummaries.map((section) => section.name)].map((value) => ({ value, label: value }))}
+          />
           <Button variant="tertiary" icon={<FilterX size={17} />} onClick={reset}>Reset</Button>
         </div>
         {activeFilters.length > 0 && <div className="active-filter-row"><span>Active view</span>{activeFilters.map((filter) => <span className="filter-chip" key={filter}>{filter}</span>)}<button onClick={reset}>Clear all</button></div>}

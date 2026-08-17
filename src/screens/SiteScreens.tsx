@@ -25,7 +25,7 @@ import { Link } from "react-router-dom";
 import { actionComplete, requirementRoute, useAppState } from "../AppState";
 import { assignedSite } from "../data";
 import type { AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../types";
-import { Button, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus } from "../components/UI";
+import { Button, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../components/UI";
 import { cx } from "../utils";
 
 const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -123,7 +123,17 @@ export function AssessmentHomeScreen() {
       </div>
       <div className="content-toolbar">
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sections and standards" /></label>
-        <label className="select-control"><Filter size={18} /><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)} aria-label="Filter assessment category"><option value="all">All categories</option><option value="operating-system">Operating System</option><option value="performance-standard">Performance Standards</option></select></label>
+        <Select
+          label="Filter assessment category"
+          icon={<Filter size={18} />}
+          value={category}
+          onChange={(value) => setCategory(value as typeof category)}
+          options={[
+            { value: "all", label: "All categories" },
+            { value: "operating-system", label: "Operating System" },
+            { value: "performance-standard", label: "Performance Standards" },
+          ]}
+        />
       </div>
       {operating.length > 0 && <section className="page-section" data-tour="assessment-sections"><div className="section-title-row"><div><p className="eyebrow">Framework</p><h2>Operating System</h2></div><span>{operating.length} sections</span></div><div className="section-card-grid">{operating.map((section) => <SectionCard section={section} requirement={requirements.find((item) => item.sectionId === section.id)} key={section.id} />)}</div></section>}
       {standards.length > 0 && <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Assessment standards</p><h2>Performance Standards</h2></div><span>Health, Safety, and Occupational Health</span></div><div className="section-card-grid">{standards.map((section) => <SectionCard section={section} requirement={requirements.find((item) => item.sectionId === section.id)} key={section.id} />)}</div></section>}
@@ -250,7 +260,17 @@ export function OwnersScreen() {
       {savedName ? <InlineMessage tone="success" title={`${savedName} owners updated`}>The new Primary and Backup Owner details are saved for this site.</InlineMessage> : <InlineMessage tone="info" title="Equal permissions">Primary and Backup Owner labels identify responsibility only. Both roles can maintain the same assessment content.</InlineMessage>}
       <div className="content-toolbar" data-tour="owners-controls">
         <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search programs, standards, or people" /></label>
-        <label className="select-control"><Filter size={18} /><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter owner category"><option value="all">All categories</option><option value="Operating System">Operating System</option><option value="Performance Standard">Performance Standard</option></select></label>
+        <Select
+          label="Filter owner category"
+          icon={<Filter size={18} />}
+          value={category}
+          onChange={setCategory}
+          options={[
+            { value: "all", label: "All categories" },
+            { value: "Operating System", label: "Operating System" },
+            { value: "Performance Standard", label: "Performance Standard" },
+          ]}
+        />
       </div>
       {filtered.length ? <div className="owner-grid" data-tour="owner-list">{filtered.map((owner) => <OwnerCard owner={owner} onEdit={setEditing} key={owner.id} />)}</div> : <EmptyState icon={<Search size={26} />} title="No owners found" description="Try another name or category." />}
       {editing && <OwnerDialog owner={editing} onClose={() => setEditing(null)} onSave={(owner) => { updateOwner(owner); setSavedName(owner.program); setEditing(null); }} />}
@@ -297,7 +317,29 @@ export function ActionsScreen() {
       </div>
       <section className="table-card">
         <div className="table-card__header table-card__header--wrap"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><label className="search-control search-control--small"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label></div>
-        <div className="filter-row" data-tour="actions-filters"><label className="select-control"><Filter size={17} /><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)} aria-label="Filter action status"><option value="all">All action states</option><option value="needs-info">Needs information</option><option value="complete">Complete details</option></select></label><label className="select-control"><select value={response} onChange={(event) => setResponse(event.target.value as typeof response)} aria-label="Filter response"><option value="all">No and Partial</option><option value="no">No only</option><option value="partial">Partial only</option></select></label></div>
+        <div className="filter-row" data-tour="actions-filters">
+          <Select
+            label="Filter action status"
+            icon={<Filter size={17} />}
+            value={status}
+            onChange={(value) => setStatus(value as typeof status)}
+            options={[
+              { value: "all", label: "All action states" },
+              { value: "needs-info", label: "Needs information" },
+              { value: "complete", label: "Complete details" },
+            ]}
+          />
+          <Select
+            label="Filter response"
+            value={response}
+            onChange={(value) => setResponse(value as typeof response)}
+            options={[
+              { value: "all", label: "No and Partial" },
+              { value: "no", label: "No only" },
+              { value: "partial", label: "Partial only" },
+            ]}
+          />
+        </div>
         {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {
           const ready = actionComplete(question.response, question.action);
           return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description needed</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner needed</span>}</td><td data-label="Status"><span className={cx("detail-status", ready ? "detail-status--complete" : "detail-status--missing")}>{ready ? "Complete" : "Needs information"}</span></td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;

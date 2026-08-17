@@ -53,11 +53,6 @@ const navigation = [
       { to: "/admin/requirements", label: "Master requirements", icon: FileText },
     ],
   },
-  {
-    label: "Account",
-    roles: ["site-contributor", "enterprise-viewer", "administrator"] as UserRole[],
-    items: [{ to: "/settings", label: "Settings", icon: Settings }],
-  },
 ];
 
 const bottomTabs = [

@@ -1,8 +1,9 @@
-import { useId, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
 import {
   AlertCircle,
   Check,
   CheckCircle2,
+  ChevronDown,
   Circle,
   CircleDotDashed,
   Clock3,
@@ -60,6 +61,121 @@ export function IconButton({
         {label}
       </span>
     </button>
+  );
+}
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Custom single-select dropdown — replaces native <select> for filter menus, which render
+ * an OS-drawn popup no CSS can restyle. Themeable, matches the app's other popovers (see
+ * ProfileMenu), and follows the ARIA listbox pattern: trigger button (aria-haspopup="listbox")
+ * + role="listbox" popup, arrow-key/Home/End navigation, Enter/Space to choose, Escape or an
+ * outside click to dismiss without changing the value.
+ */
+export function Select({
+  value,
+  onChange,
+  options,
+  label,
+  icon,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  label: string;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const listId = useId();
+  const current = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    listRef.current?.focus();
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  function openList() {
+    const activeIndex = options.findIndex((option) => option.value === value);
+    setHighlighted(activeIndex >= 0 ? activeIndex : 0);
+    setOpen(true);
+  }
+
+  function choose(index: number) {
+    onChange(options[index].value);
+    setOpen(false);
+  }
+
+  function handleListKeyDown(event: KeyboardEvent<HTMLUListElement>) {
+    if (event.key === "ArrowDown") { event.preventDefault(); setHighlighted((current) => Math.min(options.length - 1, current + 1)); }
+    else if (event.key === "ArrowUp") { event.preventDefault(); setHighlighted((current) => Math.max(0, current - 1)); }
+    else if (event.key === "Home") { event.preventDefault(); setHighlighted(0); }
+    else if (event.key === "End") { event.preventDefault(); setHighlighted(options.length - 1); }
+    else if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(highlighted); }
+    else if (event.key === "Tab") { setOpen(false); }
+  }
+
+  return (
+    <div className={cx("select-control", open && "select-control--open", className)} ref={wrapRef}>
+      {icon}
+      <button
+        type="button"
+        className="select-control__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => (open ? setOpen(false) : openList())}
+      >
+        <span>{current?.label}</span>
+        <ChevronDown size={16} className={cx("select-control__chevron", open && "select-control__chevron--open")} />
+      </button>
+      {open && (
+        <ul
+          ref={listRef}
+          role="listbox"
+          aria-label={label}
+          aria-activedescendant={options.length ? `${listId}-${highlighted}` : undefined}
+          className="select-popover"
+          tabIndex={-1}
+          onKeyDown={handleListKeyDown}
+        >
+          {options.map((option, index) => (
+            <li
+              key={option.value}
+              id={`${listId}-${index}`}
+              role="option"
+              aria-selected={option.value === value}
+              className={cx("select-option", index === highlighted && "select-option--highlighted", option.value === value && "select-option--selected")}
+              onMouseEnter={() => setHighlighted(index)}
+              onClick={() => choose(index)}
+            >
+              <span className="select-option__check">{option.value === value && <Check size={15} />}</span>
+              <span>{option.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

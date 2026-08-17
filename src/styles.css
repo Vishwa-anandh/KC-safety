@@ -1024,7 +1024,10 @@ h3 {
   color: var(--nav-accent);
 }
 
-.site-context.sidebar-context span {
+/* :not(.nav-item__tooltip) excludes the collapsed-state tooltip span — without it this
+   descendant selector would repaint the tooltip's own white text to the muted nav color,
+   the same cascade trap already fixed for .session-panel span and .selected-file span. */
+.site-context.sidebar-context span:not(.nav-item__tooltip) {
   color: var(--nav-text-muted);
 }
 
@@ -1179,7 +1182,10 @@ h3 {
   display: grid;
 }
 
-.site-context span {
+/* :not(.nav-item__tooltip) — same exclusion as the compound .sidebar-context rule above;
+   this base rule has higher specificity than .nav-item__tooltip's own color and would
+   otherwise win even with that rule's exclusion in place. */
+.site-context span:not(.nav-item__tooltip) {
   color: var(--neutral-500);
   font-size: 0.68rem;
   line-height: 1.05;
@@ -2074,29 +2080,121 @@ h3 {
   align-items: center;
 }
 
-.select-control select {
+.select-control > svg:first-child {
+  position: absolute;
+  left: 0.75rem;
+  pointer-events: none;
+  color: var(--neutral-500);
+}
+
+.select-control:has(> svg:first-child) .select-control__trigger {
+  padding-left: 2.15rem;
+}
+
+.select-control__trigger {
+  display: flex;
   width: 100%;
   min-height: 42px;
-  appearance: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   border: 1px solid var(--neutral-300);
   border-radius: var(--radius-md);
   outline: 0;
   background: var(--surface-input);
   color: var(--neutral-800);
-  padding: 0 2.25rem 0 0.75rem;
+  padding: 0 0.7rem 0 0.75rem;
   font-size: 0.85rem;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
-.select-control svg {
-  position: absolute;
-  right: 0.7rem;
-  pointer-events: none;
+.select-control__trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-control__chevron {
+  flex: 0 0 auto;
   color: var(--neutral-500);
+  transition: transform 140ms ease;
 }
 
-.select-control select:focus {
+.select-control__chevron--open {
+  transform: rotate(180deg);
+}
+
+.select-control__trigger:focus-visible {
   border-color: var(--kc-600);
   box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.select-control--open .select-control__trigger {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.select-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border: 1px solid var(--border-translucent);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-3);
+  animation: select-popover-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes select-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.select-option {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  color: var(--neutral-700);
+  font-size: 0.83rem;
+  cursor: pointer;
+}
+
+.select-option__check {
+  display: grid;
+  width: 15px;
+  flex: 0 0 15px;
+  place-items: center;
+  color: var(--kc-600);
+}
+
+.select-option > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-option--selected {
+  color: var(--kc-800);
+  font-weight: 650;
+}
+
+.select-option--highlighted {
+  background: var(--kc-50);
 }
 
 .form-card,
