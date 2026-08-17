@@ -219,14 +219,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <span>Self-Assessment</span>
           </div>
         </div>
-        <div className="site-context sidebar-context" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
+        <div
+          className="site-context sidebar-context"
+          aria-label={role === "site-contributor" ? `Current assigned site: ${assignedSite.name} · ${assignedSite.code}` : `Current authorized scope: ${profile.scope}`}
+          data-tour="site-context"
+        >
           <ScopeIcon size={17} />
           <div>
             <span>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
             <strong>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
           </div>
           {role === "site-contributor" && <span className="site-context__code">{assignedSite.code}</span>}
-          <span className="nav-item__tooltip" role="tooltip">
+          <span className="nav-item__tooltip" role="tooltip" aria-hidden="true">
             {role === "site-contributor" ? `${assignedSite.name} · ${assignedSite.code}` : profile.scope}
           </span>
         </div>
@@ -276,7 +280,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="mobile-shell-strip">
-        <div className="mobile-shell-strip__badge" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"}>
+        <div className="mobile-shell-strip__badge" aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
           <ScopeIcon size={16} />
           <span>{role === "site-contributor" ? assignedSite.code : profile.scope}</span>
         </div>

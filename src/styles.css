@@ -109,7 +109,11 @@
   --shadow-3: 0 22px 60px rgb(15 23 42 / 0.2);
   --motion-sidebar: 280ms cubic-bezier(0.22, 1, 0.36, 1);
   --sidebar: 268px;
+  /* --topbar sizes the sidebar's own brand row and the floating collapse toggle on desktop,
+     and doubles as the mobile shell strip's height on <=1100px — not the header (removed). */
   --topbar: 72px;
+  /* Space main-content must reserve above its sticky panels for a bar sitting there: 0 on
+     desktop (no bar), equal to --topbar on <=1100px (the mobile shell strip). */
   --content-offset: 0px;
 }
 
@@ -702,7 +706,7 @@ h3 {
   transition: padding var(--motion-sidebar);
 }
 
-@media (max-height: 620px) and (min-width: 1101px) {
+@media (max-height: 680px) and (min-width: 1101px) {
   .side-nav {
     overflow-y: auto;
     overflow-x: hidden;
@@ -1006,25 +1010,34 @@ h3 {
   border: 1px solid var(--nav-border);
   border-radius: var(--radius-md);
   background: rgb(255 255 255 / 0.04);
-  color: var(--nav-text);
   transition: padding var(--motion-sidebar), margin var(--motion-sidebar);
 }
 
-.sidebar-context > svg {
+.site-context.sidebar-context {
+  flex-wrap: wrap;
+  color: var(--nav-text);
+}
+
+.site-context.sidebar-context > svg {
   color: var(--nav-accent);
 }
 
-.sidebar-context span {
+.site-context.sidebar-context span {
   color: var(--nav-text-muted);
 }
 
-.sidebar-context strong {
+.site-context.sidebar-context strong {
   color: var(--nav-text-strong);
 }
 
-.sidebar-context .site-context__code {
-  border-left-color: var(--nav-divider);
-  color: var(--nav-text);
+.site-context.sidebar-context .site-context__code {
+  width: 100%;
+  margin-left: 0;
+  border-left: 0;
+  padding-left: 0;
+  color: var(--nav-text-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .app-shell--collapsed .desktop-sidebar .sidebar-context {
@@ -1048,7 +1061,6 @@ h3 {
 }
 
 .sidebar-footer {
-  position: relative;
   display: flex;
   min-width: 0;
   align-items: center;
@@ -1056,7 +1068,6 @@ h3 {
   margin-top: auto;
   padding: 0.85rem 1.15rem;
   border-top: 1px solid var(--nav-divider);
-  transition: padding var(--motion-sidebar);
 }
 
 .sidebar-footer .icon-button {
@@ -1105,7 +1116,7 @@ h3 {
   }
 }
 
-.profile-button--compact {
+.profile-button.profile-button--compact {
   min-height: auto;
   gap: 0;
   padding: 0;
