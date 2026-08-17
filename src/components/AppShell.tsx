@@ -164,6 +164,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: bo
           )}
           <div className="profile-menu__section profile-menu__session">
             <Link to="/settings" onClick={() => setOpen(false)}><Settings size={17} /><span>Open settings</span></Link>
+            <Link to="/settings/support" onClick={() => setOpen(false)}><CircleHelp size={17} /><span>Help and support</span></Link>
             <button type="button" onClick={() => { signOut(); setOpen(false); navigate("/login", { replace: true }); }}>
               <LogOut size={17} />
               <span>Sign out {user?.name ? `as ${user.name}` : ""}</span>
@@ -218,9 +219,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
         <SideNav collapsed={collapsed} role={role} />
         <div className="sidebar-footer">
-          <IconButton label="Help and guided setup" onClick={openHelp} tooltipPlacement="right" data-tour="help">
-            <CircleHelp size={20} />
-          </IconButton>
           <ProfileMenu menuPlacement="up" />
         </div>
         <button

@@ -1075,15 +1075,6 @@ h3 {
   border-top: 1px solid var(--nav-divider);
 }
 
-.sidebar-footer .icon-button {
-  color: var(--nav-text);
-}
-
-.sidebar-footer .icon-button:hover {
-  background: var(--nav-icon-hover);
-  color: var(--nav-text-strong);
-}
-
 .sidebar-footer .profile-menu-wrap {
   min-width: 0;
   flex: 1;
@@ -2419,12 +2410,22 @@ h3 {
   background: var(--neutral-25);
 }
 
+/*
+ * This targets the "secondary text under strong" pattern (e.g. site name + code), but a plain
+ * tag-based selector also matches any inline badge/chip component that happens to be a table
+ * cell's direct child <span> — status-badge, completion-badge, publish-badge, response-chip,
+ * gap-count, detail-status all render that way. Forcing display:block on those breaks their own
+ * icon+label layout (the icon, a block-level element per the global svg reset, drops to its own
+ * line) or stretches them to the cell's full width. Same root cause fixed elsewhere this session
+ * (.session-panel span, .selected-file span, .site-context span) — an ancestor selector reaching
+ * further than intended; the fix is the same, exclude the components that need their own layout.
+ */
 .data-table td > strong,
-.data-table td > span {
+.data-table td > span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status) {
   display: block;
 }
 
-.data-table td > span {
+.data-table td > span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status) {
   margin-top: 0.18rem;
   color: var(--neutral-500);
   font-size: 0.7rem;
