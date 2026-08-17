@@ -23,7 +23,7 @@ import {
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../Auth";
 import { assignedSite } from "../data";
-import { roleProfiles, useGuidedSetup, type UserRole } from "../GuidedSetup";
+import { useGuidedSetup, type UserRole } from "../GuidedSetup";
 import { ThemeSelector, useTheme } from "../Theme";
 import { IconButton, KcLogo } from "./UI";
 import { cx } from "../utils";
@@ -102,7 +102,7 @@ function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: Us
 }
 
 function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: boolean; menuPlacement?: "down" | "up" }) {
-  const { role, profile, changeRole, startTour } = useGuidedSetup();
+  const { role, profile, startTour } = useGuidedSetup();
   const { user, demoEnabled, signOut } = useAuth();
   const { preference, resolvedTheme } = useTheme();
   const navigate = useNavigate();
@@ -161,19 +161,6 @@ function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: bo
           </div>
           {demoEnabled && (
             <div className="profile-menu__section profile-role-section">
-              <div className="profile-menu__section-heading"><span>Preview role</span><small>Local demonstration</small></div>
-              <div className="profile-role-options">
-                {(Object.values(roleProfiles) as Array<(typeof roleProfiles)[UserRole]>).map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <button key={option.id} className={cx(role === option.id && "profile-role-option--selected")} onClick={() => { changeRole(option.id); setOpen(false); }} aria-pressed={role === option.id}>
-                      <Icon size={16} />
-                      <span>{option.shortLabel}</span>
-                      {role === option.id && <span className="profile-role-check">Current</span>}
-                    </button>
-                  );
-                })}
-              </div>
               <button className="profile-setup-action" onClick={() => { startTour(role, true); setOpen(false); }}>
                 <PlayCircle size={17} />
                 <span>Replay guided setup</span>

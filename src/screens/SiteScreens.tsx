@@ -189,7 +189,7 @@ export function SiteInformationScreen() {
   }
 
   return (
-    <div className="page-container page-container--form">
+    <div className="page-container">
       <PageHeader eyebrow="Site workspace" title="Site information" description="Maintain leadership and contact details for your assigned site. Core site identity is governed centrally." actions={<Button variant="primary" icon={<Save size={18} />} onClick={save} disabled={saved} data-tour="site-save">Save changes</Button>} />
       <SiteContextCard updated={lastUpdated} />
       {confirmation ? <InlineMessage tone="success" title="Site contacts saved">The updated contact information is now available across this site workspace.</InlineMessage> : <InlineMessage tone="info" title="Site identity is read-only">Site name, code, region, and segment come from the KC site master and cannot be changed here.</InlineMessage>}

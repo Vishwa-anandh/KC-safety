@@ -80,7 +80,7 @@ export function DashboardScreen() {
   function exportDashboard() { downloadSiteExport(sites, `EHSS_assessment_dashboard_${new Date().toISOString().slice(0, 10)}.csv`, focus); setExported(true); window.setTimeout(() => setExported(false), 2600); }
 
   return (
-    <div className="page-container page-container--wide">
+    <div className="page-container">
       <PageHeader eyebrow="Enterprise oversight" title="EHS&S assessment dashboard" description="Track completion and self-assessed performance across the sites in your authorized scope." actions={<Button variant="primary" icon={<ArrowDownToLine size={18} />} onClick={exportDashboard} disabled={!sites.length} data-tour="dashboard-export">Export to Excel</Button>} />
       {exported && <InlineMessage className="floating-feedback" tone="success" title="Export downloaded">The current filtered site view was downloaded and can be opened in Excel.</InlineMessage>}
       <div className="metrics-grid">
@@ -124,7 +124,7 @@ export function SiteDrilldownScreen() {
   const siteSections = site.id === "northstar" ? sectionSummaries : seedSections;
   const canEditAssignedSite = role === "site-contributor" && site.id === "northstar";
   return (
-    <div className="page-container page-container--wide">
+    <div className="page-container">
       <Link className="back-link" to="/dashboard"><ArrowLeft size={17} /> Back to dashboard</Link>
       <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHSS_${site.code}_assessment.csv`)}>Export site view</Button>} />
       <InlineMessage tone="info" title={canEditAssignedSite ? "Assigned site—editing available" : "Read-only enterprise view"}>{canEditAssignedSite ? "Open any section below to continue work in your assigned site assessment." : "You can inspect this site's assessment details. Enterprise and administrative oversight does not grant site editing access."}</InlineMessage>

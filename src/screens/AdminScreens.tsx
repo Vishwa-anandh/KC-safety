@@ -69,7 +69,7 @@ export function AdminImportsScreen() {
   function resetImport() { setStep(0); setFile(null); setFileError(""); setConfirmed(false); setResult(null); }
 
   return (
-    <div className="page-container page-container--wide">
+    <div className="page-container">
       <PageHeader eyebrow="Administration" title="Master data import" description="Validate an approved KC workbook before applying requirements and hierarchy changes." actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => setHistoryOpen(true)} data-tour="import-history">Import history</Button>} />
       <InlineMessage tone="warning" title="Administrative action">Imports update governed master requirements for every authorized site. Inspect the workbook, review the dry run, and resolve blocking errors before confirmation.</InlineMessage>
       <section className="import-card">
@@ -114,7 +114,7 @@ export function AdminRequirementsScreen() {
     setFeedback(`${item.id} was ${editing === "new" ? "added" : "updated"}.`); setEditing(null);
   }
   return (
-    <div className="page-container page-container--wide">
+    <div className="page-container">
       <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirement, guidance, evidence, hierarchy, and version content." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")} data-tour="add-requirement">Add requirement</Button>} />
       {feedback ? <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage> : <InlineMessage tone="info" title="Protected master content">Only authorized administrators can edit these records. Site and regional users always see them as read-only.</InlineMessage>}
       <section className="table-card">

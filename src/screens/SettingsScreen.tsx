@@ -206,7 +206,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <div className="page-stack settings-page settings-workspace">
+    <div className="page-container settings-workspace">
       <PageHeader eyebrow="Personal workspace" title="Settings" description="Control your account experience, alerts, security, and guided learning from one place." actions={savedAt && <span className="settings-saved" role="status"><CheckCircle2 size={16} /> Preferences saved</span>} />
 
       <div className="settings-shell">
