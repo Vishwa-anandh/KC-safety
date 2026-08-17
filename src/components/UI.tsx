@@ -173,11 +173,11 @@ export function InlineMessage({
   }[tone];
   return (
     <div className={cx("inline-message", `inline-message--${tone}`, className)}>
+      <span className="inline-message__icon">{icon}</span>
       <div>
         <strong>{title}</strong>
         <div>{children}</div>
       </div>
-      <span className="inline-message__icon">{icon}</span>
     </div>
   );
 }

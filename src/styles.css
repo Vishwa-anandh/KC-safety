@@ -1634,7 +1634,7 @@ h3 {
 
 .inline-message {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.75rem;
   border: 1px solid;
   border-radius: var(--radius-lg);
@@ -2519,9 +2519,11 @@ h3 {
 }
 
 .navigator-item--current {
-  background: var(--kc-50);
+  background: var(--kc-100);
+  border: 1px solid var(--kc-200);
   color: var(--kc-900);
-  box-shadow: inset 3px 0 0 var(--kc-600);
+  font-weight: 700;
+  box-shadow: inset 5px 0 0 var(--kc-600);
 }
 
 .navigator-item > span:nth-child(2) {
@@ -2557,12 +2559,13 @@ h3 {
 
 .nav-state--current {
   display: grid;
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   place-items: center;
-  border: 1px solid var(--kc-300);
   border-radius: 50%;
-  color: var(--kc-700);
+  background: var(--kc-600);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--kc-200);
 }
 
 .nav-state--incomplete {
@@ -2585,6 +2588,7 @@ h3 {
 .guidance-panel__top {
   display: flex;
   gap: 0.7rem;
+  margin-bottom: 1rem;
   color: var(--kc-700);
 }
 

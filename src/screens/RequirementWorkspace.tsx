@@ -83,7 +83,7 @@ function AssessmentNavigator({
       <div className="navigator-group">
         <div className="navigator-group__trigger" aria-expanded="true">
           <ChevronDown size={17} />
-          <span>Phase 1 requirements</span>
+          <span>Assessment requirements</span>
           <small>{completed} of {requirements.length}</small>
         </div>
         <div className="navigator-items">
@@ -129,13 +129,11 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
   );
 }
 
-function ActionEditor({ action, response, onChange, showErrors }: { action?: ActionItem; response: ResponseValue; onChange: (action: ActionItem) => void; showErrors: boolean }) {
+function ActionEditor({ action, response, onChange }: { action?: ActionItem; response: ResponseValue; onChange: (action: ActionItem) => void }) {
   const required = response === "no" || response === "partial";
   if (!required && !action) return null;
-  const missingDescription = showErrors && required && !action?.description.trim();
-  const missingOwner = showErrors && required && !action?.owner.trim();
   return (
-    <div className={cx("action-editor", required ? "action-editor--required" : "action-editor--retained", showErrors && "action-editor--invalid")}>
+    <div className={cx("action-editor", required ? "action-editor--required" : "action-editor--retained")}>
       <div className="action-editor__header">
         <div className="action-editor__icon"><AlertTriangle size={18} /></div>
         <div>
@@ -144,18 +142,16 @@ function ActionEditor({ action, response, onChange, showErrors }: { action?: Act
         </div>
       </div>
       <div className="form-grid form-grid--action">
-        <label className={cx("field", "field--wide", missingDescription && "field--invalid")}>
+        <label className={cx("field", "field--wide")}>
           <span>Action description {required && <b>Required</b>}</span>
-          <textarea rows={3} value={action?.description ?? ""} placeholder="Describe the specific action needed to close this gap" aria-invalid={missingDescription} onChange={(event) => onChange({ description: event.target.value, owner: action?.owner ?? "" })} />
-          {missingDescription && <small className="field-error">Enter an action description before moving on.</small>}
+          <textarea rows={3} value={action?.description ?? ""} placeholder="Describe the specific action needed to close this gap" onChange={(event) => onChange({ description: event.target.value, owner: action?.owner ?? "" })} />
         </label>
-        <label className={cx("field", missingOwner && "field--invalid")}>
+        <label className="field">
           <span>Action owner {required && <b>Required</b>}</span>
           <span className="field-control-with-icon">
             <UserRound size={17} />
-            <input type="text" value={action?.owner ?? ""} placeholder="Search or enter owner" aria-invalid={missingOwner} onChange={(event) => onChange({ description: action?.description ?? "", owner: event.target.value })} />
+            <input type="text" value={action?.owner ?? ""} placeholder="Search or enter owner" onChange={(event) => onChange({ description: action?.description ?? "", owner: event.target.value })} />
           </span>
-          {missingOwner && <small className="field-error">Assign an owner before moving on.</small>}
         </label>
       </div>
     </div>
@@ -195,13 +191,14 @@ function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence
 function GuidancePanel({ requirement }: { requirement: Requirement }) {
   return (
     <aside className="guidance-panel">
-      <div className="guidance-panel__top"><BookOpen size={20} /><div><p className="eyebrow">Read-only master content</p><h2>How to meet</h2></div></div>
+      <div className="guidance-panel__top"><div><p className="eyebrow">Read-only master content</p><h2>How to meet</h2></div><BookOpen size={20} /></div>
       <ul className="guidance-list">{requirement.guidance.map((item) => <li key={item}>{item}</li>)}</ul>
       <div className="expected-evidence">
         <div className="expected-evidence__title"><Paperclip size={18} /><h3>Expected evidence</h3></div>
         <ul>{requirement.expectedEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
       </div>
       <div className="master-protection-note"><ShieldCheck size={17} /><span>Managed by KC administrators</span></div>
+      <InlineMessage tone="info" title="How this result is calculated">The requirement result is the lowest response below. No maps to Initial, Partial to Emerging, and Yes to Performing.</InlineMessage>
     </aside>
   );
 }
@@ -292,7 +289,6 @@ export default function RequirementWorkspace() {
   const [guidanceOpen, setGuidanceOpen] = useState(false);
   const [evidenceEditor, setEvidenceEditor] = useState<EvidenceItem | null | "new">(null);
   const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
-  const [invalidQuestions, setInvalidQuestions] = useState<Set<string>>(new Set());
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentIndex = requirement ? requirements.findIndex((item) => item.id === requirement.id) : -1;
@@ -309,23 +305,14 @@ export default function RequirementWorkspace() {
 
   function changeQuestion(questionId: string, update: Partial<AssessmentQuestion>) {
     updateQuestion(requirement!.id, questionId, update);
-    setInvalidQuestions((current) => {
-      const next = new Set(current);
-      next.delete(questionId);
-      return next;
-    });
     queueSavedState();
   }
 
+  // Every requirement is always reachable — from the navigator, Next incomplete, or Previous/Next
+  // requirement — regardless of whether the current requirement's action details are complete.
+  // Incomplete No/Partial actions still surface as gaps elsewhere (Actions summary, dashboard),
+  // they just no longer block moving around the assessment.
   function moveTo(target: Requirement) {
-    const invalid = requirement!.questions.filter((question) => !actionComplete(question.response, question.action) && (question.response === "no" || question.response === "partial")).map((question) => question.id);
-    if (invalid.length) {
-      setInvalidQuestions(new Set(invalid));
-      setSaveState("attention");
-      document.getElementById(`question-${invalid[0]}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    setInvalidQuestions(new Set());
     setNavigatorOpen(false);
     setGuidanceOpen(false);
     navigate(requirementRoute(target));
@@ -350,19 +337,14 @@ export default function RequirementWorkspace() {
             <p className="requirement-text">{requirement.requirementText}</p>
             <div className="requirement-header__footer"><span>{answered} of {requirement.questions.length} questions answered</span><span className="divider-dot" /><span>Result uses the lowest question level</span><span className="requirement-save"><SaveStatus state={saveState} /></span></div>
           </header>
-          {invalidQuestions.size > 0 ? (
-            <InlineMessage tone="danger" title="Complete the required action details before moving on">Add both an action description and an owner for every No or Partial response. Your answers remain saved on this page.</InlineMessage>
-          ) : (
-            <InlineMessage tone="info" title="How this result is calculated">The requirement result is the lowest response below. No maps to Initial, Partial to Emerging, and Yes to Performing.</InlineMessage>
-          )}
           <section className="questions-section" aria-labelledby="questions-title">
             <div className="section-title-row"><div><p className="eyebrow">Assessment questions</p><h2 id="questions-title">Evaluate this requirement</h2></div><span className="question-count">{requirement.questions.length} questions</span></div>
             <div className="question-list">
               {requirement.questions.map((question) => (
-                <article className={cx("question-card", invalidQuestions.has(question.id) && "question-card--invalid")} key={question.id} id={`question-${question.id}`}>
+                <article className="question-card" key={question.id} id={`question-${question.id}`}>
                   <div className="question-card__header"><span className="question-number">{question.number}</span><div><p>Question {question.number}</p><h3>{question.text}</h3></div><PerformanceBadge performance={performanceForResponse(question.response)} compact /></div>
                   <ResponseSelector questionId={question.id} value={question.response} onChange={(response) => changeQuestion(question.id, { response })} />
-                  <ActionEditor action={question.action} response={question.response} showErrors={invalidQuestions.has(question.id)} onChange={(action) => changeQuestion(question.id, { action })} />
+                  <ActionEditor action={question.action} response={question.response} onChange={(action) => changeQuestion(question.id, { action })} />
                 </article>
               ))}
             </div>
