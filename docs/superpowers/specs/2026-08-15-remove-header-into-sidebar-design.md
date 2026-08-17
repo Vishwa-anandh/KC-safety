@@ -25,7 +25,9 @@ Top to bottom:
 1. **Brand lockup** — unchanged.
 2. **Site context** *(new, moved from header)* — compact, non-interactive strip directly under the brand lockup: "Assigned site" / "Northstar Manufacturing · KC-NSM-042" for a site contributor, or "Authorized scope" / the role's scope string for enterprise-viewer/administrator. Matches the existing `top-bar` site-context copy, just relocated.
 3. **Nav groups (`SideNav`)** — unchanged, scrollable middle section.
-4. **Footer (new, pinned to bottom)** — a row containing the Help icon button and the profile menu trigger (existing dropdown: appearance, role preview when demo-enabled, settings link, sign out), with the existing collapse-control toggle beneath it.
+4. **Footer (new, pinned to bottom)** — a row containing the Help icon button and the profile menu trigger (existing dropdown: appearance, role preview when demo-enabled, settings link, sign out).
+
+**Deviation (accepted during implementation):** the collapse-control toggle was originally specified as sitting *beneath* the footer row. On review of the built result, it was restored to its original floating position on the sidebar's right edge (absolutely positioned against the brand row) — its familiar location, and it reads better than a third stacked element in the footer. The footer therefore contains only the Help button and profile trigger.
 
 **Collapsed sidebar mode:** the site-context block collapses to just its scope icon with a tooltip, matching how nav item labels already collapse. The profile trigger collapses to avatar-only. The Help icon is unaffected (already icon-only).
 
