@@ -2242,6 +2242,12 @@ h3 {
   gap: 0.4rem;
 }
 
+/* Used in RequirementDialog and ActionEditor to span the full form grid, but had no CSS at
+   all — the field silently stayed at its normal half-width column instead. */
+.field--wide {
+  grid-column: 1 / -1;
+}
+
 .field > span:first-child {
   display: flex;
   align-items: center;
@@ -2506,10 +2512,9 @@ h3 {
 
 .requirement-layout {
   display: grid;
-  width: min(1600px, 100%);
+  width: 100%;
   min-width: 0;
   min-height: calc(100vh - var(--content-offset));
-  margin: 0 auto;
   grid-template-columns: 270px minmax(540px, 1fr) 320px;
 }
 
@@ -2748,9 +2753,15 @@ h3 {
   font-size: 0.7rem;
 }
 
+/* The "how this result is calculated" banner sits at the bottom of the guidance panel, after
+   this note — neither had its own top/bottom margin, so they sat flush against each other. */
+.guidance-panel > .inline-message {
+  margin-top: 1rem;
+}
+
 .requirement-main {
   min-width: 0;
-  padding: 1.5rem 1.5rem 4rem;
+  padding: 1.5rem var(--page-gutter) 4rem;
 }
 
 .breadcrumbs {
