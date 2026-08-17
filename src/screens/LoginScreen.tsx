@@ -7,13 +7,11 @@ import {
   LayoutDashboard,
   LockKeyhole,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { demoAccounts, useAuth } from "../Auth";
 import { roleProfiles, type UserRole } from "../GuidedSetup";
-import { ThemeSelector } from "../Theme";
 import { Button, KcLogo } from "../components/UI";
 import { cx } from "../utils";
 
@@ -70,7 +68,6 @@ export default function LoginScreen() {
       <section className="login-story" aria-label="KC EHS&S product introduction">
         <div className="login-story__brand"><KcLogo /><div><strong>EHS&S</strong><span>Self-Assessment</span></div></div>
         <div className="login-story__content">
-          <span className="login-story__kicker"><Sparkles size={17} /> One workspace, clear accountability</span>
           <h1>Move every site from assessment to action.</h1>
           <p>Complete governed assessments, close corrective-action gaps, and give enterprise leaders a trusted view of progress.</p>
           <div className="login-story__proof">
@@ -83,7 +80,6 @@ export default function LoginScreen() {
       </section>
 
       <section className="login-access">
-        <div className="login-access__top"><span>Appearance</span><ThemeSelector compact /></div>
         <div className="login-card">
           <div className="login-card__heading">
             <span className="login-card__icon"><LockKeyhole size={23} /></span>

@@ -18,20 +18,26 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "tertiary" | "danger";
   size?: "compact" | "default" | "large";
   icon?: ReactNode;
+  /** Which side of the label `icon` renders on. Icon and label are always separate flex
+   * children of the button — never siblings inside the same <span> — so an icon (display:
+   * block, per the global svg reset) can never force a line break in the middle of the label. */
+  iconPosition?: "start" | "end";
 };
 
 export function Button({
   variant = "secondary",
   size = "default",
   icon,
+  iconPosition = "start",
   className,
   children,
   ...props
 }: ButtonProps) {
   return (
     <button className={cx("button", `button--${variant}`, `button--${size}`, className)} {...props}>
-      {icon}
+      {iconPosition === "start" && icon}
       <span>{children}</span>
+      {iconPosition === "end" && icon}
     </button>
   );
 }
@@ -167,11 +173,11 @@ export function InlineMessage({
   }[tone];
   return (
     <div className={cx("inline-message", `inline-message--${tone}`, className)}>
-      <span className="inline-message__icon">{icon}</span>
       <div>
         <strong>{title}</strong>
         <div>{children}</div>
       </div>
+      <span className="inline-message__icon">{icon}</span>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Gauge, Laptop, Minus, Moon, Sun } from "lucide-react";
+import { Laptop, Moon, Sun } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cx } from "./utils";
 
@@ -75,24 +75,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ preference, resolvedTheme, setPreference, motionPreference, reducedMotion, setMotionPreference }), [motionPreference, preference, reducedMotion, resolvedTheme]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
-
-const motionOptions: Array<{ value: MotionPreference; label: string; detail: string; icon: typeof Gauge }> = [
-  { value: "system", label: "System", detail: "Match this device", icon: Laptop },
-  { value: "reduced", label: "Reduced", detail: "Minimize movement", icon: Minus },
-  { value: "full", label: "Standard", detail: "Use standard motion", icon: Gauge },
-];
-
-export function MotionSelector() {
-  const { motionPreference, setMotionPreference } = useTheme();
-  return (
-    <div className="theme-selector motion-selector" role="radiogroup" aria-label="Motion preference">
-      {motionOptions.map((option) => {
-        const Icon = option.icon;
-        return <button key={option.value} type="button" className={cx("theme-choice", motionPreference === option.value && "theme-choice--selected")} role="radio" aria-checked={motionPreference === option.value} onClick={() => setMotionPreference(option.value)}><Icon size={18} /><span><strong>{option.label}</strong><small>{option.detail}</small></span></button>;
-      })}
-    </div>
-  );
 }
 
 export function useTheme() {

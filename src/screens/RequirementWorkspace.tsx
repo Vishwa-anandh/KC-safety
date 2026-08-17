@@ -375,7 +375,7 @@ export default function RequirementWorkspace() {
           }} />
           <footer className="requirement-footer">
             <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
-            <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)}>Next requirement <ArrowRight size={18} /></Button></div>
+            <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button></div>
           </footer>
         </div>
         <div className="requirement-layout__guidance"><GuidancePanel requirement={requirement} /></div>

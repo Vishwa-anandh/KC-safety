@@ -27,7 +27,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../Auth";
 import { useGuidedSetup, type UserRole } from "../GuidedSetup";
-import { MotionSelector, ThemeSelector, useTheme } from "../Theme";
+import { ThemeSelector, useTheme } from "../Theme";
 import { Button, IconButton, InlineMessage, PageHeader, ProgressBar } from "../components/UI";
 import { cx } from "../utils";
 
@@ -55,7 +55,7 @@ const defaultNotifications: NotificationPreferences = {
 
 const sections: Array<{ id: SettingsSectionId; label: string; description: string; icon: LucideIcon; keywords: string }> = [
   { id: "account", label: "Account and access", description: "Profile, role, and scope", icon: UserRound, keywords: "profile email identity role permission site authorized scope" },
-  { id: "appearance", label: "Appearance", description: "Theme and motion", icon: Accessibility, keywords: "theme system light dark motion animation accessibility reduce" },
+  { id: "appearance", label: "Appearance", description: "Theme and display", icon: Accessibility, keywords: "theme system light dark appearance display accessibility contrast" },
   { id: "notifications", label: "Notifications", description: "Alerts and summaries", icon: Bell, keywords: "email alert reminder corrective action assignment summary digest" },
   { id: "security", label: "Security", description: "Passkeys and session", icon: ShieldCheck, keywords: "passkey password device browser session sign out security" },
   { id: "guidance", label: "Guided setup", description: "Progress and learning", icon: PlayCircle, keywords: "tour onboarding progress replay reset walkthrough" },
@@ -99,7 +99,7 @@ function SettingToggle({ checked, label, description, onChange }: { checked: boo
 export default function SettingsScreen() {
   const { user, demoEnabled, passkeys, registerPasskey, renamePasskey, removePasskey, signOut } = useAuth();
   const { profile, completed, skipped, progress, totalSteps, startTour, resetSetup, openHelp } = useGuidedSetup();
-  const { preference, resolvedTheme, motionPreference, reducedMotion } = useTheme();
+  const { preference, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -237,11 +237,9 @@ export default function SettingsScreen() {
           </section>}
 
           {sectionVisible("appearance") && <section id="settings-appearance" ref={(node) => { sectionRefs.current.appearance = node; }} className="settings-card settings-section" aria-labelledby="appearance-settings-title">
-            <div className="settings-card__heading"><span><Accessibility size={21} /></span><div><p className="settings-section__eyebrow">Experience</p><h2 id="appearance-settings-title">Appearance and motion</h2><p>Choose how the application looks and moves without changing your work.</p></div><small>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small></div>
+            <div className="settings-card__heading"><span><Accessibility size={21} /></span><div><p className="settings-section__eyebrow">Experience</p><h2 id="appearance-settings-title">Appearance</h2><p>Choose how the application looks without changing your work.</p></div><small>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small></div>
             <div className="appearance-setting"><div className="setting-subheading"><div><strong>Color theme</strong><span>System follows this device and updates automatically.</span></div></div><ThemeSelector /></div>
             <div className="appearance-preview" aria-label={`${resolvedTheme} theme preview`}><div className="appearance-preview__rail"><span /><span /><span /></div><div className="appearance-preview__body"><span /><div><span /><span /></div><div><span /><span /></div></div><small>Live {resolvedTheme} preview</small></div>
-            <div className="appearance-setting"><div className="setting-subheading"><div><strong>Motion</strong><span>Reduce movement for a calmer, more accessible experience.</span></div><small>{motionPreference === "system" ? `${reducedMotion ? "Reduced" : "Standard"} from system` : motionPreference === "reduced" ? "Reduced selected" : "Standard selected"}</small></div><MotionSelector /></div>
-            <InlineMessage tone="info" title="Google Sans is applied throughout">Typography, focus visibility, contrast, and touch targets remain consistent in every appearance.</InlineMessage>
           </section>}
 
           {sectionVisible("notifications") && <section id="settings-notifications" ref={(node) => { sectionRefs.current.notifications = node; }} className="settings-card settings-section" aria-labelledby="notification-settings-title">
