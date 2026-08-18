@@ -49,6 +49,7 @@ const navigation = [
     label: "Administration",
     roles: ["administrator"] as UserRole[],
     items: [
+      { to: "/admin/sites", label: "Sites", icon: Building2 },
       { to: "/admin/imports", label: "Imports", icon: FileInput },
       { to: "/admin/requirements", label: "Master requirements", icon: FileText },
     ],
@@ -60,6 +61,7 @@ const bottomTabs = [
   { to: "/assessment", label: "Assessment", icon: ClipboardCheck, matches: ["/assessment"], roles: ["site-contributor"] as UserRole[] },
   { to: "/actions", label: "Actions", icon: Activity, matches: ["/actions"], roles: ["site-contributor"] as UserRole[] },
   { to: "/dashboard", label: "Dashboard", icon: BarChart3, matches: ["/dashboard", "/sites/"], roles: ["enterprise-viewer", "administrator"] as UserRole[] },
+  { to: "/admin/sites", label: "Sites", icon: Building2, matches: ["/admin/sites"], roles: ["administrator"] as UserRole[] },
   { to: "/admin/imports", label: "Imports", icon: FileInput, matches: ["/admin/imports"], roles: ["administrator"] as UserRole[] },
   { to: "/admin/requirements", label: "Requirements", icon: FileText, matches: ["/admin/requirements"], roles: ["administrator"] as UserRole[] },
 ];

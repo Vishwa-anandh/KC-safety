@@ -3812,13 +3812,14 @@ h3 {
   gap: 0.6rem 0.75rem;
 }
 
-.checkbox-list__toolbar .search-control { flex: 1 1 220px; }
-
+/* Fixed 320px to match every other search box in the app, rather than growing to fill. */
+.checkbox-list__toolbar .search-control { flex: 0 1 320px; min-width: 0; }
 .checkbox-list__bulk {
   display: flex;
   flex: none;
   align-items: center;
   gap: 0.9rem;
+  margin-left: auto;
   white-space: nowrap;
 }
 
@@ -5030,14 +5031,16 @@ h3 {
    right edge of the page and widens the document. Anchor those to the button's right edge
    instead — this is what was causing a few px of horizontal page scroll on table screens. */
 .row-actions .app-tooltip--bottom,
-.table-row-actions .app-tooltip--bottom {
+.table-row-actions .app-tooltip--bottom,
+.dialog__header .app-tooltip--bottom {
   left: auto;
   right: 0;
   transform: translate(0, -4px);
 }
 
 .row-actions .app-tooltip--bottom::after,
-.table-row-actions .app-tooltip--bottom::after {
+.table-row-actions .app-tooltip--bottom::after,
+.dialog__header .app-tooltip--bottom::after {
   left: auto;
   right: 12px;
 }
@@ -5045,7 +5048,9 @@ h3 {
 .row-actions .icon-button:hover > .app-tooltip--bottom,
 .row-actions .icon-button:focus-visible > .app-tooltip--bottom,
 .table-row-actions .icon-button:hover > .app-tooltip--bottom,
-.table-row-actions .icon-button:focus-visible > .app-tooltip--bottom {
+.table-row-actions .icon-button:focus-visible > .app-tooltip--bottom,
+.dialog__header .icon-button:hover > .app-tooltip--bottom,
+.dialog__header .icon-button:focus-visible > .app-tooltip--bottom {
   transform: translate(0, 0);
 }
 

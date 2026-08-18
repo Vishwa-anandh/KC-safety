@@ -27,7 +27,7 @@ import {
 import { useAppState, type ImportHistoryRecord } from "../AppState";
 import { dashboardSites } from "../data";
 import type { MasterRequirement } from "../types";
-import { Button, CheckboxList, EmptyState, IconButton, InlineMessage, PageHeader, Select } from "../components/UI";
+import { Button, CheckboxList, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../components/UI";
 import { cx } from "../utils";
 
 const importSteps = ["Select sites", "Upload", "Inspect", "Map", "Validate", "Confirm", "Result"];
@@ -104,6 +104,51 @@ export function AdminImportHistoryScreen() {
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Audit trail</p><h2>Completed imports</h2></div><span>{rows.length} of {importHistory.length} shown</span></div>
         {rows.length ? <div className="history-list">{rows.map(({ record, isActive }) => <article key={record.id}><span className="history-list__icon"><FileSpreadsheet size={20} /></span><div><strong>{record.fileName}</strong><span>{record.id} · {new Date(record.importedAt).toLocaleString()}</span><small>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small></div><span className="history-list__actions">{isActive && <span className="publish-badge">Active</span>}<span className={cx("publish-badge", record.publishStatus === "Draft" && "publish-badge--draft")}>{record.publishStatus}</span><Link className="button button--tertiary button--compact" to={`/admin/imports/${record.id}/preview`}>Preview</Link></span></article>)}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
+      </section>
+    </div>
+  );
+}
+
+export function AdminSitesScreen() {
+  const { masterRequirements } = useAppState();
+  const [query, setQuery] = useState("");
+  const [region, setRegion] = useState("all");
+  const regions = [...new Set(dashboardSites.map((site) => site.region))];
+  const rows = dashboardSites.filter((site) =>
+    `${site.name} ${site.code} ${site.region} ${site.segment}`.toLowerCase().includes(query.toLowerCase()) &&
+    (region === "all" || site.region === region));
+  // A requirement with no site scoping applies everywhere, so it counts toward every site.
+  const globalCount = masterRequirements.filter((item) => item.siteIds.length === 0).length;
+  const scopedCountFor = (siteId: string) => masterRequirements.filter((item) => item.siteIds.includes(siteId)).length;
+
+  return (
+    <div className="page-container">
+      <PageHeader eyebrow="Administration" title="Sites" description="Every site in the KC network, its assessment status, and the governed requirements scoped to it." />
+      <div className="metrics-grid">
+        <MetricCard label="Total sites" value={dashboardSites.length} detail={`Across ${regions.length} regions`} icon={<Building2 size={21} />} tone="brand" />
+        <MetricCard label="Assessment complete" value={dashboardSites.filter((site) => site.completion === 100).length} detail="Reached 100% completion" icon={<CheckCircle2 size={21} />} tone="success" />
+        <MetricCard label="Not started" value={dashboardSites.filter((site) => site.completion === 0).length} detail="No assessment recorded" icon={<Circle size={21} />} tone="warning" />
+        <MetricCard label="Global requirements" value={globalCount} detail="Apply to every site" icon={<FileText size={21} />} />
+      </div>
+      <section className="table-card">
+        <div className="dashboard-filter-bar">
+          <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sites" /></label>
+          <Select label="Filter region" icon={<Filter size={18} />} value={region} onChange={setRegion} options={[{ value: "all", label: "All regions" }, ...regions.map((value) => ({ value, label: value }))]} />
+        </div>
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site network</p><h2>All sites</h2></div><span>{rows.length} of {dashboardSites.length} shown</span></div>
+        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Completion</th><th>Requirements</th><th>Last updated</th></tr></thead><tbody>{rows.map((site) => {
+          const scoped = scopedCountFor(site.id);
+          return (
+            <tr key={site.id}>
+              <td data-label="Site"><strong>{site.name}</strong><span>{site.code}</span></td>
+              <td data-label="Region">{site.region}</td>
+              <td data-label="Segment">{site.segment}</td>
+              <td data-label="Completion"><span className={cx("completion-badge", site.completion === 100 ? "completion-badge--complete" : site.completion === 0 ? "completion-badge--not-started" : "completion-badge--in-progress")}>{site.completion}%</span></td>
+              <td data-label="Requirements">{scoped ? `${scoped} scoped` : "Global only"}<span>{globalCount} global</span></td>
+              <td data-label="Last updated">{site.updated}</td>
+            </tr>
+          );
+        })}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
       </section>
     </div>
   );
@@ -294,7 +339,7 @@ export function AdminRequirementsScreen() {
   return (
     <div className="page-container">
       <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirement, guidance, evidence, hierarchy, and version content." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")} data-tour="add-requirement">Add requirement</Button>} />
-      {feedback ? <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage> : <InlineMessage tone="info" title="Protected master content">Only authorized administrators can edit these records. Site and regional users always see them as read-only.</InlineMessage>}
+      {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
       <section className="table-card">
         <div className="dashboard-filter-bar" data-tour="requirement-filters">
           <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
