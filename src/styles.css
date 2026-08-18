@@ -3812,6 +3812,7 @@ h3 {
 .empty-state {
   display: grid;
   width: min(560px, 100%);
+  margin: 0 auto;
   justify-items: center;
   border: 1px solid var(--border-translucent);
   border-radius: 24px;
