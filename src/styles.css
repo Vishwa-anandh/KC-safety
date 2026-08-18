@@ -3456,7 +3456,7 @@ h3 {
   padding: 0.85rem 1rem;
 }
 
-/* Every filter-bar search box is a fixed 320px rather than flex-growing: each screen's filter
+/* Every filter-bar search box is a fixed 420px rather than flex-growing: each screen's filter
    row holds a different number of selects, so a growing search box ends up a different width on
    every page. No grow keeps them visually identical across screens; shrink is still allowed so
    narrow viewports collapse gracefully (and the mobile rule below overrides to full width). */
@@ -3464,7 +3464,7 @@ h3 {
 .dashboard-filter-bar--expanded .search-control,
 .filter-row .search-control,
 .content-toolbar .search-control {
-  flex: 0 1 320px;
+  flex: 0 1 420px;
   min-width: 0;
 }
 
@@ -3812,8 +3812,8 @@ h3 {
   gap: 0.6rem 0.75rem;
 }
 
-/* Fixed 320px to match every other search box in the app, rather than growing to fill. */
-.checkbox-list__toolbar .search-control { flex: 0 1 320px; min-width: 0; }
+/* Fixed 420px to match every other search box in the app, rather than growing to fill. */
+.checkbox-list__toolbar .search-control { flex: 0 1 420px; min-width: 0; }
 .checkbox-list__bulk {
   display: flex;
   flex: none;
