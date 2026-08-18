@@ -170,7 +170,7 @@ function ContactsGroup({ group, draft, errors, onChange }: { group: "local" | "r
 }
 
 export function SiteInformationScreen() {
-  const { siteContacts, saveSiteContacts, lastUpdated } = useAppState();
+  const { siteContacts, saveSiteContacts } = useAppState();
   const [draft, setDraft] = useState<SiteContacts>(siteContacts);
   const [saved, setSaved] = useState(true);
   const [errors, setErrors] = useState<Set<keyof SiteContacts>>(new Set());
@@ -201,7 +201,6 @@ export function SiteInformationScreen() {
   return (
     <div className="page-container">
       <PageHeader eyebrow="Site workspace" title="Site information" description="Maintain leadership and contact details for your assigned site. Core site identity is governed centrally." actions={<Button variant="primary" icon={<Save size={18} />} onClick={save} disabled={saved} data-tour="site-save">Save changes</Button>} />
-      <SiteContextCard updated={lastUpdated} />
       {confirmation ? <InlineMessage tone="success" title="Site contacts saved">The updated contact information is now available across this site workspace.</InlineMessage> : <InlineMessage tone="info" title="Site identity is read-only">Site name, code, region, and segment come from the KC site master and cannot be changed here.</InlineMessage>}
       {errors.size > 0 && <InlineMessage tone="danger" title="Review the highlighted fields">Complete every contact and use a valid email address before saving.</InlineMessage>}
       <section className="form-card" data-tour="site-contacts-form">
