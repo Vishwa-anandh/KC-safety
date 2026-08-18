@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
 import {
   AlertCircle,
   Check,
@@ -367,6 +367,9 @@ export interface CheckboxListOption {
   value: string;
   label: string;
   hint?: string;
+  /** Optional group heading (e.g. a region) — options should already be sorted by group;
+   * a heading row is inserted wherever the group changes between consecutive options. */
+  group?: string;
 }
 
 export function CheckboxList({
@@ -380,17 +383,29 @@ export function CheckboxList({
   selected: string[];
   onChange: (values: string[]) => void;
   label: string;
-  /** Adds a search box and caps the list to a scrollable height — use once the option count
-   * can run into the hundreds (e.g. a site list), where a flat unbounded list stops working. */
+  /** Adds a search box, a scrollable capped height, and Select all/Clear actions — use once
+   * the option count can run into the hundreds (e.g. a site list), where a flat unbounded list
+   * with no bulk actions stops working. */
   searchable?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const filtered = searchable && query.trim()
-    ? options.filter((option) => `${option.label} ${option.hint ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
+    ? options.filter((option) => `${option.label} ${option.hint ?? ""} ${option.group ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
     : options;
+  const allFilteredSelected = filtered.length > 0 && filtered.every((option) => selected.includes(option.value));
 
   function toggle(value: string) {
     onChange(selected.includes(value) ? selected.filter((current) => current !== value) : [...selected, value]);
+  }
+
+  // Selects (or clears) every option currently visible under the search filter, leaving any
+  // selection outside that filtered set untouched — so narrowing to "APAC" and hitting Select
+  // all doesn't disturb sites already picked from an earlier search.
+  function toggleAllFiltered() {
+    const filteredValues = filtered.map((option) => option.value);
+    onChange(allFilteredSelected
+      ? selected.filter((value) => !filteredValues.includes(value))
+      : [...new Set([...selected, ...filteredValues])]);
   }
 
   return (
@@ -401,24 +416,31 @@ export function CheckboxList({
             <Search size={16} />
             <input type="text" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} aria-label={`Search ${label}`} />
           </label>
-          <span className="checkbox-list__count">
-            {selected.length} selected
-            {selected.length > 0 && <button type="button" onClick={() => onChange([])}>Clear</button>}
-          </span>
+          <div className="checkbox-list__bulk">
+            <button type="button" onClick={toggleAllFiltered} disabled={!filtered.length}>{allFilteredSelected ? "Deselect all" : query.trim() ? "Select all matching" : "Select all"}</button>
+            <span className="checkbox-list__count">
+              {selected.length} selected
+              {selected.length > 0 && <button type="button" onClick={() => onChange([])}>Clear</button>}
+            </span>
+          </div>
         </div>
       )}
       <div className={cx("checkbox-list", searchable && "checkbox-list--scroll")} role="group" aria-label={label}>
-        {filtered.length ? filtered.map((option) => {
+        {filtered.length ? filtered.map((option, index) => {
           const checked = selected.includes(option.value);
+          const showGroupHeading = option.group && option.group !== filtered[index - 1]?.group;
           return (
-            <label className={cx("checkbox-list__row", checked && "checkbox-list__row--checked")} key={option.value}>
-              <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} />
-              <span>
-                <strong>{option.label}</strong>
-                {option.hint && <small>{option.hint}</small>}
-              </span>
-              {checked && <CheckCircle2 size={18} />}
-            </label>
+            <Fragment key={option.value}>
+              {showGroupHeading && <p className="checkbox-list__group">{option.group}</p>}
+              <label className={cx("checkbox-list__row", checked && "checkbox-list__row--checked")}>
+                <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} />
+                <span>
+                  <strong>{option.label}</strong>
+                  {option.hint && <small>{option.hint}</small>}
+                </span>
+                {checked && <CheckCircle2 size={18} />}
+              </label>
+            </Fragment>
           );
         }) : <p className="checkbox-list__empty">No matches for "{query}"</p>}
       </div>

@@ -3700,6 +3700,11 @@ h3 {
   display: grid;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-lg);
+}
+
+.inspection-list {
+  /* .mapping-table can't clip its own overflow — each row now holds a Select whose dropdown
+     would otherwise be cut off by this boundary the moment it opens. */
   overflow: hidden;
 }
 
@@ -3746,6 +3751,12 @@ h3 {
   background: var(--warning-surface);
 }
 
+/* .mapping-table no longer clips overflow (its Select popovers need to escape it), so a
+   flagged row's colored background needs its own corner-rounding to match the container
+   whenever it lands on the first/last row — overflow:hidden used to do this for free. */
+.mapping-table > div:first-child { border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); }
+.mapping-table > div:last-child { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
+
 .checkbox-list {
   display: grid;
   border: 1px solid var(--neutral-200);
@@ -3774,9 +3785,34 @@ h3 {
 
 .checkbox-list__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem 0.75rem;
 }
+
+.checkbox-list__toolbar .search-control { flex: 1 1 220px; }
+
+.checkbox-list__bulk {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.9rem;
+  white-space: nowrap;
+}
+
+.checkbox-list__bulk > button {
+  border: 1px solid var(--neutral-300);
+  border-radius: 8px;
+  background: var(--surface-panel);
+  padding: 0.45rem 0.7rem;
+  color: var(--neutral-700);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.checkbox-list__bulk > button:hover:not(:disabled) { border-color: var(--kc-400); color: var(--kc-800); }
+.checkbox-list__bulk > button:disabled { color: var(--neutral-400); cursor: not-allowed; }
 
 .checkbox-list__count {
   display: flex;
@@ -3801,6 +3837,18 @@ h3 {
 .checkbox-list.checkbox-list--scroll {
   max-height: 320px;
   overflow-y: auto;
+}
+
+.checkbox-list__group {
+  margin: 0;
+  border-bottom: 1px solid var(--neutral-200);
+  background: var(--neutral-25);
+  padding: 0.4rem 0.85rem;
+  color: var(--neutral-500);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .checkbox-list__empty {
