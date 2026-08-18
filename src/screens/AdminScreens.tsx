@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -41,19 +42,33 @@ function downloadTextFile(name: string, content: string, type = "text/csv;charse
   const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
 }
 
-function ImportHistoryDialog({ records, onClose }: { records: ImportHistoryRecord[]; onClose: () => void }) {
-  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close import history" onClick={onClose} /><section className="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="history-title"><div className="dialog__header"><div><p className="eyebrow">Administration audit</p><h2 id="history-title">Import history</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>{records.length ? <div className="history-list">{records.map((record) => <article key={record.id}><span className="history-list__icon"><FileSpreadsheet size={20} /></span><div><strong>{record.fileName}</strong><span>{record.id} · {new Date(record.importedAt).toLocaleString()}</span><small>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small></div><span className="publish-badge">{record.status}</span></article>)}</div> : <EmptyState icon={<History size={28} />} title="No imports recorded" description="Completed imports will appear here with their audit reference." />}<div className="dialog__footer"><Button variant="primary" onClick={onClose}>Done</Button></div></section></div>;
+export function AdminImportHistoryScreen() {
+  const { importHistory } = useAppState();
+  const [query, setQuery] = useState("");
+  const rows = importHistory.filter((record) => `${record.fileName} ${record.id} ${record.importedBy}`.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <div className="page-container">
+      <Link className="back-link" to="/admin/imports"><ArrowLeft size={17} /> Back to master data import</Link>
+      <PageHeader eyebrow="Administration audit" title="Import history" description="Every completed master data import, with its audit reference, result counts, and administrator." />
+      <section className="table-card">
+        <div className="dashboard-filter-bar">
+          <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search file name, audit reference, or administrator" /></label>
+        </div>
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Audit trail</p><h2>Completed imports</h2></div><span>{rows.length} of {importHistory.length} shown</span></div>
+        {rows.length ? <div className="history-list">{rows.map((record) => <article key={record.id}><span className="history-list__icon"><FileSpreadsheet size={20} /></span><div><strong>{record.fileName}</strong><span>{record.id} · {new Date(record.importedAt).toLocaleString()}</span><small>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small></div><span className="publish-badge">{record.status}</span></article>)}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
+      </section>
+    </div>
+  );
 }
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, recordImport } = useAppState();
+  const { recordImport } = useAppState();
   const [step, setStep] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<ImportHistoryRecord | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function selectFile(selected?: File) {
@@ -70,7 +85,7 @@ export function AdminImportsScreen() {
 
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Administration" title="Master data import" description="Validate an approved KC workbook before applying requirements and hierarchy changes." actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => setHistoryOpen(true)} data-tour="import-history">Import history</Button>} />
+      <PageHeader eyebrow="Administration" title="Master data import" description="Validate an approved KC workbook before applying requirements and hierarchy changes." actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => navigate("/admin/imports/history")} data-tour="import-history">Import history</Button>} />
       <InlineMessage tone="warning" title="Administrative action">Imports update governed master requirements for every authorized site. Inspect the workbook, review the dry run, and resolve blocking errors before confirmation.</InlineMessage>
       <section className="import-card">
         <StepIndicator current={step} />
@@ -80,11 +95,10 @@ export function AdminImportsScreen() {
           {step === 2 && <><div className="import-stage__heading"><span className="stage-icon"><ArrowRight size={23} /></span><div><p className="eyebrow">Step 3 of 6</p><h2>Map workbook columns</h2><p>Confirm how source values map into governed master fields.</p></div></div><div className="mapping-table">{[["Requirement ID", "requirement_id", "OS 1.2.1"], ["Requirement text", "requirement_text", "Site leadership establishes..."], ["How to meet", "guidance", "Assign clear accountabilities..."], ["Evidence requirements", "expected_evidence", "Leadership matrix..."], ["Sub-section", "subsection", "1.2 Leadership commitment"]].map(([source, target, sample]) => <div key={source}><span><strong>{source}</strong><small>Source column</small></span><ArrowRight size={18} /><span><strong>{target}</strong><small>Target field</small></span><span className="mapping-sample">{sample}</span><CheckCircle2 size={18} /></div>)}</div></>}
           {step === 3 && <><div className="import-stage__heading"><span className="stage-icon"><ShieldCheck size={23} /></span><div><p className="eyebrow">Step 4 of 6</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className="validation-summary"><div className="validation-summary__success"><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className="validation-summary__warning"><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHSS_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
           {step === 4 && <><div className="import-stage__heading"><span className="stage-icon"><FileCheck2 size={23} /></span><div><p className="eyebrow">Step 5 of 6</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className="dry-run-grid"><div><span className="dry-run-dot dry-run-dot--create" /><strong>18</strong><span>Create</span></div><div><span className="dry-run-dot dry-run-dot--update" /><strong>46</strong><span>Update</span></div><div><span className="dry-run-dot dry-run-dot--same" /><strong>688</strong><span>Unchanged</span></div><div><span className="dry-run-dot dry-run-dot--conflict" /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for all sites and writes an administrator audit record.</InlineMessage><label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
-          {step === 5 && result && <div className="result-state"><span className="result-state__icon"><CheckCircle2 size={34} /></span><p className="eyebrow">Import complete</p><h2>Master data was processed successfully</h2><p>{result.created} records created, {result.updated} updated, and {result.unchanged} unchanged. Audit reference <strong>{result.id}</strong>.</p><div><Button variant="secondary" onClick={() => setHistoryOpen(true)}>View audit entry</Button><Button variant="primary" onClick={() => navigate("/admin/requirements")}>Open master requirements</Button><Button variant="tertiary" onClick={resetImport}>Import another file</Button></div></div>}
+          {step === 5 && result && <div className="result-state"><span className="result-state__icon"><CheckCircle2 size={34} /></span><p className="eyebrow">Import complete</p><h2>Master data was processed successfully</h2><p>{result.created} records created, {result.updated} updated, and {result.unchanged} unchanged. Audit reference <strong>{result.id}</strong>.</p><div><Button variant="secondary" onClick={() => navigate("/admin/imports/history")}>View audit entry</Button><Button variant="primary" onClick={() => navigate("/admin/requirements")}>Open master requirements</Button><Button variant="tertiary" onClick={resetImport}>Import another file</Button></div></div>}
         </div>
         {step < 5 && <div className="import-card__footer"><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !file) || (step === 4 && !confirmed)} icon={<ArrowRight size={17} />} iconPosition="end">{step === 4 ? "Confirm import" : "Continue"}</Button></div>}
       </section>
-      {historyOpen && <ImportHistoryDialog records={importHistory} onClose={() => setHistoryOpen(false)} />}
     </div>
   );
 }

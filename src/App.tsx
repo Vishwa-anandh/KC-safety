@@ -4,7 +4,7 @@ import { useAuth } from "./Auth";
 import AppShell from "./components/AppShell";
 import { roleProfiles, type UserRole } from "./GuidedSetup";
 import { NoAssignmentScreen, SessionExpiredScreen, UnauthorizedScreen } from "./screens/AccessStates";
-import { AdminImportsScreen, AdminRequirementsScreen } from "./screens/AdminScreens";
+import { AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementsScreen } from "./screens/AdminScreens";
 import { DashboardScreen, SiteDrilldownScreen } from "./screens/DashboardScreens";
 import RequirementWorkspace from "./screens/RequirementWorkspace";
 import LoginScreen from "./screens/LoginScreen";
@@ -90,6 +90,7 @@ export default function App() {
             </Route>
             <Route element={<RequireRole allowed={["administrator"]} />}>
               <Route path="admin/imports" element={<AdminImportsScreen />} />
+              <Route path="admin/imports/history" element={<AdminImportHistoryScreen />} />
               <Route path="admin/requirements" element={<AdminRequirementsScreen />} />
             </Route>
             <Route path="settings" element={<SettingsLayout />}>
