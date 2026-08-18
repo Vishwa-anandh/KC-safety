@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   ArrowDownToLine,
-  ArrowLeft,
   ArrowRight,
   BarChart3,
   CheckCircle2,
@@ -150,7 +149,7 @@ export function SiteSectionDetailScreen() {
   if (!section) {
     return (
       <div className="page-container">
-        <Link className="back-link" to={`/sites/${site.id}`}><ArrowLeft size={17} /> Back to {site.name}</Link>
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><Link to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} /><span aria-current="page">Section</span></nav>
         <EmptyState icon={<Search size={27} />} title="Section not found" description="This assessment section is not part of the current site's framework." />
       </div>
     );
@@ -158,7 +157,6 @@ export function SiteSectionDetailScreen() {
 
   return (
     <div className="page-container">
-      <Link className="back-link" to={`/sites/${site.id}`}><ArrowLeft size={17} /> Back to {site.name}</Link>
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link to="/dashboard">Dashboard</Link><ChevronRight size={15} />
         <Link to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} />
@@ -247,7 +245,7 @@ export function SiteDrilldownScreen() {
   const hasRealContacts = site.id === "northstar";
   return (
     <div className="page-container">
-      <Link className="back-link" to="/dashboard"><ArrowLeft size={17} /> Back to dashboard</Link>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
       <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHSS_${site.code}_assessment.csv`)}>Export site view</Button>} />
       <InlineMessage tone="info" title={canEditAssignedSite ? "Assigned site—editing available" : "Read-only enterprise view"}>{canEditAssignedSite ? "Open any section below to continue work in your assigned site assessment." : "You can inspect this site's assessment details. Enterprise and administrative oversight does not grant site editing access."}</InlineMessage>
       <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>

@@ -2414,15 +2414,24 @@ h3 {
 
 /* Tables */
 
+/* No horizontal scrolling: the wrap must not clip either, since row menus are absolutely
+   positioned inside it and any non-visible overflow axis forces the other axis to clip too. */
 .data-table-wrap {
   max-width: 100%;
-  overflow-x: auto;
 }
 
 .data-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.79rem;
+}
+
+/* Fixed layout means cells can no longer push the table wider than its container, so long
+   values must wrap (or ellipsis) rather than overflow. */
+.data-table th,
+.data-table td {
+  overflow-wrap: anywhere;
 }
 
 .data-table th,
@@ -3463,9 +3472,6 @@ h3 {
   align-items: center;
 }
 
-.dashboard-table {
-  min-width: 990px;
-}
 
 .table-completion {
   display: flex;
@@ -3945,7 +3951,58 @@ h3 {
 
 .result-state h2 { margin: 0.25rem 0 0.5rem; }
 .result-state p { color: var(--neutral-600); }
-.result-state > div { display: flex; gap: 0.65rem; margin-top: 1.2rem; }
+.result-state__icon--published { background: var(--kc-50); color: var(--kc-700); }
+
+.result-summary {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
+.result-summary > div {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 12px;
+  background: var(--neutral-25);
+  padding: 0.8rem 0.5rem;
+}
+
+.result-summary strong { font-size: 1.35rem; }
+.result-summary span { color: var(--neutral-500); font-size: 0.72rem; }
+
+.result-state__audit { margin-top: 1rem; font-size: 0.78rem; }
+.result-state__audit strong { color: var(--neutral-800); }
+
+.result-state__primary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 1.4rem;
+}
+
+.result-state__links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.result-state__links button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--kc-700);
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.result-state__links button:hover { color: var(--kc-800); text-decoration: underline; }
 
 .standalone-state {
   display: grid;
@@ -4662,11 +4719,13 @@ h3 {
     display: none;
   }
 
-  .result-state > div,
+  .result-state__primary,
   .import-card__footer {
     align-items: stretch;
     flex-direction: column;
   }
+
+  .result-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .import-card__footer .button,
   .result-state .button {
@@ -4966,6 +5025,36 @@ h3 {
 .history-list__actions { display: flex; align-items: center; gap: 0.5rem; }
 
 .row-actions--menu { position: relative; }
+
+/* Table action buttons sit in the last column, so a centre-anchored tooltip hangs past the
+   right edge of the page and widens the document. Anchor those to the button's right edge
+   instead — this is what was causing a few px of horizontal page scroll on table screens. */
+.row-actions .app-tooltip--bottom,
+.table-row-actions .app-tooltip--bottom {
+  left: auto;
+  right: 0;
+  transform: translate(0, -4px);
+}
+
+.row-actions .app-tooltip--bottom::after,
+.table-row-actions .app-tooltip--bottom::after {
+  left: auto;
+  right: 12px;
+}
+
+.row-actions .icon-button:hover > .app-tooltip--bottom,
+.row-actions .icon-button:focus-visible > .app-tooltip--bottom,
+.table-row-actions .icon-button:hover > .app-tooltip--bottom,
+.table-row-actions .icon-button:focus-visible > .app-tooltip--bottom {
+  transform: translate(0, 0);
+}
+
+/* While a row menu is open its trigger still holds hover/focus, so the icon-button tooltip
+   would sit on top of the menu and read as a second stacked popup. Suppress it for that row. */
+.row-actions--menu:has(.row-menu) .app-tooltip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
 
 .row-menu {
   position: absolute;
@@ -5697,7 +5786,7 @@ h3 {
 .login-support a { color: var(--kc-700); font-weight: 680; }
 .login-support a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 
-.settings-card { display: grid; gap: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-xl); background: var(--surface-panel); box-shadow: var(--shadow-1); padding: 1.1rem; }
+.settings-card { display: grid; min-width: 0; gap: 1rem; border: 1px solid var(--neutral-200); border-radius: var(--radius-xl); background: var(--surface-panel); box-shadow: var(--shadow-1); padding: 1.1rem; }
 .settings-card__heading { display: flex; align-items: flex-start; gap: 0.7rem; }
 .settings-card__heading > span:first-child { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 12px; background: var(--kc-50); color: var(--kc-700); }
 .settings-card__heading > div { display: grid; gap: 0.12rem; min-width: 0; }
@@ -5707,7 +5796,10 @@ h3 {
 .settings-card__heading > .capability { margin-left: auto; }
 .settings-card__heading > small { color: var(--neutral-500); font-size: 0.68rem; }
 
-.settings-identity { display: grid; grid-template-columns: auto minmax(180px, 0.7fr) minmax(300px, 1.3fr); align-items: center; gap: 0.9rem; border-radius: 14px; background: var(--neutral-25); padding: 0.9rem; }
+/* Column minimums are deliberately small: at ~1100px the app sidebar (268px) plus the settings
+   index (260px) leaves little room, and larger minimums here used to push the whole settings
+   page wider than the viewport. */
+.settings-identity { display: grid; grid-template-columns: auto minmax(120px, 0.7fr) minmax(200px, 1.3fr); align-items: center; gap: 0.9rem; border-radius: 14px; background: var(--neutral-25); padding: 0.9rem; }
 .avatar--large { width: 52px; height: 52px; font-size: 0.84rem; }
 .settings-identity > div { display: grid; min-width: 0; }
 .settings-identity > div strong { font-size: 0.88rem; }
@@ -5842,6 +5934,13 @@ h3 {
   gap: 1rem;
 }
 
+/* Grid items default to min-width:auto, so this column refused to shrink below its content's
+   min-content width and pushed the whole page wider than the viewport — the track being
+   minmax(0,1fr) is not enough on its own. */
+.settings-content {
+  min-width: 0;
+}
+
 .settings-index {
   position: sticky;
   top: calc(var(--content-offset) + 1rem);
@@ -5929,7 +6028,9 @@ h3 {
 .settings-index__account strong { font-size: 0.73rem; }
 .settings-index__account div > span { color: var(--neutral-500); font-size: 0.62rem; }
 
-.settings-content { display: grid; min-width: 0; gap: 0.85rem; }
+/* Explicit minmax(0,1fr) track: a bare grid track defaults to min-content, so a wide card
+   inside made this column wider than the space it was given and overflowed the page. */
+.settings-content { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 0.85rem; }
 .settings-content > .inline-message { margin: 0; }
 
 .managed-badge,
@@ -5948,7 +6049,9 @@ h3 {
 .managed-badge { margin-left: auto; background: var(--neutral-100); color: var(--neutral-600); }
 
 .settings-identity--expanded {
-  grid-template-columns: auto minmax(180px, 0.65fr) minmax(340px, 1.35fr);
+  /* Small column minimums on purpose — see .settings-identity. Large minimums here forced the
+     whole settings page wider than the viewport at ~1100px. */
+  grid-template-columns: auto minmax(120px, 0.65fr) minmax(200px, 1.35fr);
   border: 1px solid var(--neutral-200);
 }
 
@@ -6098,9 +6201,10 @@ h3 {
 @media (max-width: 900px) {
   .settings-shell { grid-template-columns: 1fr; }
   .settings-index { z-index: 15; top: calc(var(--content-offset) + 0.5rem); display: grid; max-height: none; overflow: visible; border-radius: 16px; }
-  .settings-index nav { display: flex; overflow-x: auto; padding-bottom: 0.15rem; scrollbar-width: none; }
-  .settings-index nav::-webkit-scrollbar { display: none; }
-  .settings-index nav > a { min-width: max-content; min-height: 42px; flex: 0 0 auto; padding: 0.35rem 0.55rem; }
+  /* Wraps onto multiple rows rather than scrolling sideways — the tab strip used to be a
+     horizontally scrolling row, which hid its later items behind an invisible scrollbar. */
+  .settings-index nav { display: flex; flex-wrap: wrap; padding-bottom: 0.15rem; }
+  .settings-index nav > a { min-height: 42px; flex: 0 1 auto; padding: 0.35rem 0.55rem; }
   .settings-index nav > a > span:first-child { width: 30px; height: 30px; flex-basis: 30px; }
   .settings-index nav small,
   .settings-index__account { display: none; }

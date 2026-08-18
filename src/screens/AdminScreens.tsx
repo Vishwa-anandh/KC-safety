@@ -1,12 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
   Building2,
   Check,
   CheckCircle2,
+  ChevronRight,
   Circle,
   Copy,
   Download,
@@ -96,11 +96,11 @@ export function AdminImportHistoryScreen() {
     .filter(({ record }) => `${record.fileName} ${record.id} ${record.importedBy}`.toLowerCase().includes(query.toLowerCase()));
   return (
     <div className="page-container">
-      <Link className="back-link" to="/admin/imports"><ArrowLeft size={17} /> Back to master data import</Link>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/imports">Master data import</Link><ChevronRight size={15} /><span aria-current="page">Import history</span></nav>
       <PageHeader eyebrow="Administration audit" title="Import history" description="Every completed master data import, with its audit reference, result counts, and administrator." />
       <section className="table-card">
         <div className="dashboard-filter-bar">
-          <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search file name, audit reference, or administrator" /></label>
+          <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search imports" /></label>
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Audit trail</p><h2>Completed imports</h2></div><span>{rows.length} of {importHistory.length} shown</span></div>
         {rows.length ? <div className="history-list">{rows.map(({ record, isActive }) => <article key={record.id}><span className="history-list__icon"><FileSpreadsheet size={20} /></span><div><strong>{record.fileName}</strong><span>{record.id} · {new Date(record.importedAt).toLocaleString()}</span><small>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small></div><span className="history-list__actions">{isActive && <span className="publish-badge">Active</span>}<span className={cx("publish-badge", record.publishStatus === "Draft" && "publish-badge--draft")}>{record.publishStatus}</span><Link className="button button--tertiary button--compact" to={`/admin/imports/${record.id}/preview`}>Preview</Link></span></article>)}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
@@ -123,7 +123,7 @@ export function AdminImportBatchPreviewScreen() {
   const published = batch?.publishStatus === "Published";
   return (
     <div className="page-container">
-      <Link className="back-link" to="/admin/imports/history"><ArrowLeft size={17} /> Back to import history</Link>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/imports">Master data import</Link><ChevronRight size={15} /><Link to="/admin/imports/history">Import history</Link><ChevronRight size={15} /><span aria-current="page">{batchId}</span></nav>
       <PageHeader
         eyebrow="Administration audit"
         title="Preview imported requirements"
@@ -193,17 +193,27 @@ export function AdminImportsScreen() {
             const requirementCount = latest.created + latest.updated;
             return (
               <div className="result-state">
-                <span className="result-state__icon"><CheckCircle2 size={34} /></span>
-                <p className="eyebrow">Import complete</p>
-                <h2>Master data was processed successfully</h2>
-                <p>{latest.created} records created, {latest.updated} updated, and {latest.unchanged} unchanged. Audit reference <strong>{latest.id}</strong>.</p>
-                {published && <InlineMessage tone="success" title="Published">This batch's {requirementCount} requirements are now live in the master requirements catalog.</InlineMessage>}
-                <div>
-                  <Button variant="primary" icon={<Check size={17} />} disabled={published} onClick={() => publishImportBatch(latest.id)}>{published ? "Published" : `Publish ${requirementCount} requirements`}</Button>
-                  <Button variant="secondary" onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>Preview imported requirements</Button>
-                  <Button variant="secondary" onClick={() => navigate("/admin/imports/history")}>View audit entry</Button>
-                  <Button variant="secondary" onClick={() => navigate("/admin/requirements")}>Open master requirements</Button>
-                  <Button variant="tertiary" onClick={resetImport}>Import another file</Button>
+                <span className={cx("result-state__icon", published && "result-state__icon--published")}><CheckCircle2 size={34} /></span>
+                <p className="eyebrow">{published ? "Published" : "Import complete"}</p>
+                <h2>{published ? "Requirements are live" : "Review and publish this import"}</h2>
+                <p>{published
+                  ? `All ${requirementCount} requirements from this import are now live in the master requirements catalog.`
+                  : `${requirementCount} requirements are staged as drafts. They stay invisible to sites until you publish them.`}</p>
+                <div className="result-summary">
+                  <div><strong>{latest.created}</strong><span>Created</span></div>
+                  <div><strong>{latest.updated}</strong><span>Updated</span></div>
+                  <div><strong>{latest.unchanged}</strong><span>Unchanged</span></div>
+                  <div><strong>{latest.siteIds.length || "All"}</strong><span>{latest.siteIds.length === 1 ? "Site" : "Sites"}</span></div>
+                </div>
+                <p className="result-state__audit">Audit reference <strong>{latest.id}</strong></p>
+                <div className="result-state__primary">
+                  {!published && <Button variant="primary" icon={<Check size={17} />} onClick={() => publishImportBatch(latest.id)}>Publish {requirementCount} requirements</Button>}
+                  <Button variant="secondary" icon={<FileText size={17} />} onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>{published ? "View imported requirements" : "Review before publishing"}</Button>
+                </div>
+                <div className="result-state__links">
+                  <button type="button" onClick={() => navigate("/admin/imports/history")}>View audit entry</button>
+                  <span className="divider-dot" />
+                  <button type="button" onClick={resetImport}>Import another file</button>
                 </div>
               </div>
             );
@@ -254,6 +264,21 @@ export function AdminRequirementsScreen() {
   const [editing, setEditing] = useState<MasterRequirement | "new" | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
+  // The row menu previously only closed by re-clicking its own trigger, so clicking anywhere
+  // else left it hanging open (and opening another row's menu left both visible).
+  useEffect(() => {
+    if (!menu) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!(event.target as HTMLElement).closest(".row-actions--menu")) setMenu(null);
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") setMenu(null); };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [menu]);
   const sections = [...new Set(masterRequirements.map((item) => item.section))];
   const rows = masterRequirements.filter((item) =>
     (`${item.title} ${item.id}`.toLowerCase().includes(query.toLowerCase())) &&
