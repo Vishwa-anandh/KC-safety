@@ -312,7 +312,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-1-q1",
         "number": "1",
         "text": "Fire and explosion prevention and mitigation systems shall be maintained and inspected according to Factory Mutual (FM), local EHS regulatory, the K-C Preventive Maintenance Standard and manufacturers requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -339,7 +340,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-2-q1",
         "number": "1",
         "text": "All gaps in the fire and explosion prevention and mitigation systems or preventive maintenance on these systems identified in Global Risk Management (GRM) Quality of Risk (QoR) reports shall be corrected.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -367,7 +369,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-3-q1",
         "number": "1",
         "text": "Impairment of fire and explosion prevention and mitigation systems shall be reported according to GRM requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -399,7 +402,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-4-q1",
         "number": "1",
         "text": "Properly labeled compressed gas cylinders shall be securely stored in the upright position, transported upright and handled in a manner to prevent tipping, falling or rolling. Valve protection devices or damage resistant valves shall be used when cylinders are not in use or while being transported or stored. The names of the gases to be stored in cylinder storage areas must be posted and all gas cylinders must be labeled by the supplier in accordance with applicable government regulations. Labels must not be removed.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -430,7 +434,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-5-q1",
         "number": "1",
         "text": "Empty cylinders and full cylinders not in use shall be stored outside of the site or in an inside storage area that conforms to FM 7-50 requirements. Outside storage, if used, shall be separate secure compounds at ground level with sufficient ventilation to prevent explosive gas build-up in the event of a tank leak.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -461,7 +466,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-6-q1",
         "number": "1",
         "text": "Cylinders in use and in storage shall be protected from mechanical damage and overheating. The temperature of gas cylinder storage areas must not exceed 125 oF (50 oC). Design, installation, maintenance and use (refueling and dispensing) of bulk fuel tanks (LPG) shall conform to FM 7-55.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -495,7 +501,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-7-q1",
         "number": "1",
         "text": "Compressed Gas Cylinder Transport, Movement & Use: Transport cylinders only by trained personnel using carts designed for cylinder movement. PPE (safety glasses and gloves) required during handling. Cylinders must have valve covers when not connected to regulators. Do not move cylinders with regulators attached. Protect cylinders from mechanical shocks and damage. Use pressure regulators designed for the specific gas. Close valves on cylinders connected to piping systems when not in use.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -524,7 +531,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-8-q1",
         "number": "1",
         "text": "Cylinders with leaking or damaged pressure relief devices or valves must be taken out of service, tagged and returned to the supplier for repair.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -552,7 +560,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-9-q1",
         "number": "1",
         "text": "Oxidizing gases (e.g., oxygen, chlorine, nitrous oxide, etc.) must be stored in areas separated from and free of flammable and combustible gases and materials.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -584,7 +593,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-10-q1",
         "number": "1",
         "text": "Asphyxiant gases (e.g., nitrogen, helium, carbon dioxide, etc.) must be stored in well-ventilated areas to avoid oxygen displacement in the event of a leak. Gas-tight outlet caps and plugs must be used for toxic gas cylinders during storage.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -615,7 +625,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-11-q1",
         "number": "1",
         "text": "Oxy-acetylene welding and cutting specific requirements: Oxy-acetylene welding and cutting equipment (e.g., torch, hoses, regulator, flashback arrestors, etc.) are kept in good working condition and free from oil or grease; Flashback arrestors and check (non-return) valves must be installed and maintained in good working condition; Acetylene cylinders must always be used in an upright position to avoid loss of solvent which reduces the cylinder capacity; and Evaluate the feasibility of substituting lower volatility fuel gases such as propylene or propane and make substitutions where feasible.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -646,7 +657,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-12-q1",
         "number": "1",
         "text": "Large quantities (single containers > 5 gallons or 19 Liters) of flammable and combustible liquids shall be stored in areas meeting the FM-7-29 storage area requirements and shall be separated from incompatible materials.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -674,7 +686,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-13-q1",
         "number": "1",
         "text": "Small quantities (< 5 gallons or 19 Liters) of flammable liquids shall be stored in metal cabinets designed for flammable liquids.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -707,7 +720,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-14-q1",
         "number": "1",
         "text": "Flammable and combustible liquid quantities used outside of designated storage areas shall not exceed NFPA 30 maximum allowable quantities (MAQs) for controlled areas.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -735,7 +749,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-15-q1",
         "number": "1",
         "text": "Flammable and combustible liquid containers shall not exceed the NFPA 30 maximum allowable size.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -765,7 +780,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-16-q1",
         "number": "1",
         "text": "Grounding and bonding procedures shall be used when flammable liquids are transferred between containers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -795,7 +811,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-17-q1",
         "number": "1",
         "text": "Ignition sources shall be eliminated in areas where flammable and combustible liquids are stored, transferred, dispensed and used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -822,7 +839,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-18-q1",
         "number": "1",
         "text": "Flammable and combustible liquid storage areas shall be ventilated according to FM 7-29 requirements to prevent build-up of vapors.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -850,7 +868,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-19-q1",
         "number": "1",
         "text": "Bulk transfers of flammable liquids shall be performed in enclosed systems meeting FM 7-32 requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -883,7 +902,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-20-q1",
         "number": "1",
         "text": "Pressurized tanks and vessels and associated safety relief valves shall be properly used, maintained and inspect per design manufacture´s instructions, FM, and GRC, and EHS regulatory requirements based on the operations conditions (size, usage, pressure and chemical).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -914,7 +934,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-21-q1",
         "number": "1",
         "text": "Plant areas and equipment where flammable vapors, gases, or combustible dust are present must be evaluated and assigned an explosion hazard classification using NFPA or Atmospheres Explosible (ATEX) hazard classification schemes.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -946,7 +967,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-22-q1",
         "number": "1",
         "text": "Over-pressure protection devices (relief valves, rupture discs, etc.) must conform to FM requirements and be inspected annually and maintained according to manufacturer requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -978,7 +1000,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-23-q1",
         "number": "1",
         "text": "The site shall maintain a documented fugitive dust control (housekeeping) program that conforms to the K-C Housekeeping Standard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1009,7 +1032,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-24-q1",
         "number": "1",
         "text": "A documented combustible dust risk assessment shall be performed on all dust collection systems to determine if they present an explosion hazard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1040,7 +1064,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-25-q1",
         "number": "1",
         "text": "Dust removal and cleaning methods that do not generate dust clouds, such as vacuuming and wet cleaning methods, shall be the primary methods of cleaning.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1072,7 +1097,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-26-q1",
         "number": "1",
         "text": "Compressed air for housekeeping must be restricted to use below 3 meters above floor level and in building or rooms with volumes less than 2000 ft3 (57 m3). Overhead cleaning of building structures with compressed air must be restricted to inaccessible areas, a work-at-heights hazard assessment, and control of potential ignition sources and hot surfaces with 10 meters (33 feet) of where the compressed air is used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1104,7 +1130,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-27-q1",
         "number": "1",
         "text": "Fire and explosion hazards posed by Dust Collection Systems must be controlled with explosion prevention and mitigation systems which meet NFPA, FM, and K-C requirements. Explosion hazard areas must be labeled. Electrical components and installations must comply with the requirements of the assigned explosion hazard classifications.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1132,7 +1159,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-28-q1",
         "number": "1",
         "text": "Explosion prevention and mitigation controls shall be provided to mitigate explosion hazards to an acceptable level of risk as determined by an assessment on relevant dust collection systems.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1159,7 +1187,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-29-q1",
         "number": "1",
         "text": "Explosion prevention and mitigation controls shall conform to relevant K-C Combustible Dust Technical Bulletins (see list of bulletins at end of this standard).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1190,7 +1219,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-30-q1",
         "number": "1",
         "text": "A permit procedure shall be used to manage all hot work activities that occur on-site with exception of designated area such as a welding shop. The permit system must conform to GRC requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1218,7 +1248,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-31-q1",
         "number": "1",
         "text": "A permit procedure shall be used to manage all hot work activities that occur on-site with exception of designated area such as a welding shop. The permit system must conform to GRC requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1248,7 +1279,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-32-q1",
         "number": "1",
         "text": "The hot work permit procedure must include the following: Hot work permit authorizer must inspect the work area and verify that required precautions are in place before issuing a permit; Combustible and flammable materials must be removed from areas prior to conducting hot work; Suitable fire extinguishing equipment is maintained in a state of readiness for immediate use; and A fire watch is required whenever welding or cutting is performed in locations other than designated hot work areas and remains in effect for a minimum of 30 minutes after the completion of hot work.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1277,7 +1309,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-33-q1",
         "number": "1",
         "text": "The hot work permits specify an expiration time and are kept on file",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1306,7 +1339,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-34-q1",
         "number": "1",
         "text": "Emergency Alarms & Egress: The site shall maintain an appropriate emergency alarm system and emergency egress/unobstructed exits.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1336,7 +1370,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-35-q1",
         "number": "1",
         "text": "Fire Separation Zones: Fire rated doors, fire dampers in duct work, and walls shall be used to separate production and storage areas and areas where flammable and combustible liquids or gases are stored.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1366,7 +1401,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-36-q1",
         "number": "1",
         "text": "Fire Brigade: When considering fire response options, a site structural fire brigade shall only be used when the available external fire response capability or response time is inadequate.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1396,7 +1432,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-1-fire-explosion-37-q1",
         "number": "1",
         "text": "Planned Inspections: To confirm conformance controls are effective planned inspections shall be conducted.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1416,7 +1453,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-1-q1",
         "number": "1",
         "text": "WORK RULES/EHS SENTINEL RULE:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1444,7 +1482,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-2-q1",
         "number": "1",
         "text": "Employees will not override, bypass, remove or render ineffective any guards, interlocks or safety devices.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1464,7 +1503,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-3-q1",
         "number": "1",
         "text": "GUARDS & GUARDING DEVICES:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1491,7 +1531,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-4-q1",
         "number": "1",
         "text": "Guarding Design: Guards are properly designed, rated, installed on all machines and do not introduce new hazards. Barrier guards create adequate safety distances. The site must be in compliance with the Global Machinery Safety Technical Standards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1518,7 +1559,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-5-q1",
         "number": "1",
         "text": "Guarding Design: Guards are properly designed, rated, installed on all machines and do not introduce new hazards. Barrier guards create adequate safety distances. The site must be in compliance with the Global Machinery Safety Technical Standards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1545,7 +1587,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-6-q1",
         "number": "1",
         "text": "Guarding Design: Guards are properly designed, rated, installed on all machines and do not introduce new hazards. Barrier guards create adequate safety distances. The site must be in compliance with the Global Machinery Safety Technical Standards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1572,7 +1615,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-7-q1",
         "number": "1",
         "text": "Properly designed and rated safeguarding must be installed on all machines to prevent personnel from reaching hazards on the machine and to control hazardous ejection of material. Equipment with missing guards or safeguarding devices that are in need of repair must not be operated without strict access control.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1599,7 +1643,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-8-q1",
         "number": "1",
         "text": "Machine safeguarding must be designed to protect personnel while facilitating effective machine operation and not introducing new hazards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1626,7 +1671,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-9-q1",
         "number": "1",
         "text": "Guards must not be removed or bypassed when equipment is in operating condition. Wherever practicable, guards and machinery must be designed to enable routine adjustments, lubrication, monitoring and maintenance to be carried out without opening or removing the guards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1653,7 +1699,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-10-q1",
         "number": "1",
         "text": "Adequate safety distances also include protection against any foreseeable hazards that may occur during upset conditions (e.g., ejection of parts or loads which are not positively guided can shift or tilt, etc.).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1676,7 +1723,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-11-q1",
         "number": "1",
         "text": "The design and construction of a barrier guard must create adequate safety distances to ensure that individuals cannot reach the hazard by reaching over, under, around or through the barrier guard as defined in the GMSTS. This includes the following: If the guard needs openings for product/material entry or exit, the guarding system must also prevent access to the machinery hazards through these apertures/openings The use of presence sensing devices (e.g., light curtains, scanners, or other presence sensing devices) that prevent personnel contacting the hazard (e.g., by stopping the machine) once the device is activated.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1701,7 +1749,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-12-q1",
         "number": "1",
         "text": "If a safeguarding system needs to be bypassed, the site must first ensure other adequate control measures are in place. Specifically, these measures must be controlled by a permitting process (approved by the Site Leader) which also ensures safeguarding systems are returned to service upon completion of the task. Such tasks must be permitted as Uncontrolled Hazardous Energy Task (UHET) outlined in the Hazardous Energy Control Performance Standard",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1725,7 +1774,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-13-q1",
         "number": "1",
         "text": "Any spare (not used) guard switch actuator devices must be controlled to prevent them being used as bypass devices. Attention is required to any new devices in store, any switches replaced or removed, any non-productive or machines that are scrapped as these can be sources enabling employees/contractors obtaining such actuator devices. Bypassing any safeguarding system is prohibited and also a violation of the Critical 10 work rules.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1745,7 +1795,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-14-q1",
         "number": "1",
         "text": "Tool Usage Over and Through Guarding:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1771,7 +1822,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-15-q1",
         "number": "1",
         "text": "The following requirements must be met if tools such as push rods, screwdrivers, hoses, etc. are used in a manner that requires them to be inserted through (i.e., penetrate) machine guarding or if they are used in the presence of machine hazards that are not guarded:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1797,7 +1849,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-16-q1",
         "number": "1",
         "text": "A task risk assessment must be completed, and all hazards associated with the use of the tool must be identified",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1823,7 +1876,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-17-q1",
         "number": "1",
         "text": "Feasible engineering controls such as guides or internal “point source” guards are implemented",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1849,7 +1903,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-18-q1",
         "number": "1",
         "text": "Tools must be designed to minimize the risk of injury if the tool is caught in the machine",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1875,7 +1930,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-19-q1",
         "number": "1",
         "text": "Documented safe operating procedures are maintained, specifying the tools that can be used and the hazard control methods",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1901,7 +1957,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-20-q1",
         "number": "1",
         "text": "Operators are trained in the task and the safe operating procedure",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1927,7 +1984,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-21-q1",
         "number": "1",
         "text": "Hazard warning signs must be displayed at the point where the tools are used if there is a risk of tool entrapment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1953,7 +2011,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-22-q1",
         "number": "1",
         "text": "Task observations must be periodically conducted to verify that the safe operating procedures are effective and are being followed",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1973,7 +2032,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-23-q1",
         "number": "1",
         "text": "Integrity of Safety Control Circuitry:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -1998,7 +2058,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-24-q1",
         "number": "1",
         "text": "When safety control circuits are used as part of the safeguarding system, the control circuits must be of sufficient integrity (Performance Level and Category defined in the MRA) according to GMSTS to provide personnel protection appropriate to the level of risk associated with the machine hazard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2023,7 +2084,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-25-q1",
         "number": "1",
         "text": "To ensure the integrity is achieved and maintained the site shall have a process for validating, inspecting, and testing of new or modified safeguarding systems to confirm their correct and safe operation under both normal and fault conditions. The site shall implement regular scheduled inspection, preventative maintenance and testing protocols that will ensure the ongoing, reliable operation of machine safeguards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2043,7 +2105,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-26-q1",
         "number": "1",
         "text": "Warning Signage & Labeling:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2063,7 +2126,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-27-q1",
         "number": "1",
         "text": "The site must use an established method for warning signs and labels for identifying machine hazards. The method must meet local EHS regulatory requirements as a minimum.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2083,7 +2147,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-28-q1",
         "number": "1",
         "text": "Emergency Response:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2103,7 +2168,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-2-machine-safeguarding-29-q1",
         "number": "1",
         "text": "The site’s emergency planning and response efforts shall consider and plan for the potential for personnel to be trapped in or serious injured by equipment due to machine safeguard failure or violation of safeguarding procedures.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2131,7 +2197,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-1-q1",
         "number": "1",
         "text": "CRITICAL TEN Commitment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2151,7 +2218,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-2-q1",
         "number": "1",
         "text": "HAZARDOUS ENERGY CONTROL (HEC) METHODS: A method for energy isolation, control and lockout must be available for each energy source on all equipment. Energy isolation/lockout is the primary control method.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2180,7 +2248,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-3-q1",
         "number": "1",
         "text": "ENERGY ISOLATION REQUIREMENTS: Personnel exposure to hazardous energy during routine and repetitive servicing and maintenance activities is prevented and appropriate built-in safety measures prevent operators and maintainers from using hazardous intervention techniques. Energy isolation devices are available for each energy source on all equipment. An inventory documents these along with a unique identifying label. These devices are used and isolation is accomplished by creating a physical break (or block) in the supply of hazardous energy when: servicing or maintaining machines and equipment; required to remove a fixed guard or other safety device(s); and production tasks where risk assessment has established the need for isolation and lockout. Isolation and energy dissipation systems allow for reliable verification of effectiveness of isolation and energy dissipation. When more than one individual is working on the same piece of machinery or equipment, each individual affixes his/her own lockout device. When energy isolation must be temporarily interrupted and energy restored for troubleshooting purposes, machine safeguarding must be restored prior to troubleshooting.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2215,7 +2284,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-4-q1",
         "number": "1",
         "text": "ENERGY ISOLATION PROCEDURES: Machine and equipment specific energy isolation procedures are documented and available at/near the location of the machine/equipment and contain: identification of the machine/equipment; activities to be completed prior to shut down; machine shutdown procedures (normal and emergency conditions); identification of the energy sources that require control; location and identification of the energy isolating devices; procedures for release of stored energy, release from lockout and safe startup. Each energy isolation procedure: 1) includes a method for the verification of isolation and lockout before any work is begun and provide a unique identification (by location or labeling, etc.) of the energy isolation device and the equipment being de-energized; involve a test/verification method that validates that the energy isolating devices will prevent unexpected start-up; and 2) address employees, temporary workers, visitors, and contractors and related categories of work (e.g., group lockout, work unfinished (shift carryover), equipment not in service, and lock removal).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2250,7 +2320,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-5-q1",
         "number": "1",
         "text": "ENERGY ISOLATION PROCEDURES: Machine and equipment specific energy isolation procedures are documented and available at/near the location of the machine/equipment and contain: identification of the machine/equipment; activities to be completed prior to shut down; machine shutdown procedures (normal and emergency conditions); identification of the energy sources that require control; location and identification of the energy isolating devices; procedures for release of stored energy, release from lockout and safe startup. Each energy isolation procedure: 1) includes a method for the verification of isolation and lockout before any work is begun and provide a unique identification (by location or labeling, etc.) of the energy isolation device and the equipment being de-energized; involve a test/verification method that validates that the energy isolating devices will prevent unexpected start-up; and 2) address employees, temporary workers, visitors, and contractors and related categories of work (e.g., group lockout, work unfinished (shift carryover), equipment not in service, and lock removal).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2287,7 +2358,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-6-q1",
         "number": "1",
         "text": "ALTERNATIVE HAZARDOUS ENERGY CONTROL METHODS: Alternative Hazardous Energy Control, Safe Operator Access (SOA), is only used if they provide equivalent protection, provide safeguarding, include exclusive operator control, provide protection appropriate to the risk, are documented in the machine and task specific safe operating procedures, do not replace the use of isolation and lockout when energy isolation is required. Safe Operator Access (SOA) is only used where formal risk assessment and validated design/installation process has been used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2324,7 +2396,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-7-q1",
         "number": "1",
         "text": "ALTERNATIVE HAZARDOUS ENERGY CONTROL METHODS: Alternative Hazardous Energy Control, Safe Operator Access (SOA), is only used if they provide equivalent protection, provide safeguarding, include exclusive operator control, provide protection appropriate to the risk, are documented in the machine and task specific safe operating procedures, do not replace the use of isolation and lockout when energy isolation is required. Safe Operator Access (SOA) is only used where formal risk assessment and validated design/installation process has been used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2361,7 +2434,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-8-q1",
         "number": "1",
         "text": "ALTERNATIVE HAZARDOUS ENERGY CONTROL METHODS: Alternative Hazardous Energy Control, Safe Operator Access (SOA), is only used if they provide equivalent protection, provide safeguarding, include exclusive operator control, provide protection appropriate to the risk, are documented in the machine and task specific safe operating procedures, do not replace the use of isolation and lockout when energy isolation is required. Safe Operator Access (SOA) is only used where formal risk assessment and validated design/installation process has been used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2395,7 +2469,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-9-q1",
         "number": "1",
         "text": "UNCONTROLLED HAZARDOUS ENERGY TASKS (UHET): Are documented in an inventory. Risks associated with all UHETs are included in the site’s EHS Risk Inventory, Risk Reduction Plan and EHS Improvement Plan as noted in Section 2 and prioritized for risk reduction activities. Protective measures are adopted prior to undertaking UHETs, including: use of a standing procedure (when UHET is frequent, routine, and always performed the same way with the same controls); and using a Safe Work Permit (if the UHET is performed infrequently or in different ways or with different controls).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2415,7 +2490,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-3-hazardous-energy-control-10-q1",
         "number": "1",
         "text": "WARNING SIGNAGE: Energy sources are labeled according to local EHS regulatory requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2439,7 +2515,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-1-q1",
         "number": "1",
         "text": "Critical 10 Safety Requirement: Employees will not work on electrical equipment unless authorized and complying with electrical safety work practices.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2463,7 +2540,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-2-q1",
         "number": "1",
         "text": "Risk Assessment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2487,7 +2565,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-3-q1",
         "number": "1",
         "text": "Risk Assessment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2512,7 +2591,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-4-q1",
         "number": "1",
         "text": "Safeguards To Prevent Contact With Energized Parts",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2538,7 +2618,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-5-q1",
         "number": "1",
         "text": "Safeguards To Prevent Contact With Energized Parts",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2563,7 +2644,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-6-q1",
         "number": "1",
         "text": "Safeguards To Prevent Contact With Energized Parts",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2587,7 +2669,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-7-q1",
         "number": "1",
         "text": "Safeguards To Prevent Contact With Energized Parts",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2612,7 +2695,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-8-q1",
         "number": "1",
         "text": "Minimize Electrical Energy Potential & Limit Exposure To Arc Flash:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2637,7 +2721,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-9-q1",
         "number": "1",
         "text": "Authorized Personnel",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2661,7 +2746,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-10-q1",
         "number": "1",
         "text": "Authorized Personnel",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2686,7 +2772,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-11-q1",
         "number": "1",
         "text": "Energy Isolation Requirements",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2710,7 +2797,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-12-q1",
         "number": "1",
         "text": "Energy Isolation Requirements",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2734,7 +2822,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-13-q1",
         "number": "1",
         "text": "Energy Isolation Requirements",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2758,7 +2847,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-14-q1",
         "number": "1",
         "text": "PPE, Work Clothing & Tools",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2780,7 +2870,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-15-q1",
         "number": "1",
         "text": "Working Near Overhead Power Sources",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2804,7 +2895,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-16-q1",
         "number": "1",
         "text": "Underground Services",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2829,7 +2921,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-17-q1",
         "number": "1",
         "text": "Cabinets/Enclosure Labeling and Drawings",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2851,7 +2944,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-18-q1",
         "number": "1",
         "text": "Cabinets/Enclosure Labeling and Drawings",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2876,7 +2970,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-19-q1",
         "number": "1",
         "text": "Planned Inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2898,7 +2993,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-20-q1",
         "number": "1",
         "text": "Planned Inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2920,7 +3016,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-4-electrical-safe-work-practices-21-q1",
         "number": "1",
         "text": "Planned Inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2948,7 +3045,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-1-q1",
         "number": "1",
         "text": "The site must develop specific entry procedures for entry into confined spaces which identify known hazards and the actions required to eliminate or control those hazards such as Entry permit. All hazards must be eliminated or controlled prior to entry.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -2979,7 +3077,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-2-q1",
         "number": "1",
         "text": "Where spaces are similar with respect to hazards, access requirements, and required control actions, a single procedure to cover the like-kind spaces is acceptable.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3007,7 +3106,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-3-q1",
         "number": "1",
         "text": "For entry into confined spaces that extend across multiple shifts or changes in entry personnel and entry leaders, procedures must be implemented to ensure safe working conditions are maintained for the duration of entry. If necessary, the entry permit must be cancelled and a new permit authorized.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3035,7 +3135,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-4-q1",
         "number": "1",
         "text": "Personnel who will enter confined spaces including the rescue team must be medically qualified according to Global Health Service requirements and/or local requirement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3073,7 +3174,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-5-q1",
         "number": "1",
         "text": "A permit is required for entry into confined spaces.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3100,7 +3202,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-6-q1",
         "number": "1",
         "text": "An entry permit must be completed, signed and posted prior to entry. Only entry leaders may authorize and sign entry permits.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3128,7 +3231,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-7-q1",
         "number": "1",
         "text": "All confined spaces must have a legible sign identifying it with the wording “Confined Space – Entry Permit Required” or equivalent language meeting local EHS regulatory requirements. Entry into any confined space must be controlled by requiring the use of tools, special equipment or keys to enter.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3152,7 +3256,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-8-q1",
         "number": "1",
         "text": "Entry into confined spaces without an Attendant is prohibited.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3181,7 +3286,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-9-q1",
         "number": "1",
         "text": "Prior to initial entry and re-entry into a confined space, testing must be conducted for hazardous atmospheres by an authorized person. Once entry has occurred, air testing must be conducted in a manner to ensure that a potentially hazardous atmosphere is quickly identified and to allow for the entry team to respond immediately.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3209,7 +3315,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-10-q1",
         "number": "1",
         "text": "Testing of the atmosphere inside a confined space must be performed at different heights to account for different density gases.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3236,7 +3343,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-11-q1",
         "number": "1",
         "text": "Atmospheric testing equipment must be tested prior to each use utilizing a known traceable concentration of test gas to demonstrate that the sensors and alarms respond to the gas within limits specified.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3264,7 +3372,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-12-q1",
         "number": "1",
         "text": "The entry team consists of the following: 1) Attendant; 2) Entrants; and 3) the Entry Leader.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3290,7 +3399,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-13-q1",
         "number": "1",
         "text": "Hazardous Energy Control: All energy sources which are potentially hazardous to confined space entrants must be isolated according to documented procedures in the site’s hazardous energy control program prior to entry.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3318,7 +3428,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-14-q1",
         "number": "1",
         "text": "Ventilation: When ventilation is used to control atmospheric contaminants, the confined space must be ventilated until the atmosphere is within the acceptable limits. Ventilation must be maintained during the entry if there is potential for atmospheric conditions to become unacceptable.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3349,7 +3460,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-15-q1",
         "number": "1",
         "text": "Confined space rescue must be included in the Emergency Response and Preparedness Plan. Each confined space must have a specific rescue procedure, including appropriate external or internal resources. The site must identify the type of rescue necessary based on a location-specific risk assessment of the space and the work being done (e.g., horizontal or vertical rescue, etc.).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3377,7 +3489,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-16-q1",
         "number": "1",
         "text": "Personnel assigned confined space rescue responsibilities must demonstrate competency through annual refresher training and drills.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3408,7 +3521,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-5-confined-space-operations-17-q1",
         "number": "1",
         "text": "On-site rescue services are required for all confined space entries requiring whole-body entry and having any one of the following risks: The potential for hazardous atmospheres; Emergency rescue requires entry into the confined space (i.e., external extraction apparatus cannot be used); and Other risks are identified that require on-site rescue services",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3436,7 +3550,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-1-q1",
         "number": "1",
         "text": "Initial testing and validation: Comply with applicable local regulatory or international standard requirements for validating safe installation. Vendors must complete a final validation by conducting a load test, ensuring all design parameters are met.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3463,7 +3578,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-2-q1",
         "number": "1",
         "text": "Safe Working Load: All lifting systems and structures must have load capacity engineering calculations completed by the manufacturer or a Professional Engineer (or local equivalent).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3491,7 +3607,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-3-q1",
         "number": "1",
         "text": "Safe Distance: Design the lifting device to ensure workers do not work under a suspended load (K-C Critical 10 Safety Rules). Maintaining a safe distance: All personnel are clear of the load path during lifting operations. No equipment or infrastructure is located directly under the load. Designing workflows and layouts to minimize exposure to suspended loads.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3516,7 +3633,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-4-q1",
         "number": "1",
         "text": "Lifting devices must only be used according to the manufacturer's instructions. Modifications to lifting devices may only be performed with manufacturer or Professional Engineer (or local equivalent) supervision",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3543,7 +3661,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-5-q1",
         "number": "1",
         "text": "Lifting equipment and devices must be positioned or installed to minimize the risk of striking personnel or other equipment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3568,7 +3687,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-6-q1",
         "number": "1",
         "text": "Overhead Crane interlock: All cranes or hoists with movements that are not continually and directly controlled by an operator require machine guarding to prevent any entry into the Primary Danger Zone. This includes any crane or hoist movements where the operator does not need to hold down the movement initiation button for the full length of the movement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3602,7 +3722,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-7-q1",
         "number": "1",
         "text": "Crane and Hoist Inventory must be updated after the installation of every new lifting device",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3627,7 +3748,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-8-q1",
         "number": "1",
         "text": "Load weights must be lower than the Safe Working Load (must meet the rated capacity). The total weight of the load, including the weight of the below-the-hook devices, must not exceed the Safe Working Load. the Safe Working Load must be followed for each individual element such as below-the-hook devices, hoists, cranes, and/or bridge structures, Cranes, lifting blocks and below the hook devices must be clearly labeled with the Safe Working Load.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3662,7 +3784,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-9-q1",
         "number": "1",
         "text": "Personnel must always stay in a safe position, away from suspended loads outside the defined hazard zone, or through engineering controls that can redefine the hazard zone area. Comments: For access control, measures must be implemented, following the hierarchy of controls, to prevent unauthorized access to a load's moving path.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3692,7 +3815,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-10-q1",
         "number": "1",
         "text": "Establish a clearly defined safe working area and maintain barriers to ensure other personnel is kept away from the hazard zone. Comments: Operators must have a clear and unobstructed safe view of the load's path, which may include the use of mirrors or cameras. Major lifts may require spotters in communication with the operator to ensure safe movement.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3729,7 +3853,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-11-q1",
         "number": "1",
         "text": "Pre-use inspections are mandatory for all lifting equipment and devices. Any NOT FFU (Not Fit for use) conditions identified in the pre-use inspection must lead to the lifting device being immediately removed from service until repairs are completed.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3759,7 +3884,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-12-q1",
         "number": "1",
         "text": "Proximity hazards must be assessed and, if required, temporary controls are put in place. To ensure safe lifting operations, Proximity hazards, such as other equipment, cranes, overhead power lines, structures, sewers, and drains in the lifting area, must be considered and addressed in advance.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3785,7 +3911,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-13-q1",
         "number": "1",
         "text": "Suspended loads must always be attended, except during emergencies when the area must be secured and access to the danger zone restricted.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3812,7 +3939,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-14-q1",
         "number": "1",
         "text": "Operators must use the lifting equipment in a safe manner and avoid causing unsafe tilting, movement, slipping, or overturning.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3838,7 +3966,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-15-q1",
         "number": "1",
         "text": "The load must be safe and stable before performing the lifting activity.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3871,7 +4000,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-16-q1",
         "number": "1",
         "text": "Major lift permits are required for non-routine Major Lift Tasks and must be available during the lift. Permits must be authorized by qualified personnel.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3899,7 +4029,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-17-q1",
         "number": "1",
         "text": "Lifting equipment controls must be operated exclusively by one control point at any time.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3929,7 +4060,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-18-q1",
         "number": "1",
         "text": "Only authorized and trained employees may operate lifting devices.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3958,7 +4090,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-19-q1",
         "number": "1",
         "text": "Frequent and Annual Inspections need to be performed on cranes and hoists. Annual inspections must be performed by a qualified external vendor. See detailed maintenance plan in the Guidance. (ISO 9927 5.3,5.4)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -3986,7 +4119,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-20-q1",
         "number": "1",
         "text": "Enhanced Inspections are required annually after the first five years of usage for motorized cranes with nominal lifts equal to or exceeding 1000 kg (2,205 lbs.) and that is used at least daily (being part of K-C operations/production). See guidance documents for enhanced inspection items and periods. (ISO 9927 5.6)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4013,7 +4147,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-21-q1",
         "number": "1",
         "text": "Exceptional Inspections are required in circumstances that may have caused damage to the crane or hoist. The crane or hoist must be taken out of service until inspected. A qualified external inspector sets the scope of inspection based on the event. (ISO 9927 5.5)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4041,7 +4176,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-22-q1",
         "number": "1",
         "text": "Inventory and Annual external inspections are required for monorails, rigging and specialty lifting devices.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4067,7 +4203,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-6-lifting-operations-suspended-loads-23-q1",
         "number": "1",
         "text": "Critical findings of a Frequent or Annual inspections must be corrected in a timely manner. If a crane or hoist is found to be Not FFU by an inspection, it must be taken out of service immediately until repaired",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4098,7 +4235,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-1-q1",
         "number": "1",
         "text": "Workers will load or unload only restrained trailers, tank vehicles, or rail car.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4128,7 +4266,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-2-q1",
         "number": "1",
         "text": "Workers will operate mobile equipment with a license and will respect the speed while operating mobile equipment.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4159,7 +4298,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-3-q1",
         "number": "1",
         "text": "Workers are required to drive safely by using seat belts and avoiding texting.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4191,7 +4331,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-4-q1",
         "number": "1",
         "text": "Workers will not work, walk, or stand under a suspended load or within the hazard zone without a permit.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4224,7 +4365,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-5-q1",
         "number": "1",
         "text": "Do not allow anyone to stand or pass under the load of the lifting mechanism (e.g., fork, clamps, paddles).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4255,7 +4397,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-6-q1",
         "number": "1",
         "text": "Do not exceed the rated capacity (safe weight load) of the PIV.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4285,7 +4428,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-7-q1",
         "number": "1",
         "text": "Secure or balance loads to prevent them from falling.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4315,7 +4459,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-8-q1",
         "number": "1",
         "text": "The PIV operator always maintains a clear and unobstructed view of the path of travel and surrounding hazards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4344,7 +4489,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-9-q1",
         "number": "1",
         "text": "Must not use mobile phone while operating a PIV.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4372,7 +4518,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-10-q1",
         "number": "1",
         "text": "Follow site defines rules for driving forwards and backwards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4402,7 +4549,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-11-q1",
         "number": "1",
         "text": "Slow down, come to a stop and sound horn at intersections or whenever view is obstructed; use mirrors to compensate for “blind spots.”",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4431,7 +4579,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-12-q1",
         "number": "1",
         "text": "Do not load or unload on inclines and uneven surfaces",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4459,7 +4608,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-13-q1",
         "number": "1",
         "text": "Do not carry passengers on PIV not intended for passenger transportation.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4488,7 +4638,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-14-q1",
         "number": "1",
         "text": "Do not use cages or truck forks to elevate personnel. When there is a need for personnel to perform a work at height task, follow the requirements of OSHPS 9: Working at Height – Fall Protection Standard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4516,7 +4667,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-15-q1",
         "number": "1",
         "text": "Follow communicated site right-of-way rules.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4544,7 +4696,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-16-q1",
         "number": "1",
         "text": "Operate PIV only per the manufacturer’s intended purpose (e.g., no stunt driving or horseplay).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4573,7 +4726,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-17-q1",
         "number": "1",
         "text": "Perform pre-use inspection the first time a PIV is used on each shift. Nonconformances are escalated to be addressed.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4601,7 +4755,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-18-q1",
         "number": "1",
         "text": "When leaving a lift truck unattended, fully lower to floor the attachments or forks, turn ignition switch to off, set brake, and leave lift truck in de-energized state with adequate controls to prevent unauthorized use.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4630,7 +4785,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-19-q1",
         "number": "1",
         "text": "Ensure that there is adequate clearance for PIV with load to safely pass through overhead doors, structures or enter trailer containers",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4657,7 +4813,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-20-q1",
         "number": "1",
         "text": "When there is a need to speak to a pedestrian: stop, lower forks or attachment to floor, engage brake prior to asking pedestrian to approach PIV.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4687,7 +4844,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-21-q1",
         "number": "1",
         "text": "Pedestrians must use designated walkways, cross at designated intersections, stop, look for approaching PIVs, proceed when deemed safe to do so; follow site right-of-way-rules, use pedestrian doors and physical gates when available.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4717,7 +4875,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-22-q1",
         "number": "1",
         "text": "Pedestrians must be aware of their surroundings and take appropriate action as they may not be clearly seen by PIV operators.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4746,7 +4905,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-23-q1",
         "number": "1",
         "text": "When a pedestrian has a need to approach a PIV, only approach PIV when acknowledged by both parties, PIV is at a stop, attachments are fully lowered to the floor, and brake is engaged.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4777,7 +4937,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-24-q1",
         "number": "1",
         "text": "Only authorized personnel shall be present during active loading and unloading operations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4807,7 +4968,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-25-q1",
         "number": "1",
         "text": "Workers will not work or walk on the outside dock area without authorization (e.g., via a permit or documented procedure).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4839,7 +5001,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-26-q1",
         "number": "1",
         "text": "Speed Limit PIVs - 10 km/hr (6 miles/hr) Other vehicles indoors - 10 km/hr (6 miles/hr) Vehicles outdoors, trucking yards, parking lots – 15 km/hr (9 miles/hr).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4867,7 +5030,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-27-q1",
         "number": "1",
         "text": "The site provides means to separate pedestrians from vehicles.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4896,7 +5060,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-28-q1",
         "number": "1",
         "text": "The site must implement site policies and work practices that will effectively limit pedestrians in the yard area when truck movement is taking place",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4924,7 +5089,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-29-q1",
         "number": "1",
         "text": "Pedestrian-free zones or pedestrian/PIV interaction prevention controls must be established during active material movement activities, such as stacking and/or removing stacked materials in the warehouse, loading and unloading on the dock, and vehicle movement in the dock area.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4953,7 +5119,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-30-q1",
         "number": "1",
         "text": "Workstations in a warehouse must be located a safe distance away from racks and stacked materials, protected and face vehicle traffic.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -4981,7 +5148,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-31-q1",
         "number": "1",
         "text": "Where obstructions block visibility to oncoming vehicles the site must complete a location-specific risk assessment and implement controls (e.g., alarming or visual signal, barrier gate to force a complete stop, convex mirrors, stop signs, etc.).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5009,7 +5177,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-32-q1",
         "number": "1",
         "text": "Loading and unloading must be conducted on a level surface",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5039,7 +5208,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-33-q1",
         "number": "1",
         "text": "The site must establish means to prevent unexpected vehicle movement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5068,7 +5238,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-34-q1",
         "number": "1",
         "text": "The site must implement site policies and work practices that will effectively limit pedestrian access to active vehicle dock approaching areas by establishing a no pedestrian zone",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5097,7 +5268,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-35-q1",
         "number": "1",
         "text": "The trailer securing methods (e.g., dock locks, wheel chocks, jack stands, etc.) must be verified by personnel prior to entry.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5126,7 +5298,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-36-q1",
         "number": "1",
         "text": "The site must establish a safe waiting zone for trailer/vehicle driver and their assistant to ensure their safety during loading/unloading activity.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5155,7 +5328,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-37-q1",
         "number": "1",
         "text": "A visual trailer inspection process must be performed on each trailer prior to loading or unloading.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5183,7 +5357,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-38-q1",
         "number": "1",
         "text": "Protocols are in place to address unsafe physical conditions identified in trailer inspections and for unsafe loads, trailers, and containers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5214,7 +5389,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-39-q1",
         "number": "1",
         "text": "Fall prevention and protection measures in compliance with local EHS regulatory requirements and must be provided on docks where there is an elevation change or where a fall from such a location could lead to personal injury as a result of the falling distance or contact with objects below the work location.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5242,7 +5418,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-40-q1",
         "number": "1",
         "text": "Loading dock door openings must be secured when not in use.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5271,7 +5448,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-41-q1",
         "number": "1",
         "text": "Dock areas and dock approaching areas shall be classified as authorized personnel only areas.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5297,7 +5475,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-42-q1",
         "number": "1",
         "text": "Pedestrian free zones have been identified and marked.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5325,7 +5504,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-43-q1",
         "number": "1",
         "text": "Workers will not walk in active truck transit areas (e.g., no pedestrian zones, no “boots” on the ground).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5353,7 +5533,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-44-q1",
         "number": "1",
         "text": "High visibility apparel with reflective stripes (e.g., ANSI Rating Type R Class 2)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5381,7 +5562,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-45-q1",
         "number": "1",
         "text": "Means must be in place to prevent pedestrian interactions during coupling or uncoupling operations.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5410,7 +5592,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-46-q1",
         "number": "1",
         "text": "Rack storage structures must be designed and constructed according to applicable engineering standards and building codes.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5438,7 +5621,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-47-q1",
         "number": "1",
         "text": "Racks must be structurally secured to the floor/ground per the manufacturer’s requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5466,7 +5650,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-48-q1",
         "number": "1",
         "text": "Rack protection must be provided to prevent damage from accidental collision from moving equipment and powered material handling vehicles.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5495,7 +5680,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-49-q1",
         "number": "1",
         "text": "Load capacity signage for racks must be permanently and prominently displayed to show the permissible loading of the racks.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5525,7 +5711,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-50-q1",
         "number": "1",
         "text": "Any damage to the rack structural components must be immediately reported at the site and evaluated.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5553,7 +5740,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-7-workplace-transportation-safety-material-storage-51-q1",
         "number": "1",
         "text": "Rack storage systems must be designed and equipped to prevent stored loads from being displaced, pushed, or falling from the opposite side of the rack during forklift or material handling operations.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5583,7 +5771,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-1-q1",
         "number": "1",
         "text": "Workers load and unload trailers, tank vehicles, and rail cars only when they are properly restrained and secured.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5610,7 +5799,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-2-q1",
         "number": "1",
         "text": "Workers operate mobile equipment within established speed limits and only when holding a valid and appropriate driver license.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5636,7 +5826,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-3-q1",
         "number": "1",
         "text": "Workers use seat belts at all times and refrain from texting or using mobile devices while driving.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5663,7 +5854,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-4-q1",
         "number": "1",
         "text": "Workers will ensure they are fit for duty and free from the influence of alcohol, illegal drugs, medications, or any other substances that could impair their ability to drive.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5690,7 +5882,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-5-q1",
         "number": "1",
         "text": "Workers will operate vehicles in a safe, respectful, and defensive manner at all times.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5717,7 +5910,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-6-q1",
         "number": "1",
         "text": "Workers will comply with over the highway rules of the country they are driving in. Becoming familiar with the basic driving requirements of the country being visited must be considered (i.e., speed limits, high visibility vests, spare pair of spectacles, etc.)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5745,7 +5939,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-7-q1",
         "number": "1",
         "text": "Workers will comply with K-C’s and region-specific mobile phone use policies.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5773,7 +5968,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-8-q1",
         "number": "1",
         "text": "Vehicle passenger capacity shall never be exceeded.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5800,7 +5996,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-9-q1",
         "number": "1",
         "text": "Vehicles must be equipped with functional seatbelts.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5828,7 +6025,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-10-q1",
         "number": "1",
         "text": "Vehicles must meet all local regulatory requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5856,7 +6054,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-11-q1",
         "number": "1",
         "text": "Vehicles have valid insurance policies per local regulatory requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5886,7 +6085,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-12-q1",
         "number": "1",
         "text": "A valid license according to the class or type of vehicle to drive shall be required for all drivers as a requirement to perform transportation tasks and general business travel on behalf of Kimberly-Clark.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5915,7 +6115,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-13-q1",
         "number": "1",
         "text": "Driver’s license suspension must be reported to their Team Leader prior to accepting an assignment that requires driving for business purposes.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5944,7 +6145,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-14-q1",
         "number": "1",
         "text": "Only trained and qualified drivers shall perform transportation duties.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -5972,7 +6174,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-15-q1",
         "number": "1",
         "text": "All tractor-trailer drivers must be physically and medically qualified according to local regulations.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6000,7 +6203,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-16-q1",
         "number": "1",
         "text": "Driver Fatigue Requirements : When required by law for tractor-trailer drivers, the site must define maximum work time periods (on-duty & off-duty tasks), maintain a driver’s record of duty status, and all reasonable steps to prevent driver’s fatigue shall be taken.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6029,7 +6233,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-17-q1",
         "number": "1",
         "text": "Any driver of a K-C owned/leased tractor-trailer or fleet vehicle who receives a roadside inspection report must deliver it to their Team Leader and any violations must be corrected according to local regulations prior to placing vehicle back on the road.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6055,7 +6260,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-18-q1",
         "number": "1",
         "text": "Any driver of a K-C owned/leased tractor-trailer or fleet vehicle who receives a driving citation/penalty must report it to their Team Leader.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6083,7 +6289,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-19-q1",
         "number": "1",
         "text": "Vehicle shall be inspected prior to departure by the user to ensure vehicle is safe and roadworthy.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6111,7 +6318,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-20-q1",
         "number": "1",
         "text": "It is the responsibility of the site and drivers to ensure the tractor-trailer vehicle does not exceed dimension or mass limits and that the load is appropriately restrained.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6139,7 +6347,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-21-q1",
         "number": "1",
         "text": "Load must be secured to prevent displacement or falling out of the vehicle.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6170,7 +6379,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-8-road-transportation-safety-22-q1",
         "number": "1",
         "text": "The operation of motorcycles in rural areas is not permitted. (In situations where urban and rural zones cannot be differentiated, the use of motorcycles for business purposes will not be permitted in zones that exceed 50 km/h.) Note: Personal protective equipment (minimum): Motorcycle full face crash helmet High visibility clothing (reflective during the night)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6199,7 +6409,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-1-q1",
         "number": "1",
         "text": "Routine work at heights tasks needs to be eliminated by engineering controls.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6228,7 +6439,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-2-q1",
         "number": "1",
         "text": "All components used in a Fall Arrest system must be certified—either in accordance with relevant standards, or, in the case of custom structures, anchor points, or lifelines (including temporary lifelines), must be designed and approved by a qualified structural engineer.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6256,7 +6468,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-3-q1",
         "number": "1",
         "text": "Anchorages of acceptable strength to support the intended load must be used when a PFAS is the sole means of fall protection. Each anchorage point must be evaluated through an engineering assessment to ensure that it meets dynamic and static load requirements. At a minimum, anchorage points to which personal fall arrest equipment are attached must be capable of supporting at least 22.2 kN (5,000 pound-force)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6282,7 +6495,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-4-q1",
         "number": "1",
         "text": "Guard rail design specifications, including top and mid-rail heights must meet the local EHS regulatory requirements and maintained to meet original functional specifications, as well as other primary means of fall protection. If there are no local EHS regulatory requirements ISO 14122 part 2 and 3 must be followed.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6309,7 +6523,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-5-q1",
         "number": "1",
         "text": "Temporary openings/holes in walking surfaces and walls must be covered or barricaded to prevent exposure to fall hazards. Materials used to cover openings/holes must be secured to prevent movement or displacement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6336,7 +6551,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-6-q1",
         "number": "1",
         "text": "Permanent floor penetrations intended to allow the transfer of materials between levels must be controlled to prevent falls to a lower level.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6364,7 +6580,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-7-q1",
         "number": "1",
         "text": "Equipment, material and tools that are raised or lowered must be controlled and not dropped from, or thrown to, any elevated levels",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6391,7 +6608,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-8-q1",
         "number": "1",
         "text": "In the absence of local regulations, all vertical and horizontal lifelines—including permanent travel restraint systems—must be designed, engineered, and certified in accordance with recognized fall protection standards (e.g., EN 795:2012 and CEN/TS 16415:2013 for multi-user systems). Temporary lifelines provided by trained specialists, with certified components, and the installation certified by trained specialists are accepted by K-C.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6426,7 +6644,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-9-q1",
         "number": "1",
         "text": "Inventory of all Work at heights and Fall protection system need to be performed and updated, it can be used for the Hazards identification and Risk Assessment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6450,7 +6669,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-10-q1",
         "number": "1",
         "text": "Work at height practices: Each site must identify and communicate work rules for fall protection.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6481,7 +6701,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-11-q1",
         "number": "1",
         "text": "Workers will perform WAH with proper fall protection, training and proper medical surveillance",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6507,7 +6728,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-12-q1",
         "number": "1",
         "text": "The site must develop WAH procedures for every routine WAH task.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6535,7 +6757,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-13-q1",
         "number": "1",
         "text": "All WAH tasks that is above 1.2 m (4 feet) and the activity requires personal Fall Protection need to have a WAH permit or SOP.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6563,7 +6786,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-14-q1",
         "number": "1",
         "text": "Medical clearance is required for personnel WAH",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6592,7 +6816,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-15-q1",
         "number": "1",
         "text": "Documented training of all persons using PFAS",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6622,7 +6847,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-16-q1",
         "number": "1",
         "text": "Pre use inspections: The condition of all equipment used during WAH tasks must be visually inspected prior to use. At a minimum, a pre-use inspection must be performed for portable ladders and step ladders, PFAS components, anchorage points, life-lines, MEWP´s and scaffolds.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6648,7 +6874,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-17-q1",
         "number": "1",
         "text": "Only full-body harnesses may be used for PFAS - Only certified equipment designed and manufactured specifically for use as fall protection must be used for this purpose (the use of body belts for fall arrest are not allowed)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6673,7 +6900,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-18-q1",
         "number": "1",
         "text": "PFAS components (i.e., including harness, shock-absorbing lanyard, or connectors) that have been subjected to a fall event must be removed from service.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6699,7 +6927,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-19-q1",
         "number": "1",
         "text": "All contractors and their subcontractors that will perform WAH tasks must have training certification and induction training in the site fall protection safety program requirements (that are applicable to their scope-of-work) and provide documentation that they have the appropriate qualifications and experience to perform WAH prior to job authorization/execution",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6724,7 +6953,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-20-q1",
         "number": "1",
         "text": "Contractors that bring their own Fall Protection Equipment must ensure the good conditions of their equipment.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6753,7 +6983,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-21-q1",
         "number": "1",
         "text": "For jobs where PFAS are required, a system shall be established to ensure that all persons accessing the roof are properly wearing the equipment and attaching to the designated anchor points. (i.e., job spotter, pre-work checks).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6780,7 +7011,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-22-q1",
         "number": "1",
         "text": "WAH task risk assessments must consider other protective measures such as requiring spotters, safety nets or air cushions in the work area to control fall hazards. If the Risk Assessment determine that is not safe work at specific roof because conditions (e.g., very fragile roof material), the site must decide if those activities must be prohibited.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6813,7 +7045,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-23-q1",
         "number": "1",
         "text": "A written roof access procedure or engineering controls shall be established to control access to unprotected roofs.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6845,7 +7078,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-24-q1",
         "number": "1",
         "text": "All skylights must be identified and included in the Working at Heights (WAH) inventory. Appropriate access control or fall protection measures must be implemented in accordance with applicable local regulations or recognized safety standards. For non-routine roof access tasks, temporary engineer controls may be considered, provided they effectively mitigate fall risks associated with skylights or fragile roof surfaces.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6879,7 +7113,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-25-q1",
         "number": "1",
         "text": "Weather conditions for external WAT activities must be considered. The activity must be stooped in case of one those conditions: When wet/snow/ice During storms, or threat of lightning. During the presence of unmitigated ice on the walking/working surfaces. Wind speed that can unbalanced the workers or set additional risk to fall",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6908,7 +7143,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-26-q1",
         "number": "1",
         "text": "Specific rescue procedures for WAH tasks must be developed and included in the WAH Inventory and in the site Emergency Response Plan",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6936,7 +7172,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-27-q1",
         "number": "1",
         "text": "Annually emergency drills must be conducted at the site with a scenario considering the prompt rescue of a person who has fallen and is suspended from a PFAS and/or is incapacitated while WAH.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -6969,7 +7206,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-28-q1",
         "number": "1",
         "text": "The MEWPs must be of suitable size, capacity and construction for the intended usage;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7000,7 +7238,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-29-q1",
         "number": "1",
         "text": "Used only when positioned on stable footing;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7029,7 +7268,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-30-q1",
         "number": "1",
         "text": "Have adequate clearance to prevent contact or operation within the established approach limit when used in close proximity to overhead electrical power or others hazards around that may manifests",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7053,7 +7293,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-31-q1",
         "number": "1",
         "text": "Use of hard hat or bump cap when on a MEWP",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7078,7 +7319,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-32-q1",
         "number": "1",
         "text": "Maintain adequate clearance to prevent personnel contact with chemical piping, steam lines, asbestos insulation, and structures that can cause head injury",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7102,7 +7344,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-33-q1",
         "number": "1",
         "text": "Operated only by trained and authorized personnel",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7127,7 +7370,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-34-q1",
         "number": "1",
         "text": "Operator will be restrained to the MEWP while in movement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7152,7 +7396,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-35-q1",
         "number": "1",
         "text": "Lift-trucks, with or without modification such as fork-attached pallets or fork-mounted baskets, shall not be used for elevating personnel",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7179,7 +7424,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-36-q1",
         "number": "1",
         "text": "Ensure isolation from other vehicles and pedestrian traffic using a clear demarcation of the work (i.e., caution tape and signage) if the MEWP is to be operated in an area that is physically accessible to any type of powered vehicle. As an additional precaution in high trafficked areas, a spotter shall also be used.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7209,7 +7455,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-37-q1",
         "number": "1",
         "text": "Work on a scaffold must be performed under a permit.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7238,7 +7485,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-38-q1",
         "number": "1",
         "text": "When scaffolds are assembled by contractors or non-K-C personnel, a certificate of safe construction is required as part of a construction project agreement and a K-C employee should inspect and release the scaffold prior to the initial use.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7268,7 +7516,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-39-q1",
         "number": "1",
         "text": "Portable and fixed ladders must be maintained to original design and function.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7296,7 +7545,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-40-q1",
         "number": "1",
         "text": "Personnel must always follow the principle of “three points of contact” with ladder during ascent, descent and stationary tasks.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7324,7 +7574,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-41-q1",
         "number": "1",
         "text": "Fixed vertical ladders with a rise of 3 meters (10 feet) or more shall follow the ISO 14122 part 4 or local legal requirement.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7353,7 +7604,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-42-q1",
         "number": "1",
         "text": "Fixed vertical ladders with a rise of 6 meters (20 feet) or more may only be accessed by authorized personnel. Both physical locks and signs must be used to prevent unauthorized access.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7381,7 +7633,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-43-q1",
         "number": "1",
         "text": "Extension ladders must be secured to the building or structure via tie-off or other method to prevent accidental displacement.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7411,7 +7664,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-44-q1",
         "number": "1",
         "text": "Traffic areas in the vicinity of ladder use must be controlled, especially when a portable ladder is placed in or near a doorway.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7437,7 +7691,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-45-q1",
         "number": "1",
         "text": "Personnel must avoid sideways overextension by maintaining center of gravity between the side rails of A-frame ladders. A PFAS is required for personnel when overextending cannot be avoided.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7465,7 +7720,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-46-q1",
         "number": "1",
         "text": "Provide an effective engineered control when a fall hazard is located at the transition between a platform and fixed ladder/stair access point.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7493,7 +7749,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-47-q1",
         "number": "1",
         "text": "Transition platforms for multi-level ladders or stairs that are intended to allow employees to rest, or which provide access to the next level must be guarded to protect against fall hazards.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7522,7 +7779,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-48-q1",
         "number": "1",
         "text": "An inventory of all permanent/collective WAH equipment must be maintained and updated and have a current inspection record, including details of inspections conducted (ie. Fall protecting guardrails, lifelines, anchor points, gates, etc.)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7558,7 +7816,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-49-q1",
         "number": "1",
         "text": "An inventory of all portable Work at Heights (WAH) equipment must be maintained and regularly updated. Each item must be uniquely identifiable and have a current inspection record, including details of inspections conducted by a competent person in accordance with the manufacturer's recommendations. The inventory must also include the designated storage location for each item to ensure traceability and proper management.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7587,7 +7846,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-50-q1",
         "number": "1",
         "text": "A planned inspection process for PFAS must be established and documented at least annually to certify that their critical components (i.e., harness, shock-absorbing lanyard, and connector) are in good conditions.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7615,7 +7875,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-51-q1",
         "number": "1",
         "text": "Ladders inspection shall be conducted at least annually",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7642,7 +7903,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-52-q1",
         "number": "1",
         "text": "Maintenance of permanent/collective WAT equipment must be performed annual or following manufacturer´s recommendations whichever is more stringent.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7670,7 +7932,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-9-fall-prevention-53-q1",
         "number": "1",
         "text": "A preventive maintenance program must be established for MEWP´s and PFAS following manufacturer´s recommendations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7697,7 +7960,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-10-ergonomics-1-q1",
         "number": "1",
         "text": "MEDICAL MANAGEMENT PROCESS: The site shall utilize a Medical management process that includes early detection, diagnosis, and intervention measures in accordance with the Global Operation Standard - Workplace Ergonomics – Health Aspects",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7722,7 +7986,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-10-ergonomics-2-q1",
         "number": "1",
         "text": "TASK-SPECIFIC RISK ASSESSMENTS: Tasks involving any of the risk factors (manual lifting tasks; high rates of repetition; awkward postures; pushing, pulling, or carrying where high forces are required extended exposure vibration, cold, or heat; and /or tasks with related injuries reported in the past).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7749,7 +8014,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-10-ergonomics-3-q1",
         "number": "1",
         "text": "ERGONOMIC CONTROLS EFFECTIVENESS EVALUATIONS: The site shall evaluate ergonomic solutions after they are implemented to ensure changes are effective and do not introduce new ergonomic risks.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7774,7 +8040,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-10-ergonomics-4-q1",
         "number": "1",
         "text": "WORKSTATION DESIGN: Workstation design shall conform to good ergonomic design principles.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7794,7 +8061,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-1-q1",
         "number": "1",
         "text": "Basic Characterization",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7822,7 +8090,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-2-q1",
         "number": "1",
         "text": "Critical information for characterizing exposures is gathered on the workplace (e.g., operations, processes, equipment, controls, etc.), work force (jobs, division of labor, tasks, etc.), and environmental agents (materials, agents, quantities, chemical and physical properties, potential health effects and OELs, etc.).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7842,7 +8111,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-3-q1",
         "number": "1",
         "text": "OELS",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7866,7 +8136,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-4-q1",
         "number": "1",
         "text": "Authoritative or internal OELs are used as criteria for exposure judgments to differentiate acceptable from unacceptable exposures. Regulatory OELs are used if lower than authoritative or internal OELs. Note: Authoritative OELs are established by the American Conference of Governmental Industrial Hygienists (ACGIH) (i.e., TLVs - Threshold Limit Values), the National Institute for Occupational Safety and Health (NIOSH) (i.e. RELs - Recommended Exposure Limits), the Occupational Alliance for Risk Science (OARS) (i.e., WEELs - Workplace Environmental Exposure Levels), the German Research Foundation (DFG) (i.e. MAKs-Maximum Workplace Concentrations) and other standard setting organizations.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7894,7 +8165,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-5-q1",
         "number": "1",
         "text": "In operations involving non-traditional work schedules, OELs are adjusted based on the methodologies cited by the ACGIH TLV Committee (Brief and Scala).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7914,7 +8186,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-6-q1",
         "number": "1",
         "text": "SEGs",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7942,7 +8215,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-7-q1",
         "number": "1",
         "text": "The workforce is stratified into similar exposure groups. This stratification covers all operations and tasks including those performed infrequently. SEGs can be defined by processes, jobs, tasks, or other logical groupings. Individual workers may be assigned to more than one SEG. Each SEG is linked to one or more environmental agents, and SEGs may be further categorized according to OEL integration period (e.g., 8 hr. TWA, 15-minute STEL, instantaneous Ceiling Limit). SEGs are documented in Cority.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7966,7 +8240,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-8-q1",
         "number": "1",
         "text": "Any employees required to be in medical surviellance or required to wear respirators, must have quantitative personal exposure monitor results for those SEGs.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -7986,7 +8261,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-9-q1",
         "number": "1",
         "text": "Exposure Judgement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8012,7 +8288,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-10-q1",
         "number": "1",
         "text": "The exposure profile for each SEG is judged acceptable or unacceptable. Some SEGs initially judged uncertain, are reclassified as acceptable or unacceptable following the collection of additional monitoring data (e.g., air samples, biological samples, electromagnetic measurements, etc.) and/or health effects data. In performing the exposure assessments, the industrial hygienist assumes the absence of personal protective equipment (PPE) used to control exposures (such as respirators, hearing protectors, and chemically protective gloves).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8039,7 +8316,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-11-q1",
         "number": "1",
         "text": "KC exposure category is selected for each air contaminant and noise SEG: Category 1: <10% OEL; Category 2: 10-50% OEL; Category 3: 50-100% OEL; Category 4: > 100% OEL. Additionally, the certainty associated with each exposure assessment is rated (highly uncertain, uncertain, certain). For initial assessments, qualitative criteria are used to rate the certainty. When monitoring data are available, quantitative criteria based on Bayesian statistics are used to rate the certainty. Note - Criteria for SEG Certainty Ratings: Qualitative: High: The environmental agent’s exposure profile is well understood. The industrial hygienist has high confidence in the acceptability judgment. Medium: There is enough information to make a judgment, but further information gathering is warranted to verify the exposure assessment. Low: The acceptability judgment was made in the absence of significant information on the exposure profile. Quantitative - Bayesian Statistics (BDA Charts) High: The likelihood that the selected exposure category is correct is >75% Medium: The likelihood that the selected exposure category is correct is 50% - 75% Low: The likelihood that the selected exposure category is correct is <50%",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8063,7 +8341,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-12-q1",
         "number": "1",
         "text": "Initial exposure assessments compare an estimate of the SEG exposure profile to the OEL. Initial exposure assessments utilize observation of the SEG activities, and all available data collected during the basic characterization. The rationale for each exposure assessment is documented.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8089,7 +8368,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-13-q1",
         "number": "1",
         "text": "Exposure monitoring data are analyzed using Bayesian statistics. The inferential findings are used to select the exposure category and the certainty rating for each SEG.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8117,7 +8397,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-14-q1",
         "number": "1",
         "text": "Presently the monitoring methods for many physical and biological agents (e.g., thermal stress, microwave radiation, EMFs) do not adequately support the collection and statistical analysis of robust multiple-day exposure samples. Nevertheless, exposures to these various physical and biological agents must be identified, assessed, and judged acceptable or unacceptable. The basis for each exposure assessment must be documented including the exposure scenario (relative to the temporal range of exposure conditions), the assessment methods used (measurement, surrogate data, modeling techniques, instrumentation, etc.), and an estimate of the certainty associated with the exposure judgment (high, medium, or low).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8137,7 +8418,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-15-q1",
         "number": "1",
         "text": "Monitoring Practices",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8163,7 +8445,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-16-q1",
         "number": "1",
         "text": "The collection of exposure monitoring data across SEGs within a site is prioritized. A prioritization scheme is established and applied to guide the collection of monitoring data. Prioritization is often based on the exposure category, certainty rating, and other criteria (e.g., health effects rating, number of workers in each SEG, frequency of the exposure).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8188,7 +8471,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-17-q1",
         "number": "1",
         "text": "Two or more baseline personal samples are collected for each SEG initially rated exposure category 2 or 3. The monitoring results are analyzed using Bayesian statistics and are used to update the SEG exposure category and the associated certainty rating.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8213,7 +8497,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-18-q1",
         "number": "1",
         "text": "Two or more personal monitoring data are collected for SEGs judged unacceptable, category 4, when: a) the data may support updating the assessment to acceptable, b) the data are needed to support the selection of controls, including PPE in view of respirator protection factors or hearing protection noise reduction ratings, or c) the data are needed to establish a baseline for assessing the effectiveness of newly planned engineering or work practice controls.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8238,7 +8523,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-19-q1",
         "number": "1",
         "text": "When characterizing a SEG exposure profile, monitoring samples are collected in a manner that is unbiased, representative of the entire SEG population of exposures, and as close to random as is practical.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8262,7 +8548,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-20-q1",
         "number": "1",
         "text": "Air samples are collected in accordance with standard methods, good quality assurance / quality control processes, and analyzed by an AIHA-accredited laboratory or equivalent.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8292,7 +8579,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-21-q1",
         "number": "1",
         "text": "Where practical, all periods of exposure during the work shift are monitored in order to accurately determine the time-weighted average. Measured exposure values are averaged over the integration period of the OEL. However, the airborne concentration during the unsampled period is only counted as zero if it is known that exposures were not present during this period.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8317,7 +8605,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-22-q1",
         "number": "1",
         "text": "Biological monitoring is considered as a supplement to air monitoring where a) validated protocols and Biological Exposure Indices (BEIs) have been established, and b) the assessment findings may provide additional insight into worker exposures and associated health risks.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8337,7 +8626,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-23-q1",
         "number": "1",
         "text": "Non-Reoccuring Operations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8373,7 +8663,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-24-q1",
         "number": "1",
         "text": "Non-recurring operations are anticipated, prospectively assessed, and controlled to prevent unacceptably high exposures to environmental agents. Non-recurring operations include the one-time manufacture of unique products, some maintenance work, construction projects, environmental remediation, research experiments, and emergency response. Exposures are assessed through modeling or surrogate data from similar operations performed elsewhere. Personal protective equipment is conservatively prescribed to compensate for the high uncertainty in the exposure assessment. Direct reading instruments may be used in real time to determine exposure control strategies.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8393,7 +8684,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-25-q1",
         "number": "1",
         "text": "Health Hazard Controls",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8419,7 +8711,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-26-q1",
         "number": "1",
         "text": "Newly identified unacceptable SEGs are quickly controlled, often through administrative controls, work practice controls, and/or personal protective equipment. Then permanent controls are sought featuring one (or more) of the superior mitigation strategies. Note: The hierarchy of controls is elimination or substitution, followed by engineering controls, administrative controls / work practice controls, and finally personal protective equipment. The hierarchy is based on the reliability and effectiveness of the control strategies. Effective and reliable protection is often achieved through multiple layers of protection. While preferred, the superior mitigation strategies (elimination, substitution, engineering controls) may take time to plan, resource and implement.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8444,7 +8737,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-27-q1",
         "number": "1",
         "text": "A systematic prioritization and continuous improvement process is in place across SEGs to improve control reliability and effectiveness by moving up the hierarchy of controls. Prioritization is often based upon the exposure category, certainty rating, and other criteria (e.g., health effects rating, number of workers in each SEG, frequency of the exposure). The rationale for continuing to rely on administrative, work practice, and or PPE controls, rather than instituting superior mitigation strategies is documented.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8474,7 +8768,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-28-q1",
         "number": "1",
         "text": "Operating and preventative maintenance procedures/schedules are established for engineering controls. If appropriate, the procedures address the limitations of the engineering controls. Workers are trained in the operating and maintenance procedures. Where available, engineering controls feature monitors if performance can decline or fail (e.g., static pressure gauges).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8502,7 +8797,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-29-q1",
         "number": "1",
         "text": "Procedures are established for administrative and work practice controls. Workers are trained in the administrative and work practice controls. Observational inspections (LSW) are performed to verify adherence to the administrative and work practice controls.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8527,7 +8823,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-30-q1",
         "number": "1",
         "text": "The effectiveness of newly instituted engineering, administrative and work practice controls is validated through exposure monitoring reassessments.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8555,7 +8852,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-31-q1",
         "number": "1",
         "text": "Procedures are established addressing the limitations, selection and use of PPE. Workers are trained in the PPE procedures. Observational inspections (LSW) are conducted to verify if PPE are properly selected, properly maintained, used where and when required, and properly worn.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8581,7 +8879,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-32-q1",
         "number": "1",
         "text": "Prevention through Design (PtD): Newly planned operations, sites and equipment are designed and selected in an effort to ensure prospective exposures are maintained well below OELs.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8601,7 +8900,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-33-q1",
         "number": "1",
         "text": "Medical Surviellance",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8625,7 +8925,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-11-industrial-hygiene-34-q1",
         "number": "1",
         "text": "Medical surveillance is provided to workers in exposure categories 3 (if required) and 4 where protocols are available. The protocols are established by occupational medicine resources and address physical examinations, bioassays, and other evaluations for detecting early indicators or evidence of adverse health effects. The surveillance findings may direct work restrictions or medical treatments.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8649,7 +8950,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-1-q1",
         "number": "1",
         "text": "Performance Standard Owner is identified.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8675,7 +8977,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-2-q1",
         "number": "1",
         "text": "MINIMUM PPE REQUIREMENTS: Each site must communicate and assure conformance with the minimum PPE requirements for all operating areas. Operating locations include, but are not limited to, manufacturing, maintenance, warehouses, and distribution centers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8700,7 +9003,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-3-q1",
         "number": "1",
         "text": "HAZARD SPECIFIC PPE REQUIREMENTS: Each site must communicate the use of appropriate PPE based on a hazard assessment and assure conformance with the hazard specific PPE requirements for all identified hazards and operating areas. Operating locations include, but are not limited to, manufacturing, maintenance, warehouses, and distribution centers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8728,7 +9032,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-4-q1",
         "number": "1",
         "text": "PPE INVENTORY REQUIREMENTS: Each site must maintain an inventory of K-C approved PPE.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8754,7 +9059,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-5-q1",
         "number": "1",
         "text": "PPE SELECTION REQUIREMENTS: Each site must complete a PPE assessment and select PPE that is applicable to the hazard, safety regulation, recognized industry standard (e.g. NFPA, ANSI, ASTM, ISO, etc.), and K-C Performance Standard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8778,7 +9084,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-6-q1",
         "number": "1",
         "text": "PPE INSPECTION AND MAINTENANCE REQUIREMENTS: Each site must ensure PPE is inspected, stored, maintained, not expired and used according to the manufacturer’s directions.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8802,7 +9109,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-12-personal-protective-equipment-7-q1",
         "number": "1",
         "text": "PPE TASK OBSERVATION REQUIREMENTS: Each site must ensure PPE usage is being followed through task observation, peer to peer observations, or leader standard work.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8832,7 +9140,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-1-q1",
         "number": "1",
         "text": "Controls - Selection of Respiratory Protection Equipment (RPE)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8856,7 +9165,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-2-q1",
         "number": "1",
         "text": "Controls - Medical Clearance",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8883,7 +9193,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-3-q1",
         "number": "1",
         "text": "Controls - Fit Testing",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8913,7 +9224,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-4-q1",
         "number": "1",
         "text": "Controls - Inspection, Maintenance, and Storage",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8939,7 +9251,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-5-q1",
         "number": "1",
         "text": "Controls - Voluntary Use of Respirator Exceptions",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8963,7 +9276,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-6-q1",
         "number": "1",
         "text": "Controls - Information and Communication",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -8995,7 +9309,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-7-q1",
         "number": "1",
         "text": "Controls - Required Training – All Employees",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9024,7 +9339,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-13-respiratory-protection-8-q1",
         "number": "1",
         "text": "Controls - Required Training – Specialized Job Function",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9044,7 +9360,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-1-q1",
         "number": "1",
         "text": "OEL",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9068,7 +9385,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-2-q1",
         "number": "1",
         "text": "Hearing protection is required when an employee’s 8-hour time weighted average (TWA) is ≥85 dBA",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9092,7 +9410,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-3-q1",
         "number": "1",
         "text": "Personal dosimeter settings: Criterion Level: 85 dBA; Exchange rate: 3 dB; Threshold: 80 dBA, Weighting: A-frequency, slow response time constant (ACGIH TLV criteria). Dosimeters typically have the capability to record multiple settings, also allowing for compliance with local regulatory requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9121,7 +9440,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-4-q1",
         "number": "1",
         "text": "This criterion level must be adjusted for extended shifts: Adjusted level= 85 - (10* log (T/8)) where T= length of shift in hours (e.g., 10 hour shift = 84 dBA, 12-hour shift = 83 dBA)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9147,7 +9467,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-5-q1",
         "number": "1",
         "text": "Peak limit for impulse and impact noise is <140 dBA",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9167,7 +9488,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-6-q1",
         "number": "1",
         "text": "Exposure Assessment",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9194,7 +9516,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-7-q1",
         "number": "1",
         "text": "Basic Characterization & Established SEGs (PSO) Basic Characterization is completed first -- information for characterizing exposures is gathered on the workplace, work force, and environmental agents. (PSO) Basic Sound Survey Mapping and worker interviews should be conducted to group workers based on exposures so that full-shift sampling can be completed.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9220,7 +9543,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-8-q1",
         "number": "1",
         "text": "(PSO) Similar Exposure Groups (SEGs) are defined as logical grouping of workers with similar processes, jobs, tasks, or other groupings. SEGs should be prioritized by potential exposures (i.e., <75 dBA, 75-82 dBA, 82-85 dBA, >85 dBA)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9245,7 +9569,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-9-q1",
         "number": "1",
         "text": "Area & Personal Exposure Monitoring (Qualified Consultant) Conduct area / positional sound level meter (SLM) noise surveys to estimate the exposures for each SEG. Collect personal noise dosimeter samples for Exposure Categories 2 and 3. 8-hr TWA examples: 85 dBA is 100%, 82 dBA is 50%, 75 dBA is 10%. 10-hr TWA examples: 84 dBA is 100%, 81 dBA is 50%,74 dBA is 10%. 12-hr TWA examples: 83 dBA is 100%, 80 dBA is 50%, 73 dBA is 10%. Each SEG is classified into the appropriate Exposure Category 1 - 4: Category 1: >10% OEL; Category 2: 10-50% OEL; Category 3: 50-100% OEL; Category 4: >100% OEL.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9269,7 +9594,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-10-q1",
         "number": "1",
         "text": "(Qualified Consultant) Personal noise dosimeter samples are collected for Category 4 SEGs to: a) support reducing the SEG assessment to Category 3 or below, b) support the selection of hearing protection with adequate noise reduction ratings, or c) establish a baseline for assessing the effectiveness of newly planned engineering or work practice controls.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9293,7 +9619,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-11-q1",
         "number": "1",
         "text": "(Qualified Consultant) Personal noise dosimeter samples must be a minimum of 7 hours in length to help ensure the majority of tasks and environments are accounted for. The tasks and different environments a worker is in need to be considered.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9320,7 +9647,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-12-q1",
         "number": "1",
         "text": "(Qualified Consultant or PSO) Area noise mapping must be conducted for all operational areas using an SLM set to dBA and the SLOW setting. Calibration of the instruments must occur before and after use, following the manufacturer’s guidelines. Survey results must be documented and include information about operating conditions (e.g., production information, equipment that was not running), equipment in operation, and the location of noise samples. A facility floor plan, equipment layout, or P&ID can be utilized to map sampled noise locations. If a map is unavailable, a table can be used to present noise levels.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9346,7 +9674,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-13-q1",
         "number": "1",
         "text": "Written Interpretative Report (Qualified Consultant) After sampling is complete, exposure assessment findings must be summarized in written interpretive report that includes, at a minimum: Introduction Equipment used Calibration records Dosimeters and sound level meters (SLMs) settings Date, name, job title, shift length, and duration of monitoring Exposure results and noise mapping, including NRR of hearing protection and attenuation calculations Field notes and recommendations Identification of employees who require unenrollment or enrollment in the hearing conservation program Employee notification letters Types of hearing protection worn Required follow-up monitoring Corrective actions Communication of Results (PSO) The written report results are communicated to all affected workers, management staff and occupational health within 15 calendar days of receiving the written report.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9370,7 +9699,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-14-q1",
         "number": "1",
         "text": "(Consultant & PSO) Employees monitored must receive a written notification of their personal exposure monitoring results within 15 days of receiving the data. Employees are required to sign this notification, which must be electronically stored in Cority. At a minimum, the letter must include the employee’s name, date of the letter, date of monitoring, exposure results, the shift OEL and actions to be taken.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9395,7 +9725,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-15-q1",
         "number": "1",
         "text": "Frequency of Area & Personal Exposure Monitoring (Consultant) For areas >80 dBA, personal dosimetry and area mapping noise surveys are performed at a frequency aligned with the effectiveness of the MOC process, and no less than once every 3 years. If an MOC event occurs and noise levels are suspected to have increased, updated noise readings must be obtained within six months.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9419,7 +9750,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-16-q1",
         "number": "1",
         "text": "Required Equipment & Calibration (PSO) Each site must purchase and maintain at least one Type 2 sound level meter (SLM) and calibrator to ensure accurate measurements to annually evaluate engineered acoustical control effectiveness, risk assess changes and concerns.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9439,7 +9771,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-17-q1",
         "number": "1",
         "text": "Noise Measurement",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9466,7 +9799,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-18-q1",
         "number": "1",
         "text": "(IH Consultant) Noise levels must be determined using a sound level meter, integrating sound level meter, or dosimeter that meets one of the following: ANSI Sound Level Meter – Part 1: Specifications, S1.4-1 (Type 1 or 2), ANSI S1.25 – Specification for Personal Noise Dosimeters (Class 2), or IEC 61672-1.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9492,7 +9826,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-19-q1",
         "number": "1",
         "text": "(IH Consultant) Sound Level Meters (Type 1 or Type 2) are used for area noise measurements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9516,7 +9851,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-20-q1",
         "number": "1",
         "text": "(IH Consultant) Noise dosimeters (Class 2) are used for personal exposure assessments.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9542,7 +9878,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-21-q1",
         "number": "1",
         "text": "(IH Consultant) Any noise measurement instrument used, must be pre- and post-calibrated. In addition, the calibrator must be calibrated annually and traceable to national standards. (e.g., National Institute of Standards and Technology.)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9566,7 +9903,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-22-q1",
         "number": "1",
         "text": "(PSO) Calibration and equipment records must be managed in the Cority equipment module.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9590,7 +9928,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-23-q1",
         "number": "1",
         "text": "Instruments use A-weighting with Slow Response.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9610,7 +9949,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-24-q1",
         "number": "1",
         "text": "Ototoxins",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9634,7 +9974,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-25-q1",
         "number": "1",
         "text": "Exposure Assessment & Controls for Ototoxins (Qualified Consultant or PSO) Perform exposure assessments and apply control strategies for ototoxicant agents (i.e., chemicals that can cause hearing loss with or without noise).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9659,7 +10000,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-26-q1",
         "number": "1",
         "text": "Reference ACGIH TLVs for ototoxicant notations and/or review SDSs in the workplace for potential ototoxic hazards and health effects (found in Section 11 od SDS).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9683,7 +10025,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-27-q1",
         "number": "1",
         "text": "Temporary Enrollment in Audiometric Testing Program Include workers exposed to greater than >50% of the ototoxin OEL or when there is significant dermal exposure to ototoxicants in the audiometric testing programs (consult with Global IH Leader prior to enrolling). Annual audiograms are required for workers exposed to > 50% of the OEL for ototoxic airborne exposures.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9708,7 +10051,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-28-q1",
         "number": "1",
         "text": "Provide ototoxicant-specific education and training to workers in SEGs rated category 2 and higher. Training addresses: 1) Potential health effects, 2) OELs, 3) SEG-specific exposure levels/ categories, 4) Engineering controls, 5) Administrative controls, 6) Work practice controls, and 7) Medical surveillance (i.e., audiometric testing).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9728,7 +10072,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-29-q1",
         "number": "1",
         "text": "Hearing Protection",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9759,7 +10104,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-30-q1",
         "number": "1",
         "text": "Hearing Protection Rules Hearing protection is required any time an employee enters an area with noise above the OEL (e.g.: walking through a production area to get to an office). These rules must be based on area / positional noise measurements to ensure exposures above the OEL are effectively controlled. The rules may target specific tasks, work positions, equipment, or require all workers to use hearing protection when entering designated work areas. Hearing protection rules must be included in training to employees, contractors and visitors and must be displayed near the entrance to areas with noise levels above the OEL as well as in areas requiring specific types of hearing protection.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9783,7 +10129,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-31-q1",
         "number": "1",
         "text": "Hearing Protector Selection Workers must be offered a selection of at least two types of earplugs and two models of earmuffs with adequate noise attenuation.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9813,7 +10160,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-32-q1",
         "number": "1",
         "text": "Leader Standard Work – Hearing protection Fit Checks As part of Leader Standard Work (LSW) – Site Leaders must conduct monthly qualitative fit evaluation of ear plugs and earmuffs. It is essential that site leadership, not the EHS personnel, directly observes and addresses compliance with hearing protection fit and usage. Guidance for how to complete these checks for different kinds of hearing protection is provided here or by following the manufacturers’ recommendations: Foam Ear Plugs: Observe if employees are correctly inserting and wearing ear plugs. Roll-up earplugs should be rolled down into a tight cylinder and held in place until expanded. The earplug should completely seal the ear canal. Visually check that the inserted earplug does not extend beyond the tragus (same with push-to-fit ear plugs). Pre-Molded Ear Plugs: Ask the employee to gently tug back and forth on the inserted earplug. If properly inserted, the employee should feel a slight pressure change in the ear canal. Earmuffs: Observe (1) if the earmuff cup is centered around the ear and presses against the skull; (2) that no obstructions interfere with the cup seal (e.g., hair, glasses, ear lobe); and (3) that the headband is directly over the top of the head.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9843,7 +10191,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-33-q1",
         "number": "1",
         "text": "Personal Attenuation Rating Testing (Fit Testing) For all employees in the audiometric testing program, personal attenuation ratings (PARs) of a selected hearing protector is verified through hearing protector fit testing using a field attenuation estimation system compliant with ASA/ANSI S12.71-2018(R2022). This must be completed within 15 days of the hire date or transfer. Hearing protection must attenuate employee noise exposure below the OEL. This must be completed every 2 years at a minimum or when changes occur (i.e. change of hearing protective device, hearing loss, physical change in ear canal, etc.). Effectiveness The effectiveness of the hearing protection must ensure that employee exposure is reduced to an 8-hour TWA of 85 dBA or lower. For shifts longer than 8-hours, the attenuation must be lower the exposure below the OEL for that shift length. Temporary De-Rating Calculation Manufacturer laboratory NRR tests often do not match the field NRR workers actually achieve in the field, therefore the following de-rating scheme is required to be used temporarily until the real PARs is determined: Earmuffs: (NRR-7) / 2 Formable or custom-fitted earplugs: (NRR-7) / 2 All other earplugs: (NRR-7) / 2 This 50% de-rating method provides a temporary estimate of protection until individual fit testing is completed. Note: NRRs are typically reported using the ‘C’ weighting and must be converted to the ‘A’ weighting which is why the equation uses a minus 7. To determine the adequacy of hearing protection, add the corrected NRR to shift OEL dBA (8-hour TWA of 85 dBA). For example, if an employee uses a plug with an NRR of 33, the corrected NRR would be (33-7)/2 = 13). This plug would protect the employee up to (85 + 13 = 98) 98 dBA.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9873,7 +10222,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-34-q1",
         "number": "1",
         "text": "Adding earmuffs for double protection provides an additional 5 dB of noise reduction, resulting in a total protection level of 19 dB, thus protecting the employee up to 104 dBA. A combination of earplugs and earmuffs is required where a single set of hearing protectors does not provide adequate attenuation. Double Hearing Protection Requirements Double hearing protection (i.e., earmuff and earplugs) is required any time levels ≥100 dBA. Examples include compressed air use, mechanical rooms, etc. This requirement applies regardless of personal attenuation rating (PAR) results; single-layer protection is never acceptable for high risk exposures ≥100 dBA due to the elevated risk, variability, degradation of material, moisture, employee physical changes and human factors. NRRs are not additive; if double protection is used, add only 5 dB of attenuation to the higher of the two NRRs. Administrative Exposure Time Limits Exposure-time limits are established where the noise exposures cannot be reduced below the OEL through the use of engineering controls or both ear plugs and muffs.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9897,7 +10247,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-35-q1",
         "number": "1",
         "text": "Hearing Aids in the Workplace Hearing Aids typically do not have a Noise Reduction Rating (NRR) and should not be relied upon as protective devices against noise. Employees who wear hearing aids must use additional hearing protection, such as earmuffs, or remove their hearing aids and rely solely on hearing protection, to ensure noise levels are reduced to safe limits. The following guidance applies to employees using hearing aids, and should be supplemented by advice from their personal medical professional: Hearing aids do not provide measurable hearing protection and may actually increase noise exposure at the eardrum. When worn with earmuffs, hearing aids may experience “feedback” noise, and moisture inside the earmuffs can damage the hearing aids, particularly in hot environments.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9922,7 +10273,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-36-q1",
         "number": "1",
         "text": "Noise Hazard Signage Noise hazard warning signs must be posted in areas where noise exposures necessitate mandatory hearing protection.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9946,7 +10298,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-37-q1",
         "number": "1",
         "text": "Communication Devices/Prohibited Devices Communication devices (i.e. headsets) must provide adequate hearing protection (NRR) and limit the speaker volume to 82 dBA to ensure safe operation in noisy environments.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9971,7 +10324,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-38-q1",
         "number": "1",
         "text": "Prohibited Devices: Personal entertainment earbuds and headphones are not permitted. Only devices with adequate certified NRRs and volume limiters are allowed. Personal entertainment devices are not allowed to be worn under earmuffs.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -9991,7 +10345,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-39-q1",
         "number": "1",
         "text": "Audiometric Testing",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10015,7 +10370,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-40-q1",
         "number": "1",
         "text": "Audiometric Testing Program Audiometric testing must be performed by a physician, audiologist, or occupational hearing conservationist that is certified by the Council for Accreditation in Occupational Hearing Conservation (CAOHC) or an equivalent body.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10039,7 +10395,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-41-q1",
         "number": "1",
         "text": "Baseline audiograms must be completed within 30 days of employment for all workers who may be exposed to noise ≥100% of the OEL (Exposure category 4). For an 8-hour shift 100% is 85 dBA, for a 10-hour shift 100% is 84 dBA, for a 12-hour shift 100% of 83 dBA.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10063,7 +10420,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-42-q1",
         "number": "1",
         "text": "Ensure employees are not exposed to noise levels above their shift OEL for 12 hours prior to baseline audiogram. They may use hearing protection that attenuates exposure below the shift OEL during this period.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10087,7 +10445,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-43-q1",
         "number": "1",
         "text": "All employees identified in Category 4 (>100% OEL) during exposure assessments must be included in the audiometric testing program. This can be based on area or personal dosimetry noise measurements. Audiometric testing is performed annually for employees in exposure category 4.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10116,7 +10475,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-44-q1",
         "number": "1",
         "text": "Standard Threshold Shift (STS) A Standard Threshold Shift (STS) is defined as a change in hearing threshold levels in one or both ears of an average of 10 decibels or more relative to the baseline at 2000, 3000 and 4000 Hz (after applying the age correction factor). Annual audiograms that meet the STS criteria must be retested within 30 days of the annual audiogram and after a 12-hour quiet period. If the repeat test still meets the STS criteria, it is classified as a Persistent Threshold Shift, and the professional audiologist or physician will set this as the new baseline for each ear. Persistent Threshold Shift (PTS) A field investigation must be performed to identify the root cause of each Persistent Threshold Shift and prevent its recurrence. This investigation must be performed by a field-level or operationally knowledgeable individual—rather than a clinical or nursing professional—to ensure practical, worksite-specific insights (clinical focused investigation is separate). If more than two STSs occur within a year at the site, the Global Industrial Hygiene (IH) Leader must be involved in an on site investigation.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10147,7 +10507,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-45-q1",
         "number": "1",
         "text": "The field investigation must include: 1) Noise source analysis and feasibility of engineering controls - determine if primary noise sources have been identified and whether feasible design or isolation measures were considered to reduce noise at the source, 2) Workstation and process design - assess whether the layout or workflow places workers unnecessarily close to high-noise areas and if barriers, enclosures, or remote operation options have been considered, 3) Equipment maintenance and condition - verify that machinery maintenance schedules are followed and determine if poor maintenance contributed to increased noise levels, including the existence of a preventive maintenance program targeting noise reduction, 4) Procurement standards for noise specifications for equipment - review whether purchasing specifications for new equipment include noise-level requirements and if low-noise alternatives were considered during procurement decisions, 5) Adequacy of hearing protection rules and the worker's understanding and compliance of the rules, 6) Hearing protection - selection related to noise exposures, 7) Worker's capability to safely perform the job in view of the hearing loss.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10174,7 +10535,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-46-q1",
         "number": "1",
         "text": "Next, a clinical / case management investigation is performed to identify the cause of each Persistent Threshold Shift and prevent its recurrence related to the clinical aspects (not operations). This investigation is intended to be performed by a clinical or health care professional. The investigation must include: 1) Hearing protection fit testing to verify the adequacy of attenuation compared to the field exposures, 2) Off-the-job noise exposures, and 3) Physical or medical factors—such as earwax impaction, ear canal shape, medicines, infections, or other conditions—that may interfere with proper hearing protection fit or affect audiometric results.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10201,7 +10563,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-47-q1",
         "number": "1",
         "text": "Reporting, Medical Review and Follow-up If an employee's audiogram indicates a work-related Standard Threshold Shift (STS) of 10 dB in one or both ears, and the employee's total hearing level is 25 dB or more above audiometric zero (averaged at 2000, 3000, and 4000 Hz) in the same ear(s) as the STS, the hearing threshold shifts that meet this criterion must be documented and reported as a K-C reportable work-related illness in the EtQ EHS Events Module. OH Notification: The Noise Control Standard Owner must be notified within 48 hours of any STSs to facilitate proper field investigation.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10228,7 +10591,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-48-q1",
         "number": "1",
         "text": "Reportable (recordable) STS Medical Opinion: a reportable STS, may be considered non-recordable if a physician or audiologist reviews the hearing loss, including workplace noise exposure data, and provides a written opinion stating that the condition is not related to workplace noise. This may require a medical evaluation of the employee. K-C will cover any medical evaluation to determine work-relatedness. Note: Employees with noise exposure below 85 dBA TWA who are in the hearing conservation program must still be evaluated by a physician or audiologist to rule out work-relatedness. Employees must be provided with a confidential assessment of their audiometric test results within 15 calendar days. This may include if present the identification of a Persistent Threshold Shift or newly identified Hearing Impairment. Medical referrals are made where audiograms suggest a non-noise related condition.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10252,7 +10616,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-49-q1",
         "number": "1",
         "text": "Job Capability & Exit Audiograms If hearing has been determined as an essential function of a specific job or task (i.e. alarms, warning devices), evaluation and consideration of job re-assignments or special accommodation for workers exhibiting considerable work or non-work-related hearing loss.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10276,7 +10641,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-50-q1",
         "number": "1",
         "text": "Exit Audiograms: Employees leaving the site (i.e. transferring to another site, leaving the company) must receive an exit audiogram prior to their last day if their most recent audiogram is older than 6 months.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10296,7 +10662,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-51-q1",
         "number": "1",
         "text": "Noise Control Engineering",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10324,7 +10691,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-52-q1",
         "number": "1",
         "text": "Hierarchy of Controls & Risk Reduction Plan The hierarchy of controls is used as primary means to eliminate personal noise exposure: elimination, substitution, engineering controls, administrative controls, PPE. Review of the feasibility of engineering and/or administrative controls must be conducted by the PSO and engineering. Feasible engineering controls must be implemented on all new equipment installations. For areas where noise exposures exceed 95 dBA, 8-hour TWA, the PSO develops a documented long-term plan to apply feasible engineering controls to existing equipment must be developed and prioritized based on risk level and cost/benefit. The plan must include an objective of reducing the reliance on the use of hearing protection devices and the action plan identifies tasks, owners, resources and a timeline.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10351,7 +10719,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-53-q1",
         "number": "1",
         "text": "Prevention Through Design Newly planned operations, facilities and equipment must be designed and selected to control noise exposures below the OEL. Manufactured equipment is designed and verified to limit noise levels at or below 80 dBA at three feet (goal). If this is not feasible, written information describing the noise levels is supplied to the site and warnings are affixed to the equipment. This proactive approach, known as “Buy it Quiet,” emphasizes noise reduction during the design and fabrication phases.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10375,7 +10744,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-54-q1",
         "number": "1",
         "text": "Compressed Air Equipment: When purchasing compressed air equipment, including nozzles and other components, a thorough evaluation of their noise output should be conducted.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10399,7 +10769,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-55-q1",
         "number": "1",
         "text": "Wire Mesh vs Lexan Guarding: When considering physical safety hazard guarding, Lexan can be a superior choice compared to wire mesh when feasible. Not only does Lexan provide effective physical protection, but it also offers sound attenuation, helping to reduce noise exposure in the workplace.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10423,7 +10794,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-56-q1",
         "number": "1",
         "text": "Engineering acoustical controls must be validated with SLM measurements annually to ensure continued effectiveness.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10453,7 +10825,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-14-hearing-loss-prevention-57-q1",
         "number": "1",
         "text": "Capital Project Integration for Noise Reduction Sites must identify and submit capital funding projects to reduce high-risk noise exposures as part of their annual budgeting and planning process. At a minimum for areas: ≥100 dBA double hearing protection areas, ≥95 dBA 8-hour TWA, and hearing loss cases. These projects should be prioritized based on risk level, feasibility, and cost-benefit analysis, and must align with the documented long-term noise control plan. Evidence of submitted projects and their inclusion in the site's prioritization process demonstrates proactive efforts to eliminate or significantly reduce reliance on hearing protection devices and achieve sustainable noise control through engineering solutions.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10488,7 +10861,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-1-q1",
         "number": "1",
         "text": "Controls for potable water meet the minimum",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10520,7 +10894,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-2-q1",
         "number": "1",
         "text": "Controls for non-potable water",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10557,7 +10932,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-3-q1",
         "number": "1",
         "text": "Toilet site requirement are met.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10583,7 +10959,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-4-q1",
         "number": "1",
         "text": "Shower Site Requirements (does not apply to voluntary showering)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10608,7 +10985,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-5-q1",
         "number": "1",
         "text": "Eating & Drinking Area",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10639,7 +11017,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-6-q1",
         "number": "1",
         "text": "Waste Disposal Container",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10668,7 +11047,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-7-q1",
         "number": "1",
         "text": "Food Service & Storage Hygiene",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10695,7 +11075,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-15-access-to-safe-water-sanitation-hygiene-8-q1",
         "number": "1",
         "text": "Facilities Design & Maintenance Shall Discourage Entry of Vermin",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10720,7 +11101,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-16-compressed-air-1-q1",
         "number": "1",
         "text": "Compressed Air Safety and Mitigation Systems",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10744,7 +11126,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-16-compressed-air-2-q1",
         "number": "1",
         "text": "Compressed Air Safety and Mitigation Systems",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10768,7 +11151,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-16-compressed-air-3-q1",
         "number": "1",
         "text": "Compressed Air Safety and Mitigation Systems",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10816,7 +11200,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-16-compressed-air-4-q1",
         "number": "1",
         "text": "Compressed Air Use",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10864,7 +11249,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-16-compressed-air-5-q1",
         "number": "1",
         "text": "Compressed Air Use",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10886,7 +11272,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-1-q1",
         "number": "1",
         "text": "Task-Specific Risk Assessments: Tasks involving the handling of sharp objects and materials shall be risk assessed to determine if there is a need to implement controls.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10910,7 +11297,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-2-q1",
         "number": "1",
         "text": "Elimination",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10934,7 +11322,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-3-q1",
         "number": "1",
         "text": "Substitution",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10958,7 +11347,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-4-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -10982,7 +11372,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-5-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11006,7 +11397,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-6-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11030,7 +11422,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-7-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11054,7 +11447,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-8-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11078,7 +11472,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-9-q1",
         "number": "1",
         "text": "Engineering Controls: A physical barrier to protect the employee.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11102,7 +11497,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-10-q1",
         "number": "1",
         "text": "Develop a task based approved knife inventory list",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11128,7 +11524,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-11-q1",
         "number": "1",
         "text": "Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11152,7 +11549,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-12-q1",
         "number": "1",
         "text": "Incorporate operation floor laceration hazards into floor inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11176,7 +11574,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-13-q1",
         "number": "1",
         "text": "Incorporate operation floor laceration hazards into floor inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11200,7 +11599,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-14-q1",
         "number": "1",
         "text": "Incorporate operation floor laceration hazards into floor inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11224,7 +11624,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-15-q1",
         "number": "1",
         "text": "Incorporate cutting tasks into People Centered Safety (PCS- SAFE) observations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11248,7 +11649,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-16-q1",
         "number": "1",
         "text": "Develop and implement procedures for proper blade storage and disposal.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11272,7 +11674,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-17-q1",
         "number": "1",
         "text": "Develop and implement routine and non-routine task risk assessment to identify laceration hazards",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11296,7 +11699,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-18-q1",
         "number": "1",
         "text": "Completing a PPE Hazard Assessment to identify head impacts and laceration risks on others the body parts.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11322,7 +11726,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-19-q1",
         "number": "1",
         "text": "Establish a minimum cut resistant level:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11346,7 +11751,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-20-q1",
         "number": "1",
         "text": "Based on specific task risk assessment another level of protection must be used, this is the case of the Log Saw operations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11370,7 +11776,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-21-q1",
         "number": "1",
         "text": "General Purpose Glove (All Routine Task = Cutting tasks - Medium risk): ANSI A3 or equivalent",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11394,7 +11801,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-22-q1",
         "number": "1",
         "text": "General Purpose Glove (All Routine Task = Cutting tasks - Medium risk): ANSI A3 or equivalent",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11418,7 +11826,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-23-q1",
         "number": "1",
         "text": "Bump-Caps are required for all operational areas identified in PPE Risk Assessment (See OSHPS 12: Personal Protective Equipment). The use of the Bump-Cap is mandatory in the following machine operational areas:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11442,7 +11851,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-24-q1",
         "number": "1",
         "text": "Bump-Caps are required for all operational areas identified in PPE Risk Assessment (See OSHPS 12: Personal Protective Equipment). The use of the Bump-Cap is mandatory in the following machine operational areas:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11466,7 +11876,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-25-q1",
         "number": "1",
         "text": "Bump-Caps are required for all operational areas identified in PPE Risk Assessment (See OSHPS 12: Personal Protective Equipment). The use of the Bump-Cap is mandatory in the following machine operational areas:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11490,7 +11901,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-26-q1",
         "number": "1",
         "text": "In the absence of a PPE Hazard Assessment, employees, contractors and visitors are required to wear a bump cap or helmet on the operation floor.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11519,7 +11931,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-27-q1",
         "number": "1",
         "text": "All Bump-Caps must be constructed out of hard plastic to provide adequate head protection. EN812 is recommended. Please consider you must apply your Business Unit or Local Site",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11543,7 +11956,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-28-q1",
         "number": "1",
         "text": "All Bump-Caps must be constructed out of hard plastic to provide adequate head protection. EN812 is recommended. Please consider you must apply your Business Unit or Local Site",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11568,7 +11982,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-29-q1",
         "number": "1",
         "text": "All Bump-Caps must be constructed out of hard plastic to provide adequate head protection. EN812 is recommended. Please consider you must apply your Business Unit or Local Site",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11592,7 +12007,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-30-q1",
         "number": "1",
         "text": "Reporting:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11616,7 +12032,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-31-q1",
         "number": "1",
         "text": "Reporting:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11640,7 +12057,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-32-q1",
         "number": "1",
         "text": "Reporting:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11664,7 +12082,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-33-q1",
         "number": "1",
         "text": "Recommended Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11688,7 +12107,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-34-q1",
         "number": "1",
         "text": "Recommended Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11712,7 +12132,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-35-q1",
         "number": "1",
         "text": "Recommended Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11736,7 +12157,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-36-q1",
         "number": "1",
         "text": "Recommended Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11760,7 +12182,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-37-q1",
         "number": "1",
         "text": "Recommended Leader Standard Work:",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11784,7 +12207,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-38-q1",
         "number": "1",
         "text": "Recommended People Centered Safety (PCS-SAFE) Observations. Establish dedicated check list to complete laceration observations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11808,7 +12232,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-39-q1",
         "number": "1",
         "text": "Recommended People Centered Safety (PCS-SAFE) Observations. Establish dedicated check list to complete laceration observations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11832,7 +12257,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-40-q1",
         "number": "1",
         "text": "Recommended People Centered Safety (PCS-SAFE) Observations. Establish dedicated check list to complete laceration observations",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11856,7 +12282,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-41-q1",
         "number": "1",
         "text": "Recommended Floor Inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11880,7 +12307,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-42-q1",
         "number": "1",
         "text": "Recommended Floor Inspections",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11904,7 +12332,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-43-q1",
         "number": "1",
         "text": "Training shall include;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11928,7 +12357,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-44-q1",
         "number": "1",
         "text": "Training shall include;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11952,7 +12382,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-45-q1",
         "number": "1",
         "text": "Training shall include;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -11976,7 +12407,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-46-q1",
         "number": "1",
         "text": "Training shall include;",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12000,7 +12432,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-47-q1",
         "number": "1",
         "text": "All employees shall be retrained at a minimum every 3 years",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12024,7 +12457,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-48-q1",
         "number": "1",
         "text": "All employees shall be retrained at a minimum every 3 years",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12048,7 +12482,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-49-q1",
         "number": "1",
         "text": "Required Training – New Hires",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12073,7 +12508,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-50-q1",
         "number": "1",
         "text": "Changes associated with laceration hazards (e.g., new knife requests, risk assessing a new task, introducing new PPE) shall be managed according to section 2.2 of the EHS Management System Standard",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12097,7 +12533,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-51-q1",
         "number": "1",
         "text": "With the quest to find safer tools, a Request for Approval shall be completed and reviewed by the Work Team, the Site’s EHS and Mill Managers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12121,7 +12558,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-52-q1",
         "number": "1",
         "text": "The site program owner shall perform a self-assessment and program evaluation as required",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12146,7 +12584,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-53-q1",
         "number": "1",
         "text": "Measure (Performance Standard Requirement)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12171,7 +12610,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-17-laceration-elimination-54-q1",
         "number": "1",
         "text": "Measure (Performance Standard Requirement)",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12195,7 +12635,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-1-q1",
         "number": "1",
         "text": "Contractor Pre-qualification and Selection",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12219,7 +12660,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-2-q1",
         "number": "1",
         "text": "Contractor Activities Planning",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12243,7 +12685,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-3-q1",
         "number": "1",
         "text": "Contractor EHS Induction and Onboarding",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12267,7 +12710,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-4-q1",
         "number": "1",
         "text": "Contractor Work Execution",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12291,7 +12735,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-5-q1",
         "number": "1",
         "text": "Contractor Work Post-Evaluation",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12315,7 +12760,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-6-q1",
         "number": "1",
         "text": "Low-Risk Contractor Classification",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12339,7 +12785,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-18-contractor-management-7-q1",
         "number": "1",
         "text": "Business Relationship Only Suppliers",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12366,7 +12813,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-19-ehs-event-management-1-q1",
         "number": "1",
         "text": "1. Event Management Requirements: a. All K-C workers and contractors have the responsibility to report all work-related EHS&S events according to K-C and statutory requirements. b. All personnel must report any event they become aware of, as soon as possible: and no later than end of the same working day or shift. c. The initial response and control of an event shall be defined within the site emergency action plan. d. All events must be evaluated and classified in accordance with OSHPS 19.1 Event Evaluation & Classification Procedure. e. The level of rigor required for all event investigations shall be determined using the K-C Event Risk Assessment Matrix and based on the result of the classification of the potential risk. f. The documentation requirements consist of the following elements. Document communication log (stakeholder engagements) Document investigation Document Management Review: conclusion and actions Document Lessons Learned g. Conduct Management Review, inclusive of the below steps: Review / approve investigation Review proposed actions Determine actions and allocate appropriate resources Manage actions and verify through CAPA process Verify effectiveness of actions taken h. Management Lessons Learned: Based on management decision with SME input, a Learning From Event (LFI) communication shall be developed and shared in a structured manner. The steps to follow are (we actually follow the events sharing process): Identify applicability across KC or a relevant subsection Determine strategy for leveraging lesson learned Manage targeted sharing of lessons learned I. If an event results in an actual severity of Critical or Major, a Call to Action (CTA) shall be developed (CTAs no longer exist).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": [],
@@ -12395,7 +12843,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "oshps-19-ehs-event-management-2-q1",
         "number": "1",
         "text": "2. Reporting Requirements: a. All K-C workers, temporary workers and contractors are responsible for reporting all work-related events to the supervisor of the work activity no later than end of the same working day or shift. b. Site Reporting Policy: A site policy for reporting in alignment with details of 2.1 of the EHS Events Reporting Standard and local legal requirements. c. Each month, each site must verify all Injury/Illness, the K-C Injury/Illness Severity Criteria including First Aids as defined by this standard, safety data for K-C workers, temporary workers, and contractors to ensure all data has been correctly entered into the EtQ by the third weeking day following the end of the month. d. Following the start of a new year, site/facility managers must verify all safety data from the previous year has been entered in the event reporting system and is accurate, completed by the end of January of hte current year. e. Hours worked include all the hours worked by all K-C workers, temporary workers or contractor workers as defined by this standard. All functions/locations within K-C shall have a designated person that is responsible for monthly hour reporting, including but not limited to, sites/facilities, office locations, sales and commercial teams, etc. f. Working hours shall be verified on a monthly basis, by comparing the number of workers and/or the hours worked with the K-C payroll systems.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12415,7 +12864,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-1-q1",
         "number": "1",
         "text": "CONTROLS",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12446,7 +12896,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-2-q1",
         "number": "1",
         "text": "FITNESS TO WORK PROGRAM TRIGGERS: Each facility identifies and communicates Fitness to Work triggers.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12472,7 +12923,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-3-q1",
         "number": "1",
         "text": "FITNESS TO WORK ASSESSMENTS: Facilities must have a process to conduct FTW health assessments at key triggers: '-Before placement or post-offer (per local laws). After return from work-related or personal illness/injury. When job roles change or transfers occur. When an employee’s health status or medical history changes.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12501,7 +12953,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-4-q1",
         "number": "1",
         "text": "PROGRAM CAPABILITIES: The FTW Program must: '-Notify employees and supervisors when an FTW health assessment is needed. Obtain written consent for the evaluation and authorization to share results securely. Identify authorized personnel (or vendors) to conduct assessments and define required clinical credentials",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12527,7 +12980,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-5-q1",
         "number": "1",
         "text": "REASONABLE ACCOMODATION PROCESS: The FTW Program must have a local process to assess and authorize reasonable accommodation of essential job functions, following local laws and K-C Legal, HR, and EHS&S guidance",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12552,7 +13006,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-6-q1",
         "number": "1",
         "text": "FITNESS TO WORK ASSESSMENTS DEPLOY AND RESULTS MANAGEMENT: FTW health assessment results must be delivered in writing, following all local and KC data protection policies, and shared only with authorized contacts. Results should indicate one of the following statuses (which may vary based on local legal requirements): Fit to Work – medically cleared, no limitations. Fit to Work with limitations – medically cleared with restrictions. Not medically cleared – cannot perform the role. Pending determination – requires further medical evaluation or information.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12576,7 +13031,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-7-q1",
         "number": "1",
         "text": "REPORTING AND INVESTIGATIONS:The FTW Program must include a process for reporting and investigating concerns or issues related to FTW health assessments, outcomes, or accommodation decisions. Each facility must also have a procedure to manage complaints or concerns about any aspect of the FTW Program.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12601,7 +13057,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-8-q1",
         "number": "1",
         "text": "CASE MANAGEMENT: Each site must have a process that includes activities, administration, and procedures designed to achieve a timely, safe, and sustainable Return to Work (RTW) for employees following an injury or illness.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12626,7 +13083,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-1-fitness-to-work-9-q1",
         "number": "1",
         "text": "CONTRACTOR MANAGEMENT: Contractors must comply with all facility Fitness for Work (FTW) requirements. These requirements must be clearly stated in the contractor’s scope of work or contract documentation, releasing KC from any responsibility related to the FTW program",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12650,7 +13108,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-1-q1",
         "number": "1",
         "text": "4.1 PROGRAM PRINCIPLES: Each facility identifies and communicates the basics for Medical Surveillance. The work rules include the following: Program triggers: Medical surveillance must be conducted to identify effects of health exposures, as well as communicable diseases to monitor employee health. Medical surveillance information must be protected to ensure employee’s privacy. It must only be shared on an as needed basis, and as legally permitted and only to the people that are required with the applicable access restrictions; and in accordance with Global Privacy Policy",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12674,7 +13133,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-2-q1",
         "number": "1",
         "text": "4.2 POTENTIAL OCCUPATIONAL HAZARDS ASSESSMENT: Potential Occupational hazards that pose potential medical risk(s) to employees shall be identified for at each facility and may include physical, biological, chemical, or endemic threats.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12698,7 +13158,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-3-q1",
         "number": "1",
         "text": "4.3 SELECTION OF MEDICAL SURVEILLANCE FOR WORKPLACE HAZARD CONTROL: The program owner shall ensure that a medical surveillance program for all exposures that are required by regulations, risk assessment, and monitoring results exists.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12722,7 +13183,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-4-q1",
         "number": "1",
         "text": "4.4 MEDICAL EXPOSURE STANDARD LEVELS DEFINITION: Determination of appropriate medical exposure standards levels will be based on local regulatory standards, recognized industry standards (NIOSH, OSHA, ANSI, ACGIH TLVs/BEIs) or country specific standards, whichever are more stringent, hazard banding or subjective/objective medical standards. The most stringent criteria prevail when implementing it. Also use OSHPS 11: Occupational Hygiene Standard as a reference.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12746,7 +13208,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-5-q1",
         "number": "1",
         "text": "4.5 EXPOSED, ILL, AND RETURN TO WORK EMPLOYEE MANAGEMENT: Each facility shall guarantee and document local processes to ensure proper employee case management. Return-to-work and job accommodations protocols must also exist.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12770,7 +13233,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-6-q1",
         "number": "1",
         "text": "4.6 MEDICAL RECORDS AND SENSITIVE INFORMATION MANAGEMENT: Medical Surveillance documentation and medical records generated as part of this program implementation and local processes must be controlled and retained according to legal requirements and Corporate Global Retention and Information Controls and KC Data Privacy policy, applying the strongest applicable criteria. Where there are no recognized local requirements, Medical Services should apply the Global retention requirements for Kimberly Clark business records, through the Enterprise Records Retention Schedule (ERRS) approved and applicable for all employees.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12794,7 +13258,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-2-medical-surveillance-7-q1",
         "number": "1",
         "text": "4.7 CONTRACTOR MANAGEMENT: Contractor personnel shall be managed by their companies to comply with all facility medical surveillance requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12818,7 +13283,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-1-q1",
         "number": "1",
         "text": "Medical Emergency Plan: The KC facility shall have a tailored Medical Emergency Plan that complies with local regulatory requirements and the OHPS3 Medical Emergency Performance Standard.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12844,7 +13310,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-2-q1",
         "number": "1",
         "text": "Medical Emergency Risk Assessment conducted and updated at least annually, or sooner if site conditions change. Results rated as Medium or High risk must be presented to site management.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12880,7 +13347,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-3-q1",
         "number": "1",
         "text": "Medical emergency drills: Conduct regular medical emergency drills to ensure effective preparedness and response in the event of a medical incident.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12905,7 +13373,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-4-q1",
         "number": "1",
         "text": "MERT (Medical Emergency Response team) radio: Compliance with the required number of Medical Emergency Responders (MER),based on the MERT Calculator included in this standard and applicable legal requirements.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12931,7 +13400,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-5-q1",
         "number": "1",
         "text": "MERT Training: Members are certified and have recevided the required trainig.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12959,7 +13429,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-6-q1",
         "number": "1",
         "text": "Medical emergency supplies and equipment:The site must ensure the availability, accessibility, and proper maintenance of medical emergency supplies and equipment necessary for an effective response to medical incidents, including Personal Protective Equipment (PPE).",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -12983,7 +13454,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "ohps-3-medical-emergency-7-q1",
         "number": "1",
         "text": "Emergency Transportation: availability of specialized emergency transportation services to transfer employees in the event of medical emergencies.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -13010,7 +13482,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "caps-1-critical-asset-yankee-dryer-1-q1",
         "number": "1",
         "text": "MINIMUM YANKEE DRYER SAFETY REQUIREMENTS: Each site must communicate and assure conformance with the Yankee Dryer Safety Manual.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -13037,7 +13510,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "caps-2-critical-asset-tad-1-q1",
         "number": "1",
         "text": "MINIMUM TAD REQUIREMENTS: Each site must communicate and assure conformance with the Yankee Dryer Safety Manual.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []
@@ -13064,7 +13538,8 @@ export const performanceStandardRequirements: ImportedRequirement[] = [
         "id": "caps-3-critical-asset-boiler-1-q1",
         "number": "1",
         "text": "MINIMUM BOILER REQUIREMENTS: Each site must communicate and assure conformance with the Boiler Safety & Reliability Manual.",
-        "response": null
+        "response": null,
+        "period": "2026 Q3"
       }
     ],
     "evidence": []

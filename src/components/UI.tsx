@@ -9,6 +9,7 @@ import {
   Clock3,
   Info,
   Minus,
+  Search,
   X,
 } from "lucide-react";
 import { performanceLabel } from "../data";
@@ -83,6 +84,7 @@ export function Select({
   label,
   icon,
   className,
+  searchable = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -90,17 +92,25 @@ export function Select({
   label: string;
   icon?: ReactNode;
   className?: string;
+  /** Adds a search box above the list — use for lists long enough that arrow-keying through
+   * every option (e.g. a site list that can run into the hundreds) is impractical. */
+  searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
+  const [query, setQuery] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
   const current = options.find((option) => option.value === value) ?? options[0];
+  const filteredOptions = searchable && query.trim()
+    ? options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
 
   useEffect(() => {
     if (!open) return;
-    listRef.current?.focus();
+    (searchable ? searchRef.current : listRef.current)?.focus();
     const closeOnOutsidePress = (event: PointerEvent) => {
       if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -113,26 +123,47 @@ export function Select({
       document.removeEventListener("pointerdown", closeOnOutsidePress);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [open]);
+  }, [open, searchable]);
 
   function openList() {
+    setQuery("");
     const activeIndex = options.findIndex((option) => option.value === value);
     setHighlighted(activeIndex >= 0 ? activeIndex : 0);
     setOpen(true);
   }
 
   function choose(index: number) {
-    onChange(options[index].value);
+    const option = filteredOptions[index];
+    if (!option) return;
+    onChange(option.value);
     setOpen(false);
   }
 
-  function handleListKeyDown(event: KeyboardEvent<HTMLUListElement>) {
-    if (event.key === "ArrowDown") { event.preventDefault(); setHighlighted((current) => Math.min(options.length - 1, current + 1)); }
+  function handleListKeyDown(event: KeyboardEvent<HTMLUListElement | HTMLInputElement>) {
+    if (event.key === "ArrowDown") { event.preventDefault(); setHighlighted((current) => Math.min(filteredOptions.length - 1, current + 1)); }
     else if (event.key === "ArrowUp") { event.preventDefault(); setHighlighted((current) => Math.max(0, current - 1)); }
     else if (event.key === "Home") { event.preventDefault(); setHighlighted(0); }
-    else if (event.key === "End") { event.preventDefault(); setHighlighted(options.length - 1); }
-    else if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(highlighted); }
+    else if (event.key === "End") { event.preventDefault(); setHighlighted(filteredOptions.length - 1); }
+    else if (event.key === "Enter") { event.preventDefault(); choose(highlighted); }
+    else if (event.key === " " && !searchable) { event.preventDefault(); choose(highlighted); }
     else if (event.key === "Tab") { setOpen(false); }
+  }
+
+  function renderOption(option: SelectOption, index: number) {
+    return (
+      <li
+        key={option.value}
+        id={`${listId}-${index}`}
+        role="option"
+        aria-selected={option.value === value}
+        className={cx("select-option", index === highlighted && "select-option--highlighted", option.value === value && "select-option--selected")}
+        onMouseEnter={() => setHighlighted(index)}
+        onClick={() => choose(index)}
+      >
+        <span className="select-option__check">{option.value === value && <Check size={15} />}</span>
+        <span>{option.label}</span>
+      </li>
+    );
   }
 
   return (
@@ -149,7 +180,31 @@ export function Select({
         <span>{current?.label}</span>
         <ChevronDown size={16} className={cx("select-control__chevron", open && "select-control__chevron--open")} />
       </button>
-      {open && (
+      {open && searchable && (
+        <div className="select-popover select-popover--searchable">
+          <input
+            ref={searchRef}
+            className="select-popover__search"
+            type="text"
+            value={query}
+            onChange={(event) => { setQuery(event.target.value); setHighlighted(0); }}
+            onKeyDown={handleListKeyDown}
+            placeholder={`Search ${label.toLowerCase()}`}
+            aria-label={`Search ${label}`}
+          />
+          <ul
+            ref={listRef}
+            role="listbox"
+            aria-label={label}
+            aria-activedescendant={filteredOptions.length ? `${listId}-${highlighted}` : undefined}
+            className="select-popover__list"
+            tabIndex={-1}
+          >
+            {filteredOptions.length ? filteredOptions.map(renderOption) : <li className="select-popover__empty">No matches</li>}
+          </ul>
+        </div>
+      )}
+      {open && !searchable && (
         <ul
           ref={listRef}
           role="listbox"
@@ -159,20 +214,7 @@ export function Select({
           tabIndex={-1}
           onKeyDown={handleListKeyDown}
         >
-          {options.map((option, index) => (
-            <li
-              key={option.value}
-              id={`${listId}-${index}`}
-              role="option"
-              aria-selected={option.value === value}
-              className={cx("select-option", index === highlighted && "select-option--highlighted", option.value === value && "select-option--selected")}
-              onMouseEnter={() => setHighlighted(index)}
-              onClick={() => choose(index)}
-            >
-              <span className="select-option__check">{option.value === value && <Check size={15} />}</span>
-              <span>{option.label}</span>
-            </li>
-          ))}
+          {options.map(renderOption)}
         </ul>
       )}
     </div>
@@ -317,6 +359,69 @@ export function EmptyState({ icon, title, description, action }: { icon: ReactNo
       <h2>{title}</h2>
       <p>{description}</p>
       {action}
+    </div>
+  );
+}
+
+export interface CheckboxListOption {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+export function CheckboxList({
+  options,
+  selected,
+  onChange,
+  label,
+  searchable = false,
+}: {
+  options: CheckboxListOption[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+  label: string;
+  /** Adds a search box and caps the list to a scrollable height — use once the option count
+   * can run into the hundreds (e.g. a site list), where a flat unbounded list stops working. */
+  searchable?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = searchable && query.trim()
+    ? options.filter((option) => `${option.label} ${option.hint ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  function toggle(value: string) {
+    onChange(selected.includes(value) ? selected.filter((current) => current !== value) : [...selected, value]);
+  }
+
+  return (
+    <div className="checkbox-list-wrap">
+      {searchable && (
+        <div className="checkbox-list__toolbar">
+          <label className="search-control">
+            <Search size={16} />
+            <input type="text" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} aria-label={`Search ${label}`} />
+          </label>
+          <span className="checkbox-list__count">
+            {selected.length} selected
+            {selected.length > 0 && <button type="button" onClick={() => onChange([])}>Clear</button>}
+          </span>
+        </div>
+      )}
+      <div className={cx("checkbox-list", searchable && "checkbox-list--scroll")} role="group" aria-label={label}>
+        {filtered.length ? filtered.map((option) => {
+          const checked = selected.includes(option.value);
+          return (
+            <label className={cx("checkbox-list__row", checked && "checkbox-list__row--checked")} key={option.value}>
+              <input type="checkbox" checked={checked} onChange={() => toggle(option.value)} />
+              <span>
+                <strong>{option.label}</strong>
+                {option.hint && <small>{option.hint}</small>}
+              </span>
+              {checked && <CheckCircle2 size={18} />}
+            </label>
+          );
+        }) : <p className="checkbox-list__empty">No matches for "{query}"</p>}
+      </div>
     </div>
   );
 }

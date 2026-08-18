@@ -9,6 +9,7 @@ import {
   CircleAlert,
   Clock3,
   FilterX,
+  Mail,
   MapPin,
   RefreshCw,
   Search,
@@ -19,7 +20,7 @@ import { Link, useParams } from "react-router-dom";
 import { requirementRoute, useAppState } from "../AppState";
 import { useGuidedSetup } from "../GuidedSetup";
 import { performanceLabel, sections as seedSections } from "../data";
-import type { DashboardSite, Performance, SectionSummary } from "../types";
+import type { DashboardSite, Performance, SectionSummary, SiteContacts } from "../types";
 import { Button, CompletionBadge, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
 import { cx } from "../utils";
 
@@ -141,20 +142,54 @@ function SectionPreview({ site, section, onClose }: { site: DashboardSite; secti
   return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close section preview" onClick={onClose} /><section className="dialog dialog--compact" role="dialog" aria-modal="true" aria-labelledby="section-preview-title"><div className="dialog__header"><div><p className="eyebrow">{site.name}</p><h2 id="section-preview-title">{section.name}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div><div className="section-preview"><div><span>Completion</span><strong>{section.completion}%</strong></div><div><span>Performance</span><PerformanceBadge performance={section.performance} /></div><div><span>Questions</span><strong>{section.questions}</strong></div><div><span>Gaps</span><strong>{section.gaps}</strong></div></div><InlineMessage tone="info" title="Read-only site record">This preview is available within your enterprise scope. Only the currently assigned site can be edited.</InlineMessage><div className="dialog__footer"><Button variant="primary" onClick={onClose}>Done</Button></div></section></div>;
 }
 
+function ContactsPanel({ contacts }: { contacts: SiteContacts | null }) {
+  if (!contacts) return <EmptyState icon={<Mail size={26} />} title="Contact details not yet provided" description="Site contacts have not been recorded for this site yet." />;
+  const initials = (name: string) => name.split(" ").filter(Boolean).map((part) => part[0]).join("");
+  const group = (title: string, rows: Array<[string, string, string]>) => (
+    <article className="owner-card" key={title}>
+      <div className="owner-card__header"><div><p>Read-only</p><h3>{title}</h3></div></div>
+      {rows.map(([label, name, email]) => (
+        <div className="owner-person" key={label}><span className="avatar avatar--soft">{initials(name)}</span><div><small>{label}</small><strong>{name}</strong><a href={`mailto:${email}`}>{email}</a></div></div>
+      ))}
+    </article>
+  );
+  return (
+    <div className="owner-grid">
+      {group("Local leadership", [
+        ["Site / Location Manager", contacts.siteManager, contacts.siteManagerEmail],
+        ["Site Environmental Leader", contacts.environmentalLeader, contacts.environmentalLeaderEmail],
+        ["Site Health & Safety Leader", contacts.healthSafetyLeader, contacts.healthSafetyLeaderEmail],
+        ["Site Occupational Health Nurse", contacts.occupationalHealthNurse, contacts.occupationalHealthNurseEmail],
+      ])}
+      {group("Regional leadership", [
+        ["Regional Health & Safety Leader", contacts.regionalHealthSafetyLeader, contacts.regionalHealthSafetyEmail],
+        ["Regional Environmental Leader", contacts.regionalEnvironmentalLeader, contacts.regionalEnvironmentalEmail],
+        ["Regional Occupational Health Leader", contacts.regionalOccupationalHealthLeader, contacts.regionalOccupationalHealthEmail],
+      ])}
+    </div>
+  );
+}
+
 export function SiteDrilldownScreen() {
   const { siteId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirements } = useAppState();
+  const { dashboardSiteRows, sectionSummaries, requirements, siteContacts } = useAppState();
   const { role } = useGuidedSetup();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const [preview, setPreview] = useState<SectionSummary | null>(null);
   const siteSections = site.id === "northstar" ? sectionSummaries : seedSections;
   const canEditAssignedSite = role === "site-contributor" && site.id === "northstar";
+  // Only "northstar" has real seeded contact data (siteContacts is a single global record, not
+  // yet keyed by site) — every other mock dashboard site shows the empty state rather than
+  // fabricated placeholder contacts, which would misleadingly imply fictitious people are real
+  // site leadership in a compliance app.
+  const hasRealContacts = site.id === "northstar";
   return (
     <div className="page-container">
       <Link className="back-link" to="/dashboard"><ArrowLeft size={17} /> Back to dashboard</Link>
       <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHSS_${site.code}_assessment.csv`)}>Export site view</Button>} />
       <InlineMessage tone="info" title={canEditAssignedSite ? "Assigned site—editing available" : "Read-only enterprise view"}>{canEditAssignedSite ? "Open any section below to continue work in your assigned site assessment." : "You can inspect this site's assessment details. Enterprise and administrative oversight does not grant site editing access."}</InlineMessage>
       <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>
+      <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Read-only</p><h2>Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
       <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Assessment detail</p><h2>Operating System sections</h2></div><PerformanceBadge performance={site.performance} /></div><div className="section-drilldown-list" data-tour="drilldown-sections">{siteSections.filter((section) => section.kind === "operating-system").map((section, index) => {
         const requirement = requirements.find((item) => item.sectionId === section.id);
         return <article key={section.id} className="section-drilldown-row"><div className="section-drilldown-row__name"><span className="section-index">{index + 1}</span><div><strong>{section.name}</strong><span>{section.questions} questions · {section.gaps} gaps</span></div></div><div><span className="mobile-label">Completion</span><ProgressBar value={section.completion} /></div><div><span className="mobile-label">Performance</span><PerformanceBadge performance={section.performance} compact /></div>{canEditAssignedSite && requirement ? <Link className="button button--tertiary button--compact" to={requirementRoute(requirement)}><span>Open</span><ArrowRight size={16} /></Link> : <Button variant="tertiary" size="compact" onClick={() => setPreview(section)} icon={<ArrowRight size={16} />} iconPosition="end">View</Button>}</article>;

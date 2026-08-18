@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { actionComplete, requirementRoute, useAppState } from "../AppState";
-import { assignedSite } from "../data";
-import type { AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../types";
+import { assessmentPeriods, assignedSite } from "../data";
+import type { AssessmentPeriod, AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../types";
 import { Button, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../components/UI";
 import { cx } from "../utils";
 
@@ -297,6 +297,7 @@ export function ActionsScreen() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "complete" | "needs-info">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
+  const [period, setPeriod] = useState<"all" | AssessmentPeriod>("all");
   const [editing, setEditing] = useState<GapRow | null>(null);
   const [saved, setSaved] = useState(false);
   const actions = useMemo(() => requirements.flatMap((requirement) => requirement.questions.filter((question) => question.response === "no" || question.response === "partial").map((question) => ({ requirement, question }))), [requirements]);
@@ -304,7 +305,7 @@ export function ActionsScreen() {
   const filtered = actions.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""}`.toLowerCase().includes(query.toLowerCase());
     const isComplete = actionComplete(question.response, question.action);
-    return matchesQuery && (status === "all" || (status === "complete" ? isComplete : !isComplete)) && (response === "all" || question.response === response);
+    return matchesQuery && (status === "all" || (status === "complete" ? isComplete : !isComplete)) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
   });
   return (
     <div className="page-container">
@@ -338,6 +339,13 @@ export function ActionsScreen() {
               { value: "no", label: "No only" },
               { value: "partial", label: "Partial only" },
             ]}
+          />
+          <Select
+            label="Filter assessment period"
+            icon={<CalendarClock size={17} />}
+            value={period}
+            onChange={(value) => setPeriod(value as typeof period)}
+            options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]}
           />
         </div>
         {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {

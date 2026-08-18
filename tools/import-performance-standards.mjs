@@ -127,6 +127,8 @@ function buildStandard(sheet) {
           number: "1",
           text: requirementText,
           response: null,
+          // Matches `currentAssessmentPeriod` in src/data.ts — keep in sync if that changes.
+          period: "2026 Q3",
         },
       ],
       evidence: [],

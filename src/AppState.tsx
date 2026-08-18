@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  currentAssessmentPeriod,
   dashboardSites,
   initialSiteContacts,
   masterRequirements as seedMasterRequirements,
@@ -11,6 +12,7 @@ import {
 } from "./data";
 import type {
   ActionItem,
+  AssessmentPeriod,
   DashboardSite,
   EvidenceItem,
   MasterRequirement,
@@ -28,10 +30,12 @@ export interface ImportHistoryRecord {
   fileName: string;
   importedAt: string;
   importedBy: string;
+  siteIds: string[];
   created: number;
   updated: number;
   unchanged: number;
   status: "Completed";
+  publishStatus: "Draft" | "Published";
 }
 
 interface PersistedState {
@@ -50,7 +54,7 @@ interface AppStateValue extends PersistedState {
   overallPerformance: ReturnType<typeof rollupPerformance>;
   gapCount: number;
   missingActionCount: number;
-  updateQuestion: (requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem }) => void;
+  updateQuestion: (requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }) => void;
   addEvidence: (requirementId: string, item: EvidenceItem) => void;
   updateEvidence: (requirementId: string, item: EvidenceItem) => void;
   removeEvidence: (requirementId: string, evidenceId: string) => void;
@@ -58,7 +62,8 @@ interface AppStateValue extends PersistedState {
   updateOwner: (owner: OwnerRecord) => void;
   addMasterRequirement: (requirement: MasterRequirement) => void;
   updateMasterRequirement: (requirement: MasterRequirement) => void;
-  recordImport: (fileName: string) => ImportHistoryRecord;
+  submitImportBatch: (fileName: string, siteIds: string[]) => ImportHistoryRecord;
+  publishImportBatch: (batchId: string) => void;
 }
 
 function freshState(): PersistedState {
@@ -80,9 +85,20 @@ function loadState(): PersistedState {
     return {
       ...freshState(),
       ...parsed,
-      requirements: parsed.requirements?.length ? parsed.requirements : structuredClone(seedRequirements),
+      // Backfill fields added after some browsers may already have a persisted snapshot from
+      // an earlier schema — without this, a stale record missing e.g. `siteIds` would throw the
+      // moment code reads `.length` on it, rather than just quietly defaulting.
+      requirements: parsed.requirements?.length
+        ? parsed.requirements.map((requirement) => ({
+          ...requirement,
+          questions: requirement.questions.map((question) => ({ ...question, period: question.period ?? currentAssessmentPeriod })),
+        }))
+        : structuredClone(seedRequirements),
       ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : structuredClone(seedOwnerRecords),
-      masterRequirements: parsed.masterRequirements?.length ? parsed.masterRequirements : structuredClone(seedMasterRequirements),
+      masterRequirements: parsed.masterRequirements?.length
+        ? parsed.masterRequirements.map((requirement) => ({ ...requirement, siteIds: requirement.siteIds ?? [] }))
+        : structuredClone(seedMasterRequirements),
+      importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
     };
   } catch {
     return freshState();
@@ -144,12 +160,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...update(current), lastUpdated: new Date().toISOString() }));
   }
 
-  function updateQuestion(requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem }) {
+  function updateQuestion(requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }) {
+    // Setting a response tags it with the current assessment period unless a period was
+    // explicitly given — this is descriptive metadata on the one live response, not a new
+    // versioning axis (there is still exactly one response per question).
+    const tagged = update.response !== undefined && update.period === undefined
+      ? { ...update, period: currentAssessmentPeriod }
+      : update;
     touch((current) => ({
       ...current,
       requirements: current.requirements.map((requirement) => requirement.id === requirementId ? {
         ...requirement,
-        questions: requirement.questions.map((question) => question.id === questionId ? { ...question, ...update } : question),
+        questions: requirement.questions.map((question) => question.id === questionId ? { ...question, ...tagged } : question),
       } : requirement),
     }));
   }
@@ -203,19 +225,63 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }));
   }
 
-  function recordImport(fileName: string) {
+  function submitImportBatch(fileName: string, siteIds: string[]) {
+    const batchId = `IMP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    // Illustrative mock batch: a small, real set of rows is actually written to state (so the
+    // numbers shown match what happened), rather than fabricating the full workbook scale.
+    // Selection/counts are decided from the current render's `state` (safe here — this function
+    // makes exactly one `touch` call, so `state` is still fresh); the write itself below still
+    // derives from `current` inside `touch`, matching this file's usual pattern.
+    const sectionPool = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation"];
+    const createdRows: MasterRequirement[] = Array.from({ length: 4 }, (_, index) => ({
+      id: `OS ${5 + index}.1.${index + 1}`,
+      title: `Imported requirement ${index + 1} from ${fileName}`,
+      section: sectionPool[index % sectionPool.length],
+      version: "v1",
+      status: "Draft",
+      siteIds,
+      importBatchId: batchId,
+    }));
+    const updateCandidateIds = state.masterRequirements.slice(0, 2).map((requirement) => requirement.id);
     const record: ImportHistoryRecord = {
-      id: `IMP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+      id: batchId,
       fileName,
       importedAt: new Date().toISOString(),
       importedBy: "Rachel Morgan",
-      created: 18,
-      updated: 46,
-      unchanged: 688,
+      siteIds,
+      created: createdRows.length,
+      updated: updateCandidateIds.length,
+      unchanged: state.masterRequirements.length - updateCandidateIds.length,
       status: "Completed",
+      publishStatus: "Draft",
     };
-    touch((current) => ({ ...current, importHistory: [record, ...current.importHistory] }));
+    touch((current) => ({
+      ...current,
+      masterRequirements: [
+        ...createdRows,
+        ...current.masterRequirements.map((requirement) => updateCandidateIds.includes(requirement.id)
+          ? {
+            ...requirement,
+            status: "Draft" as const,
+            importBatchId: batchId,
+            siteIds: [...new Set([...requirement.siteIds, ...siteIds])],
+            version: `v${Number(requirement.version.replace(/^v/, "")) + 1}`,
+          }
+          : requirement),
+      ],
+      importHistory: [record, ...current.importHistory],
+    }));
     return record;
+  }
+
+  function publishImportBatch(batchId: string) {
+    touch((current) => ({
+      ...current,
+      masterRequirements: current.masterRequirements.map((requirement) =>
+        requirement.importBatchId === batchId ? { ...requirement, status: "Published" as const } : requirement),
+      importHistory: current.importHistory.map((record) =>
+        record.id === batchId ? { ...record, publishStatus: "Published" as const } : record),
+    }));
   }
 
   const value: AppStateValue = {
@@ -229,7 +295,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateOwner,
     addMasterRequirement,
     updateMasterRequirement,
-    recordImport,
+    submitImportBatch,
+    publishImportBatch,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

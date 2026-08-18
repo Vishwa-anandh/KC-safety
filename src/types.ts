@@ -1,6 +1,7 @@
 export type Performance = "initial" | "emerging" | "performing" | "not-assessed";
 export type ResponseValue = "no" | "partial" | "yes" | null;
 export type CompletionState = "not-started" | "in-progress" | "complete";
+export type AssessmentPeriod = "2026 Q1" | "2026 Q2" | "2026 Q3";
 
 export interface SectionSummary {
   id: string;
@@ -33,6 +34,7 @@ export interface AssessmentQuestion {
   number: string;
   text: string;
   response: ResponseValue;
+  period: AssessmentPeriod;
   action?: ActionItem;
 }
 
@@ -95,4 +97,6 @@ export interface MasterRequirement {
   section: string;
   version: string;
   status: "Published" | "Draft";
+  siteIds: string[];
+  importBatchId?: string;
 }
