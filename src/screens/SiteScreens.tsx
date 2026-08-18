@@ -317,8 +317,9 @@ export function ActionsScreen() {
         <MetricCard label="Needs information" value={actions.length - complete} detail="Missing description or owner" icon={<FileWarning size={21} />} tone="warning" />
       </div>
       <section className="table-card">
-        <div className="table-card__header table-card__header--wrap"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><label className="search-control search-control--small"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label></div>
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><span>{filtered.length} of {actions.length} shown</span></div>
         <div className="filter-row" data-tour="actions-filters">
+          <label className="search-control"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label>
           <Select
             label="Filter action status"
             icon={<Filter size={17} />}

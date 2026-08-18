@@ -2060,10 +2060,6 @@ h3 {
   font-size: 0.85rem;
 }
 
-.search-control--small {
-  max-width: 290px;
-}
-
 .select-control {
   position: relative;
   display: flex;
@@ -2510,6 +2506,18 @@ h3 {
   border-color: var(--warning-border);
   background: var(--warning-surface);
   color: var(--warning) !important;
+}
+
+.response-chip--yes {
+  border-color: var(--success-border);
+  background: var(--success-surface);
+  color: var(--success) !important;
+}
+
+.response-chip--none {
+  border-color: var(--neutral-300);
+  background: var(--neutral-100);
+  color: var(--neutral-500) !important;
 }
 
 .publish-badge {
@@ -3439,8 +3447,16 @@ h3 {
   padding: 0.85rem 1rem;
 }
 
-.dashboard-filter-bar .search-control {
-  min-width: 280px;
+/* Every filter-bar search box is a fixed 320px rather than flex-growing: each screen's filter
+   row holds a different number of selects, so a growing search box ends up a different width on
+   every page. No grow keeps them visually identical across screens; shrink is still allowed so
+   narrow viewports collapse gracefully (and the mobile rule below overrides to full width). */
+.dashboard-filter-bar .search-control,
+.dashboard-filter-bar--expanded .search-control,
+.filter-row .search-control,
+.content-toolbar .search-control {
+  flex: 0 1 320px;
+  min-width: 0;
 }
 
 .table-card__header--results {
@@ -4478,7 +4494,6 @@ h3 {
   }
 
   .search-control,
-  .search-control--small,
   .select-control {
     width: 100%;
     max-width: none;
@@ -4874,7 +4889,6 @@ h3 {
 .detail-status--missing { background: var(--warning-surface); color: var(--warning); }
 .missing-value { color: var(--warning); font-size: 0.74rem; font-style: italic; }
 
-.dashboard-filter-bar--expanded .search-control { flex: 1 1 280px; }
 .dashboard-filter-bar--expanded .select-control { flex: 1 1 170px; }
 .dashboard-filter-bar--expanded .select-control--focus { flex-basis: 230px; }
 
@@ -4896,6 +4910,27 @@ h3 {
 
 .section-preview span { color: var(--neutral-500); font-size: 0.72rem; }
 .section-preview strong { font-size: 1.2rem; }
+
+.readonly-response {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.readonly-response > span:first-child { color: var(--neutral-500); font-size: 0.78rem; font-weight: 650; }
+
+.readonly-action {
+  margin-top: 0.9rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  background: var(--neutral-25);
+  padding: 0.75rem 0.85rem;
+}
+
+.readonly-action p { margin: 0; color: var(--neutral-800); font-size: 0.85rem; }
+.readonly-action p.eyebrow { margin-bottom: 0.3rem; }
+.readonly-action > span { display: block; margin-top: 0.4rem; color: var(--neutral-500); font-size: 0.76rem; }
 
 .history-list {
   display: grid;

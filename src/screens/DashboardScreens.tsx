@@ -14,14 +14,13 @@ import {
   RefreshCw,
   Search,
   Target,
-  X,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { requirementRoute, useAppState } from "../AppState";
 import { useGuidedSetup } from "../GuidedSetup";
-import { performanceLabel, sections as seedSections } from "../data";
-import type { DashboardSite, Performance, SectionSummary, SiteContacts } from "../types";
-import { Button, CompletionBadge, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
+import { performanceForResponse, performanceLabel, responseLabel, sections as seedSections } from "../data";
+import type { DashboardSite, Performance, SiteContacts } from "../types";
+import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
 import { cx } from "../utils";
 
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
@@ -138,8 +137,72 @@ export function DashboardScreen() {
   );
 }
 
-function SectionPreview({ site, section, onClose }: { site: DashboardSite; section: SectionSummary; onClose: () => void }) {
-  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close section preview" onClick={onClose} /><section className="dialog dialog--compact" role="dialog" aria-modal="true" aria-labelledby="section-preview-title"><div className="dialog__header"><div><p className="eyebrow">{site.name}</p><h2 id="section-preview-title">{section.name}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div><div className="section-preview"><div><span>Completion</span><strong>{section.completion}%</strong></div><div><span>Performance</span><PerformanceBadge performance={section.performance} /></div><div><span>Questions</span><strong>{section.questions}</strong></div><div><span>Gaps</span><strong>{section.gaps}</strong></div></div><InlineMessage tone="info" title="Read-only site record">This preview is available within your enterprise scope. Only the currently assigned site can be edited.</InlineMessage><div className="dialog__footer"><Button variant="primary" onClick={onClose}>Done</Button></div></section></div>;
+export function SiteSectionDetailScreen() {
+  const { siteId, sectionId } = useParams();
+  const { dashboardSiteRows, sectionSummaries, requirements } = useAppState();
+  const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
+  const siteSections = site.id === "northstar" ? sectionSummaries : seedSections;
+  const section = siteSections.find((item) => item.id === sectionId);
+  // Same gating as the drill-down list: real per-question answers exist only for the one real
+  // site, so other mock sites must not borrow Northstar's answers.
+  const requirement = site.id === "northstar" ? requirements.find((item) => item.sectionId === sectionId) : undefined;
+
+  if (!section) {
+    return (
+      <div className="page-container">
+        <Link className="back-link" to={`/sites/${site.id}`}><ArrowLeft size={17} /> Back to {site.name}</Link>
+        <EmptyState icon={<Search size={27} />} title="Section not found" description="This assessment section is not part of the current site's framework." />
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      <Link className="back-link" to={`/sites/${site.id}`}><ArrowLeft size={17} /> Back to {site.name}</Link>
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link to="/dashboard">Dashboard</Link><ChevronRight size={15} />
+        <Link to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} />
+        <span aria-current="page">{section.shortName}</span>
+      </nav>
+      <PageHeader eyebrow="Assessment detail" title={section.name} description={`${site.code} · ${section.description}`} />
+      <InlineMessage tone="info" title="Read-only site record">This view is available within your enterprise scope. Only the currently assigned site can be edited.</InlineMessage>
+      <div className="metrics-grid">
+        <MetricCard label="Completion" value={`${section.completion}%`} detail="Section completion" icon={<Target size={21} />} tone="brand" />
+        <MetricCard label="Performance" value={performanceLabel(section.performance)} detail="Lowest question level" icon={<BarChart3 size={21} />} tone={section.performance === "performing" ? "success" : section.performance === "emerging" ? "warning" : "danger"} />
+        <MetricCard label="Questions" value={section.questions} detail="In this section" icon={<CheckCircle2 size={21} />} />
+        <MetricCard label="Gaps" value={section.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" />
+      </div>
+      <section className="page-section" aria-labelledby="site-questions-title">
+        <div className="section-title-row"><div><p className="eyebrow">Assessment questions</p><h2 id="site-questions-title">Recorded responses</h2></div>{requirement && <span className="question-count">{requirement.questions.length} questions</span>}</div>
+        {requirement ? (
+          <div className="question-list">
+            {requirement.questions.map((question) => (
+              <article className="question-card" key={question.id}>
+                <div className="question-card__header">
+                  <span className="question-number">{question.number}</span>
+                  <div><p>Question {question.number}</p><h3>{question.text}</h3></div>
+                  <PerformanceBadge performance={performanceForResponse(question.response)} compact />
+                </div>
+                <div className="readonly-response">
+                  <span>Response</span>
+                  <span className={cx("response-chip", `response-chip--${question.response ?? "none"}`)}>{responseLabel(question.response)}</span>
+                </div>
+                {question.action?.description && (
+                  <div className="readonly-action">
+                    <p className="eyebrow">Corrective action</p>
+                    <p>{question.action.description}</p>
+                    {question.action.owner && <span>Owner · {question.action.owner}</span>}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={<Search size={27} />} title="Question-level detail not available" description="Individual assessment responses are only recorded for sites with live self-assessment data. Completion and performance summaries above are tracked for every site in your authorized scope." />
+        )}
+      </section>
+    </div>
+  );
 }
 
 function ContactsPanel({ contacts }: { contacts: SiteContacts | null }) {
@@ -175,7 +238,6 @@ export function SiteDrilldownScreen() {
   const { dashboardSiteRows, sectionSummaries, requirements, siteContacts } = useAppState();
   const { role } = useGuidedSetup();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
-  const [preview, setPreview] = useState<SectionSummary | null>(null);
   const siteSections = site.id === "northstar" ? sectionSummaries : seedSections;
   const canEditAssignedSite = role === "site-contributor" && site.id === "northstar";
   // Only "northstar" has real seeded contact data (siteContacts is a single global record, not
@@ -191,10 +253,13 @@ export function SiteDrilldownScreen() {
       <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>
       <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
       <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Assessment detail</p><h2>Operating System sections</h2></div><PerformanceBadge performance={site.performance} /></div><div className="section-drilldown-list" data-tour="drilldown-sections">{siteSections.filter((section) => section.kind === "operating-system").map((section, index) => {
-        const requirement = requirements.find((item) => item.sectionId === section.id);
-        return <article key={section.id} className="section-drilldown-row"><div className="section-drilldown-row__name"><span className="section-index">{index + 1}</span><div><strong>{section.name}</strong><span>{section.questions} questions · {section.gaps} gaps</span></div></div><div><span className="mobile-label">Completion</span><ProgressBar value={section.completion} /></div><div><span className="mobile-label">Performance</span><PerformanceBadge performance={section.performance} compact /></div>{canEditAssignedSite && requirement ? <Link className="button button--tertiary button--compact" to={requirementRoute(requirement)}><span>Open</span><ArrowRight size={16} /></Link> : <Button variant="tertiary" size="compact" onClick={() => setPreview(section)} icon={<ArrowRight size={16} />} iconPosition="end">View</Button>}</article>;
+        // `requirements` is one global list of real, answered assessment data tied to the one
+        // real site ("northstar") — every mock dashboard site shares the same sectionId space,
+        // so this lookup must stay gated to that one real site. Otherwise a different site's
+        // drill-down would show Northstar's actual answers as if they belonged to it.
+        const requirement = site.id === "northstar" ? requirements.find((item) => item.sectionId === section.id) : undefined;
+        return <article key={section.id} className="section-drilldown-row"><div className="section-drilldown-row__name"><span className="section-index">{index + 1}</span><div><strong>{section.name}</strong><span>{section.questions} questions · {section.gaps} gaps</span></div></div><div><span className="mobile-label">Completion</span><ProgressBar value={section.completion} /></div><div><span className="mobile-label">Performance</span><PerformanceBadge performance={section.performance} compact /></div>{canEditAssignedSite && requirement ? <Link className="button button--tertiary button--compact" to={requirementRoute(requirement)}><span>Open</span><ArrowRight size={16} /></Link> : <Link className="button button--tertiary button--compact" to={`/sites/${site.id}/sections/${section.id}`}><span>View</span><ArrowRight size={16} /></Link>}</article>;
       })}</div></section>
-      {preview && <SectionPreview site={site} section={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }

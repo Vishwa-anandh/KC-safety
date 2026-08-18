@@ -5,7 +5,7 @@ import AppShell from "./components/AppShell";
 import { roleProfiles, type UserRole } from "./GuidedSetup";
 import { NoAssignmentScreen, SessionExpiredScreen, UnauthorizedScreen } from "./screens/AccessStates";
 import { AdminImportBatchPreviewScreen, AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementsScreen } from "./screens/AdminScreens";
-import { DashboardScreen, SiteDrilldownScreen } from "./screens/DashboardScreens";
+import { DashboardScreen, SiteDrilldownScreen, SiteSectionDetailScreen } from "./screens/DashboardScreens";
 import RequirementWorkspace from "./screens/RequirementWorkspace";
 import LoginScreen from "./screens/LoginScreen";
 import {
@@ -87,6 +87,7 @@ export default function App() {
             <Route element={<RequireRole allowed={["enterprise-viewer", "administrator"]} />}>
               <Route path="dashboard" element={<DashboardScreen />} />
               <Route path="sites/:siteId" element={<SiteDrilldownScreen />} />
+              <Route path="sites/:siteId/sections/:sectionId" element={<SiteSectionDetailScreen />} />
             </Route>
             <Route element={<RequireRole allowed={["administrator"]} />}>
               <Route path="admin/imports" element={<AdminImportsScreen />} />

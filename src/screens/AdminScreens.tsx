@@ -150,7 +150,7 @@ export function AdminImportBatchPreviewScreen() {
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { submitImportBatch } = useAppState();
+  const { importHistory, publishImportBatch, submitImportBatch } = useAppState();
   const [step, setStep] = useState(0);
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -178,7 +178,6 @@ export function AdminImportsScreen() {
   return (
     <div className="page-container">
       <PageHeader eyebrow="Administration" title="Master data import" description="Validate an approved KC workbook before applying requirements and hierarchy changes." actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => navigate("/admin/imports/history")} data-tour="import-history">Import history</Button>} />
-      <InlineMessage tone="warning" title="Administrative action">Imports update governed master requirements for the sites you select. Inspect the workbook, review the dry run, and resolve blocking errors before confirmation.</InlineMessage>
       <section className="import-card">
         <StepIndicator current={step} />
         <div className="import-stage">
@@ -188,7 +187,27 @@ export function AdminImportsScreen() {
           {step === 3 && <><div className="import-stage__heading"><span className="stage-icon"><ArrowRight size={23} /></span><div><p className="eyebrow">Step 4 of 7</p><h2>Map workbook columns</h2><p>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div></div><div className="mapping-table">{mappings.map((mapping, index) => <div key={mapping.source} className={cx(mapping.needsReview && "mapping-table__row--flagged")}><span><strong>{mapping.source}</strong><small>Source column</small></span><ArrowRight size={18} /><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /><span className="mapping-sample">{mapping.sample}</span>{mapping.needsReview ? <span className="warning-label">Needs review</span> : <CheckCircle2 size={18} />}</div>)}</div>{needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}</>}
           {step === 4 && <><div className="import-stage__heading"><span className="stage-icon"><ShieldCheck size={23} /></span><div><p className="eyebrow">Step 5 of 7</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className="validation-summary"><div className="validation-summary__success"><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className="validation-summary__warning"><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHSS_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
           {step === 5 && <><div className="import-stage__heading"><span className="stage-icon"><FileCheck2 size={23} /></span><div><p className="eyebrow">Step 6 of 7</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className="dry-run-grid"><div><span className="dry-run-dot dry-run-dot--create" /><strong>4</strong><span>Create</span></div><div><span className="dry-run-dot dry-run-dot--update" /><strong>2</strong><span>Update</span></div><div><span className="dry-run-dot dry-run-dot--same" /><strong>746</strong><span>Unchanged</span></div><div><span className="dry-run-dot dry-run-dot--conflict" /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for {siteNamesFor(selectedSiteIds) || "the selected sites"} and writes an administrator audit record.</InlineMessage><label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
-          {step === 6 && result && <div className="result-state"><span className="result-state__icon"><CheckCircle2 size={34} /></span><p className="eyebrow">Import complete</p><h2>Master data was processed successfully</h2><p>{result.created} records created, {result.updated} updated, and {result.unchanged} unchanged. Audit reference <strong>{result.id}</strong>.</p><div><Button variant="secondary" onClick={() => navigate(`/admin/imports/${result.id}/preview`)}>Preview imported requirements</Button><Button variant="secondary" onClick={() => navigate("/admin/imports/history")}>View audit entry</Button><Button variant="primary" onClick={() => navigate("/admin/requirements")}>Open master requirements</Button><Button variant="tertiary" onClick={resetImport}>Import another file</Button></div></div>}
+          {step === 6 && result && (() => {
+            const latest = importHistory.find((record) => record.id === result.id) ?? result;
+            const published = latest.publishStatus === "Published";
+            const requirementCount = latest.created + latest.updated;
+            return (
+              <div className="result-state">
+                <span className="result-state__icon"><CheckCircle2 size={34} /></span>
+                <p className="eyebrow">Import complete</p>
+                <h2>Master data was processed successfully</h2>
+                <p>{latest.created} records created, {latest.updated} updated, and {latest.unchanged} unchanged. Audit reference <strong>{latest.id}</strong>.</p>
+                {published && <InlineMessage tone="success" title="Published">This batch's {requirementCount} requirements are now live in the master requirements catalog.</InlineMessage>}
+                <div>
+                  <Button variant="primary" icon={<Check size={17} />} disabled={published} onClick={() => publishImportBatch(latest.id)}>{published ? "Published" : `Publish ${requirementCount} requirements`}</Button>
+                  <Button variant="secondary" onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>Preview imported requirements</Button>
+                  <Button variant="secondary" onClick={() => navigate("/admin/imports/history")}>View audit entry</Button>
+                  <Button variant="secondary" onClick={() => navigate("/admin/requirements")}>Open master requirements</Button>
+                  <Button variant="tertiary" onClick={resetImport}>Import another file</Button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         {step < 6 && <div className="import-card__footer"><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && selectedSiteIds.length === 0) || (step === 1 && !file) || (step === 3 && needsReview) || (step === 5 && !confirmed)} icon={<ArrowRight size={17} />} iconPosition="end">{step === 5 ? "Confirm import" : "Continue"}</Button></div>}
       </section>
