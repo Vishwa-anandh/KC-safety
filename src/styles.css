@@ -3823,6 +3823,14 @@ h3 {
   backdrop-filter: blur(18px);
 }
 
+.table-card .empty-state {
+  border: none;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 3rem 1.25rem;
+}
+
 .empty-state__icon {
   display: grid;
   width: 72px;
