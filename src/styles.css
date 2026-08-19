@@ -6492,3 +6492,73 @@ h3 {
   font-size: 0.8rem;
   text-align: center;
 }
+
+/* ---- KC brand blue accent -------------------------------------------------
+   Opt-in palette selected in Appearance settings. Only the accent tokens are
+   overridden; neutrals, status colours, and layout are untouched, so every
+   component picks the new colour up without any per-component change. */
+
+:root[data-accent="kc-brand"] {
+  --kc-50: #eff5ff;
+  --kc-100: #dbe8fe;
+  --kc-200: #bfd7fe;
+  --kc-300: #93bbfd;
+  --kc-400: #6096fa;
+  --kc-500: #3b74f6;
+  --kc-600: #0047bb;
+  --kc-700: #003da5;
+  --kc-800: #003488;
+  --kc-900: #002d6f;
+  --kc-950: #001c45;
+
+  --brand-solid: #0047bb;
+  --brand-solid-hover: #003da5;
+  --brand-solid-active: #003488;
+  --brand-deep: #002d6f;
+  --brand-deepest: #001c45;
+}
+
+/* Dark mode needs the ramp inverted for contrast, mirroring how the default
+   palette lightens 300-900 under [data-theme="dark"]. */
+:root[data-theme="dark"][data-accent="kc-brand"] {
+  --kc-50: #0f1f3d;
+  --kc-100: #14284d;
+  --kc-200: #1f3a6b;
+  --kc-300: #7ea6f8;
+  --kc-400: #8fb3f9;
+  --kc-500: #7aa4f7;
+  --kc-600: #8ab0f9;
+  --kc-700: #a3c2fb;
+  --kc-800: #c0d7fc;
+  --kc-900: #dbe8fe;
+}
+
+.accent-selector { display: grid; gap: 0.5rem; }
+
+.accent-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  padding: 0.7rem 0.85rem;
+  color: var(--neutral-700);
+  text-align: left;
+  cursor: pointer;
+}
+
+.accent-choice:hover { border-color: var(--kc-300); }
+.accent-choice--selected { border-color: var(--kc-600); background: var(--kc-50); color: var(--kc-800); }
+.accent-choice > span:nth-child(2) { display: grid; flex: 1; min-width: 0; }
+.accent-choice strong { font-size: 0.83rem; }
+.accent-choice small { color: var(--neutral-500); font-size: 0.72rem; }
+.accent-choice > svg { flex: none; color: var(--kc-700); }
+
+.accent-choice__swatch {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgb(15 23 42 / 0.12);
+  border-radius: 8px;
+}

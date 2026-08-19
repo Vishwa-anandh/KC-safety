@@ -26,7 +26,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../Auth";
 import { useGuidedSetup, type UserRole } from "../GuidedSetup";
-import { ThemeSelector, useTheme } from "../Theme";
+import { AccentSelector, ThemeSelector, useTheme } from "../Theme";
 import { Button, ConfirmDialog, IconButton, InlineMessage, PageHeader, ProgressBar } from "../components/UI";
 import { cx } from "../utils";
 
@@ -162,6 +162,7 @@ export function AppearanceSettings() {
       <PageHeader eyebrow="Personal workspace" title="Appearance" description="Choose how the application looks without changing your work." actions={<small className="settings-page-state">{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>} />
       <section className="settings-card">
         <div className="appearance-setting"><div className="setting-subheading"><div><strong>Color theme</strong><span>System follows this device and updates automatically.</span></div></div><ThemeSelector /></div>
+        <div className="appearance-setting"><div className="setting-subheading"><div><strong>Accent colour</strong><span>Applies to buttons, links, and highlights in both light and dark themes.</span></div></div><AccentSelector /></div>
         <div className="appearance-preview" aria-label={`${resolvedTheme} theme preview`}><div className="appearance-preview__rail"><span /><span /><span /></div><div className="appearance-preview__body"><span /><div><span /><span /></div><div><span /><span /></div></div><small>Live {resolvedTheme} preview</small></div>
       </section>
     </>

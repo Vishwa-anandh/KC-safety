@@ -1,11 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Laptop, Moon, Sun } from "lucide-react";
+import { Check, Laptop, Moon, Sun } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { cx } from "./utils";
 
 export type ThemePreference = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 export type MotionPreference = "system" | "reduced" | "full";
+/** Accent palette. "signature" is the original sky-blue scale; "kc-brand" is the deeper
+ *  Kimberly-Clark logo blue. Both drive the same --kc-* / --brand-* tokens. */
+export type AccentPreference = "signature" | "kc-brand";
 
 interface ThemeContextValue {
   preference: ThemePreference;
@@ -14,10 +17,13 @@ interface ThemeContextValue {
   motionPreference: MotionPreference;
   reducedMotion: boolean;
   setMotionPreference: (preference: MotionPreference) => void;
+  accent: AccentPreference;
+  setAccent: (accent: AccentPreference) => void;
 }
 
 const THEME_KEY = "ehss-theme";
 const MOTION_KEY = "ehss-motion";
+const ACCENT_KEY = "ehss-accent";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readPreference(): ThemePreference {
@@ -27,6 +33,10 @@ function readPreference(): ThemePreference {
 
 function readSystemTheme(): ResolvedTheme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function readAccent(): AccentPreference {
+  return window.localStorage.getItem(ACCENT_KEY) === "kc-brand" ? "kc-brand" : "signature";
 }
 
 function readMotionPreference(): MotionPreference {
@@ -39,6 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(readSystemTheme);
   const [motionPreference, setMotionPreference] = useState<MotionPreference>(readMotionPreference);
   const [systemReducedMotion, setSystemReducedMotion] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [accent, setAccent] = useState<AccentPreference>(readAccent);
   const resolvedTheme = preference === "system" ? systemTheme : preference;
   const reducedMotion = motionPreference === "system" ? systemReducedMotion : motionPreference === "reduced";
 
@@ -67,13 +78,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [preference, resolvedTheme]);
 
   useEffect(() => {
+    // The default palette leaves the attribute off entirely, so the base :root tokens apply
+    // unchanged and only the opt-in accent needs an override block.
+    if (accent === "signature") {
+      window.localStorage.removeItem(ACCENT_KEY);
+      delete document.documentElement.dataset.accent;
+    } else {
+      window.localStorage.setItem(ACCENT_KEY, accent);
+      document.documentElement.dataset.accent = accent;
+    }
+  }, [accent]);
+
+  useEffect(() => {
     if (motionPreference === "system") window.localStorage.removeItem(MOTION_KEY);
     else window.localStorage.setItem(MOTION_KEY, motionPreference);
     document.documentElement.dataset.motion = reducedMotion ? "reduced" : "full";
     document.documentElement.dataset.motionPreference = motionPreference;
   }, [motionPreference, reducedMotion]);
 
-  const value = useMemo(() => ({ preference, resolvedTheme, setPreference, motionPreference, reducedMotion, setMotionPreference }), [motionPreference, preference, reducedMotion, resolvedTheme]);
+  const value = useMemo(() => ({ preference, resolvedTheme, setPreference, motionPreference, reducedMotion, setMotionPreference, accent, setAccent }), [accent, motionPreference, preference, reducedMotion, resolvedTheme]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
@@ -109,6 +132,33 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+const accentOptions: Array<{ value: AccentPreference; label: string; detail: string; swatch: string }> = [
+  { value: "signature", label: "Signature blue", detail: "The original application palette", swatch: "#2178b2" },
+  { value: "kc-brand", label: "KC brand blue", detail: "Matches the Kimberly-Clark logo", swatch: "#0047bb" },
+];
+
+export function AccentSelector() {
+  const { accent, setAccent } = useTheme();
+  return (
+    <div className="accent-selector" role="radiogroup" aria-label="Accent colour">
+      {accentOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={cx("accent-choice", accent === option.value && "accent-choice--selected")}
+          role="radio"
+          aria-checked={accent === option.value}
+          onClick={() => setAccent(option.value)}
+        >
+          <span className="accent-choice__swatch" style={{ background: option.swatch }} aria-hidden="true" />
+          <span><strong>{option.label}</strong><small>{option.detail}</small></span>
+          {accent === option.value && <Check size={17} />}
+        </button>
+      ))}
     </div>
   );
 }
