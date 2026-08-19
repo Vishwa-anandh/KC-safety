@@ -21,13 +21,16 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Target,
   Upload,
+  UsersRound,
   X,
 } from "lucide-react";
 import { useAppState, type ImportHistoryRecord } from "../AppState";
 import { dashboardSites } from "../data";
-import type { MasterRequirement } from "../types";
+import type { MasterRequirement, SiteUser, SiteUserRole } from "../types";
 import { Button, CheckboxList, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../components/UI";
+import { ContactsPanel, OwnersPanel } from "../components/SitePanels";
 import { cx } from "../utils";
 
 const importSteps = ["Select sites", "Upload", "Inspect", "Map", "Validate", "Confirm", "Result"];
@@ -136,7 +139,7 @@ export function AdminSitesScreen() {
           <Select label="Filter region" icon={<Filter size={18} />} value={region} onChange={setRegion} options={[{ value: "all", label: "All regions" }, ...regions.map((value) => ({ value, label: value }))]} />
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site network</p><h2>All sites</h2></div><span>{rows.length} of {dashboardSites.length} shown</span></div>
-        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Completion</th><th>Requirements</th><th>Last updated</th></tr></thead><tbody>{rows.map((site) => {
+        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Completion</th><th>Requirements</th><th>Last updated</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{rows.map((site) => {
           const scoped = scopedCountFor(site.id);
           return (
             <tr key={site.id}>
@@ -146,6 +149,7 @@ export function AdminSitesScreen() {
               <td data-label="Completion"><span className={cx("completion-badge", site.completion === 100 ? "completion-badge--complete" : site.completion === 0 ? "completion-badge--not-started" : "completion-badge--in-progress")}>{site.completion}%</span></td>
               <td data-label="Requirements">{scoped ? `${scoped} scoped` : "Global only"}<span>{globalCount} global</span></td>
               <td data-label="Last updated">{site.updated}</td>
+              <td data-label=""><Link className="table-action" to={`/admin/sites/${site.id}`} aria-label={`Open ${site.name}`}><ChevronRight size={18} /></Link></td>
             </tr>
           );
         })}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
@@ -351,6 +355,115 @@ export function AdminRequirementsScreen() {
         {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td data-label="ID"><strong>{item.id}</strong></td><td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td><td data-label="Section">{item.section}</td><td data-label="Sites" title={siteCodesSummary(item.siteIds).title}>{siteCodesSummary(item.siteIds).text}</td><td data-label="Version">{item.version}</td><td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td><td data-label="Actions"><span className="row-actions row-actions--menu"><IconButton label={`Edit ${item.id}`} onClick={() => setEditing(item)}><Pencil size={17} /></IconButton><IconButton label={`More actions for ${item.id}`} onClick={() => setMenu(menu === item.id ? null : item.id)}><MoreHorizontal size={18} /></IconButton>{menu === item.id && <span className="row-menu"><button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button><button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button></span>}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
       </section>
       {editing && <RequirementDialog item={editing === "new" ? undefined : editing} sections={sections} onClose={() => setEditing(null)} onSave={save} />}
+    </div>
+  );
+}
+
+const roleLabels: Record<SiteUserRole, string> = {
+  "site-contributor": "Site contributor",
+  "enterprise-viewer": "Regional / enterprise viewer",
+  administrator: "Administrator",
+};
+
+function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; siteId: string; onClose: () => void; onSave: (user: SiteUser) => void }) {
+  const [draft, setDraft] = useState<SiteUser>(user ?? { id: `su-${Date.now().toString().slice(-6)}`, name: "", email: "", role: "site-contributor", siteId, status: "Active" });
+  const [submitted, setSubmitted] = useState(false);
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email.trim());
+  const valid = Boolean(draft.name.trim()) && emailValid;
+  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close user editor" onClick={onClose} /><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="site-user-dialog-title">
+    <div className="dialog__header"><div><p className="eyebrow">Site access</p><h2 id="site-user-dialog-title">{user ? `Edit ${user.name}` : "Assign user to site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
+    <div className="dialog-form form-grid">
+      <label className={cx("field", "field--wide", submitted && !draft.name.trim() && "field--invalid")}>
+        <span>Full name <b>Required</b></span>
+        <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="For example, Maya Patel" />
+        {submitted && !draft.name.trim() && <small className="field-error">Enter a name for this person.</small>}
+      </label>
+      <label className={cx("field", "field--wide", submitted && !emailValid && "field--invalid")}>
+        <span>Email <b>Required</b></span>
+        <input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
+        {submitted && !emailValid && <small className="field-error">Enter a valid email address.</small>}
+      </label>
+      <label className="field">
+        <span>Role</span>
+        <Select label="Role" value={draft.role} onChange={(value) => setDraft((current) => ({ ...current, role: value as SiteUserRole }))} options={(Object.keys(roleLabels) as SiteUserRole[]).map((value) => ({ value, label: roleLabels[value] }))} />
+      </label>
+      <label className="field">
+        <span>Status</span>
+        <Select label="Status" value={draft.status} onChange={(value) => setDraft((current) => ({ ...current, status: value as SiteUser["status"] }))} options={[{ value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }]} />
+      </label>
+    </div>
+    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => { setSubmitted(true); if (valid) onSave({ ...draft, name: draft.name.trim(), email: draft.email.trim() }); }}>{user ? "Save changes" : "Assign user"}</Button></div>
+  </section></div>;
+}
+
+export function AdminSiteDetailScreen() {
+  const { siteId } = useParams();
+  const { siteUsers, ownerRecords, siteContacts, addSiteUser, updateSiteUser, removeSiteUser } = useAppState();
+  const [editing, setEditing] = useState<SiteUser | "new" | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const site = dashboardSites.find((item) => item.id === siteId);
+  if (!site) {
+    return (
+      <div className="page-container">
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
+        <EmptyState icon={<Search size={27} />} title="Site not found" description="This site is not part of the KC site network." />
+      </div>
+    );
+  }
+  // Narrowed `site` does not survive into the callbacks below, so capture it once.
+  const currentSite = site;
+  const users = siteUsers.filter((user) => user.siteId === currentSite.id);
+  // Owners and contacts are still single global records rather than per-site, so only the one
+  // site with real recorded data shows them; everything else gets an honest empty state rather
+  // than another site's people presented as its own.
+  const hasRealSiteRecords = currentSite.id === "northstar";
+
+  function saveUser(user: SiteUser) {
+    const isNew = editing === "new";
+    const duplicate = isNew && siteUsers.some((record) => record.email.toLowerCase() === user.email.toLowerCase() && record.siteId === user.siteId);
+    if (duplicate) { setFeedback(`${user.email} is already assigned to this site.`); setEditing(null); return; }
+    if (isNew) addSiteUser(user); else updateSiteUser(user);
+    setFeedback(`${user.name} was ${isNew ? "assigned to" : "updated for"} ${currentSite.name}.`);
+    setEditing(null);
+  }
+
+  return (
+    <div className="page-container">
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
+      <PageHeader eyebrow="Administration" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Assign user</Button>} />
+      {feedback && <InlineMessage tone={feedback.includes("already assigned") ? "warning" : "success"} title={feedback.includes("already assigned") ? "User not assigned" : "Site access updated"}>{feedback}</InlineMessage>}
+
+      <div className="metrics-grid">
+        <MetricCard label="Assigned users" value={users.length} detail={`${users.filter((user) => user.status === "Active").length} active`} icon={<UsersRound size={21} />} tone="brand" />
+        <MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} />
+        <MetricCard label="Open gaps" value={site.gaps} detail="No and Partial responses" icon={<AlertCircle size={21} />} tone={site.gaps > 20 ? "danger" : "neutral"} />
+        <MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<History size={21} />} />
+      </div>
+
+      <section className="table-card">
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site access</p><h2>Assigned users</h2></div><span>{users.length} user{users.length === 1 ? "" : "s"}</span></div>
+        {users.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>{users.map((user) => (
+          <tr key={user.id}>
+            <td data-label="Name"><strong>{user.name}</strong></td>
+            <td data-label="Email">{user.email}</td>
+            <td data-label="Role">{roleLabels[user.role]}</td>
+            <td data-label="Status"><span className={cx("publish-badge", user.status === "Inactive" && "publish-badge--draft")}>{user.status}</span></td>
+            <td data-label="Actions"><span className="row-actions"><IconButton label={`Edit ${user.name}`} onClick={() => setEditing(user)}><Pencil size={17} /></IconButton><IconButton label={`Remove ${user.name} from this site`} onClick={() => { removeSiteUser(user.id); setFeedback(`${user.name} was removed from ${currentSite.name}.`); }}><X size={17} /></IconButton></span></td>
+          </tr>
+        ))}</tbody></table></div> : <EmptyState icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
+      </section>
+
+      <section className="page-section">
+        <div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Program &amp; standard owners</h2></div></div>
+        <OwnersPanel owners={hasRealSiteRecords ? ownerRecords : null} />
+      </section>
+
+      <section className="page-section">
+        <div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site information</h2></div></div>
+        <ContactsPanel contacts={hasRealSiteRecords ? siteContacts : null} />
+      </section>
+
+      {editing && <SiteUserDialog user={editing === "new" ? undefined : editing} siteId={site.id} onClose={() => setEditing(null)} onSave={saveUser} />}
     </div>
   );
 }

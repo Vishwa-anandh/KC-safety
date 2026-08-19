@@ -100,3 +100,16 @@ export interface MasterRequirement {
   siteIds: string[];
   importBatchId?: string;
 }
+
+/** Mirrors UserRole in GuidedSetup.tsx. Declared here rather than imported so this module
+ *  stays free of React component dependencies. */
+export type SiteUserRole = "site-contributor" | "enterprise-viewer" | "administrator";
+
+export interface SiteUser {
+  id: string;
+  name: string;
+  email: string;
+  role: SiteUserRole;
+  siteId: string;
+  status: "Active" | "Inactive";
+}

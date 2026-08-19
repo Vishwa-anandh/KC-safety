@@ -3,8 +3,8 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./Auth";
 import AppShell from "./components/AppShell";
 import { roleProfiles, type UserRole } from "./GuidedSetup";
-import { NoAssignmentScreen, SessionExpiredScreen, UnauthorizedScreen } from "./screens/AccessStates";
-import { AdminImportBatchPreviewScreen, AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementsScreen, AdminSitesScreen } from "./screens/AdminScreens";
+import { NoAssignmentScreen, SessionExpiredScreen } from "./screens/AccessStates";
+import { AdminImportBatchPreviewScreen, AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementsScreen, AdminSiteDetailScreen, AdminSitesScreen } from "./screens/AdminScreens";
 import { DashboardScreen, SiteDrilldownScreen, SiteSectionDetailScreen } from "./screens/DashboardScreens";
 import RequirementWorkspace from "./screens/RequirementWorkspace";
 import LoginScreen from "./screens/LoginScreen";
@@ -46,7 +46,9 @@ function AuthenticatedLanding() {
 
 function RequireRole({ allowed }: { allowed: UserRole[] }) {
   const { user } = useAuth();
-  return user && allowed.includes(user.role) ? <Outlet /> : <Navigate to="/unauthorized" replace />;
+  // Out-of-scope URLs bounce silently to the signed-in role's own home rather than showing a
+  // dedicated "no access" screen, which was removed by request.
+  return user && allowed.includes(user.role) ? <Outlet /> : <Navigate to={user ? roleProfiles[user.role].home : "/login"} replace />;
 }
 
 function ScrollToTop() {
@@ -91,6 +93,7 @@ export default function App() {
             </Route>
             <Route element={<RequireRole allowed={["administrator"]} />}>
               <Route path="admin/sites" element={<AdminSitesScreen />} />
+              <Route path="admin/sites/:siteId" element={<AdminSiteDetailScreen />} />
               <Route path="admin/imports" element={<AdminImportsScreen />} />
               <Route path="admin/imports/history" element={<AdminImportHistoryScreen />} />
               <Route path="admin/imports/:batchId/preview" element={<AdminImportBatchPreviewScreen />} />
@@ -108,7 +111,6 @@ export default function App() {
           </Route>
         </Route>
         <Route path="no-assignment" element={<NoAssignmentScreen />} />
-        <Route path="unauthorized" element={<UnauthorizedScreen />} />
         <Route path="session-expired" element={<SessionExpiredScreen />} />
         <Route path="*" element={<AuthenticatedLanding />} />
       </Routes>

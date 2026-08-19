@@ -7,6 +7,7 @@ import {
   masterRequirements as seedMasterRequirements,
   ownerRecords as seedOwnerRecords,
   requirements as seedRequirements,
+  siteUsers as seedSiteUsers,
   rollupPerformance,
   sections as seedSections,
 } from "./data";
@@ -21,6 +22,7 @@ import type {
   ResponseValue,
   SectionSummary,
   SiteContacts,
+  SiteUser,
 } from "./types";
 
 const STORAGE_KEY = "ehss-phase-one-state-v1";
@@ -44,6 +46,7 @@ interface PersistedState {
   ownerRecords: OwnerRecord[];
   masterRequirements: MasterRequirement[];
   importHistory: ImportHistoryRecord[];
+  siteUsers: SiteUser[];
   lastUpdated: string;
 }
 
@@ -64,6 +67,9 @@ interface AppStateValue extends PersistedState {
   updateMasterRequirement: (requirement: MasterRequirement) => void;
   submitImportBatch: (fileName: string, siteIds: string[]) => ImportHistoryRecord;
   publishImportBatch: (batchId: string) => void;
+  addSiteUser: (user: SiteUser) => void;
+  updateSiteUser: (user: SiteUser) => void;
+  removeSiteUser: (userId: string) => void;
 }
 
 function freshState(): PersistedState {
@@ -73,6 +79,7 @@ function freshState(): PersistedState {
     ownerRecords: structuredClone(seedOwnerRecords),
     masterRequirements: structuredClone(seedMasterRequirements),
     importHistory: [],
+    siteUsers: structuredClone(seedSiteUsers),
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -99,6 +106,7 @@ function loadState(): PersistedState {
         ? parsed.masterRequirements.map((requirement) => ({ ...requirement, siteIds: requirement.siteIds ?? [] }))
         : structuredClone(seedMasterRequirements),
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
+      siteUsers: parsed.siteUsers ?? structuredClone(seedSiteUsers),
     };
   } catch {
     return freshState();
@@ -274,6 +282,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return record;
   }
 
+  function addSiteUser(user: SiteUser) {
+    touch((current) => ({ ...current, siteUsers: [user, ...current.siteUsers] }));
+  }
+
+  function updateSiteUser(user: SiteUser) {
+    touch((current) => ({
+      ...current,
+      siteUsers: current.siteUsers.map((record) => record.id === user.id ? user : record),
+    }));
+  }
+
+  function removeSiteUser(userId: string) {
+    touch((current) => ({ ...current, siteUsers: current.siteUsers.filter((record) => record.id !== userId) }));
+  }
+
   function publishImportBatch(batchId: string) {
     touch((current) => ({
       ...current,
@@ -297,6 +320,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateMasterRequirement,
     submitImportBatch,
     publishImportBatch,
+    addSiteUser,
+    updateSiteUser,
+    removeSiteUser,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

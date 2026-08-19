@@ -1,4 +1,4 @@
-import { ArrowLeft, CircleHelp, KeyRound, LockKeyhole, LogIn, UserRoundX } from "lucide-react";
+import { CircleHelp, KeyRound, LogIn, UserRoundX } from "lucide-react";
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../Auth";
@@ -6,10 +6,6 @@ import { EmptyState } from "../components/UI";
 
 export function NoAssignmentScreen() {
   return <StandaloneState><EmptyState icon={<UserRoundX size={35} />} title="No site is assigned to your account" description="Your sign-in was successful, but you do not currently have permission to work with a KC site. Ask an administrator to assign your site and role." action={<div className="state-actions"><a className="button button--primary button--default" href="mailto:ehss-support@example.com?subject=Site%20assignment%20request"><CircleHelp size={18} /><span>Contact support</span></a><SignOutLink /></div>} /></StandaloneState>;
-}
-
-export function UnauthorizedScreen() {
-  return <StandaloneState><EmptyState icon={<LockKeyhole size={35} />} title="You don’t have access to this page" description="This page belongs to a site or workspace outside your authorized scope. No protected information has been displayed." action={<div className="state-actions"><Link className="button button--primary button--default" to="/"><ArrowLeft size={18} /><span>Return to my workspace</span></Link><a className="button button--tertiary button--default" href="mailto:ehss-support@example.com?subject=Access%20request"><CircleHelp size={18} /><span>Get help</span></a></div>} /></StandaloneState>;
 }
 
 export function SessionExpiredScreen() {

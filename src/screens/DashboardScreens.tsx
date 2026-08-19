@@ -8,7 +8,7 @@ import {
   CircleAlert,
   Clock3,
   FilterX,
-  Mail,
+
   MapPin,
   RefreshCw,
   Search,
@@ -18,8 +18,9 @@ import { Link, useParams } from "react-router-dom";
 import { requirementRoute, useAppState } from "../AppState";
 import { useGuidedSetup } from "../GuidedSetup";
 import { performanceForResponse, performanceLabel, responseLabel, sections as seedSections } from "../data";
-import type { DashboardSite, Performance, SiteContacts } from "../types";
+import type { DashboardSite, Performance } from "../types";
 import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
+import { ContactsPanel } from "../components/SitePanels";
 import { cx } from "../utils";
 
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
@@ -199,34 +200,6 @@ export function SiteSectionDetailScreen() {
           <EmptyState icon={<Search size={27} />} title="Question-level detail not available" description="Individual assessment responses are only recorded for sites with live self-assessment data. Completion and performance summaries above are tracked for every site in your authorized scope." />
         )}
       </section>
-    </div>
-  );
-}
-
-function ContactsPanel({ contacts }: { contacts: SiteContacts | null }) {
-  if (!contacts) return <EmptyState icon={<Mail size={26} />} title="Contact details not yet provided" description="Site contacts have not been recorded for this site yet." />;
-  const initials = (name: string) => name.split(" ").filter(Boolean).map((part) => part[0]).join("");
-  const group = (title: string, rows: Array<[string, string, string]>) => (
-    <article className="owner-card" key={title}>
-      <div className="owner-card__header"><div><p>Read-only</p><h3>{title}</h3></div></div>
-      {rows.map(([label, name, email]) => (
-        <div className="owner-person" key={label}><span className="avatar avatar--soft">{initials(name)}</span><div><small>{label}</small><strong>{name}</strong><a href={`mailto:${email}`}>{email}</a></div></div>
-      ))}
-    </article>
-  );
-  return (
-    <div className="owner-grid">
-      {group("Local leadership", [
-        ["Site / Location Manager", contacts.siteManager, contacts.siteManagerEmail],
-        ["Site Environmental Leader", contacts.environmentalLeader, contacts.environmentalLeaderEmail],
-        ["Site Health & Safety Leader", contacts.healthSafetyLeader, contacts.healthSafetyLeaderEmail],
-        ["Site Occupational Health Nurse", contacts.occupationalHealthNurse, contacts.occupationalHealthNurseEmail],
-      ])}
-      {group("Regional leadership", [
-        ["Regional Health & Safety Leader", contacts.regionalHealthSafetyLeader, contacts.regionalHealthSafetyEmail],
-        ["Regional Environmental Leader", contacts.regionalEnvironmentalLeader, contacts.regionalEnvironmentalEmail],
-        ["Regional Occupational Health Leader", contacts.regionalOccupationalHealthLeader, contacts.regionalOccupationalHealthEmail],
-      ])}
     </div>
   );
 }

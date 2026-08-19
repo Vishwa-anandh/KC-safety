@@ -8,6 +8,7 @@ import type {
   ResponseValue,
   SectionSummary,
   SiteContacts,
+  SiteUser,
 } from "./types";
 
 export const assessmentPeriods: AssessmentPeriod[] = ["2026 Q1", "2026 Q2", "2026 Q3"];
@@ -499,3 +500,14 @@ export function responseLabel(response: ResponseValue) {
   if (!response) return "Not answered";
   return { no: "No", partial: "Partial", yes: "Yes" }[response];
 }
+
+export const siteUsers: SiteUser[] = [
+  { id: "su-1", name: "Maya Patel", email: "maya.patel@example.com", role: "site-contributor", siteId: "northstar", status: "Active" },
+  { id: "su-2", name: "Daniel Brooks", email: "daniel.brooks@example.com", role: "site-contributor", siteId: "northstar", status: "Active" },
+  { id: "su-3", name: "Jordan Lee", email: "jordan.lee@example.com", role: "site-contributor", siteId: "northstar", status: "Inactive" },
+  { id: "su-4", name: "Noah Williams", email: "noah.williams@example.com", role: "enterprise-viewer", siteId: "riverbend", status: "Active" },
+  { id: "su-5", name: "Sofia Chen", email: "sofia.chen@example.com", role: "site-contributor", siteId: "riverbend", status: "Active" },
+  { id: "su-6", name: "Elena Garcia", email: "elena.garcia@example.com", role: "site-contributor", siteId: "lakeview", status: "Active" },
+  { id: "su-7", name: "Priya Nair", email: "priya.nair@example.com", role: "site-contributor", siteId: "cedar-grove", status: "Active" },
+  { id: "su-8", name: "Aisha Rahman", email: "aisha.rahman@example.com", role: "enterprise-viewer", siteId: "solstice", status: "Active" },
+];
