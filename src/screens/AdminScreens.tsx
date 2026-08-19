@@ -515,6 +515,68 @@ function blankSite(): DashboardSite {
   return { id: "", name: "", code: "", region: "", segment: "", completion: 0, performance: "not-assessed", gaps: 0, updated: "Not started" };
 }
 
+
+const ADD_NEW_VALUE = "__add_new__";
+
+/**
+ * Value picker that avoids the native <datalist> popup (OS-drawn, unstyleable) while still
+ * allowing a value that does not exist yet: the styled Select lists known values plus an
+ * "Add new" entry which swaps in a text field.
+ */
+function ValueWithAddNew({
+  label,
+  value,
+  options,
+  placeholder,
+  invalid,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  placeholder: string;
+  invalid?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [addingNew, setAddingNew] = useState(false);
+  const known = options.includes(value);
+  const showInput = addingNew || (Boolean(value) && !known);
+  if (showInput) {
+    return (
+      <span className="value-add-new">
+        <input
+          autoFocus
+          value={value}
+          placeholder={placeholder}
+          aria-label={`New ${label.toLowerCase()}`}
+          aria-invalid={invalid || undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {options.length > 0 && (
+          <button type="button" onClick={() => { setAddingNew(false); onChange(""); }}>
+            Choose existing
+          </button>
+        )}
+      </span>
+    );
+  }
+  return (
+    <Select
+      label={label}
+      value={value}
+      onChange={(next) => {
+        if (next === ADD_NEW_VALUE) { setAddingNew(true); onChange(""); return; }
+        onChange(next);
+      }}
+      options={[
+        ...(value ? [] : [{ value: "", label: `Select ${label.toLowerCase()}` }]),
+        ...options.map((option) => ({ value: option, label: option })),
+        { value: ADD_NEW_VALUE, label: `+ Add new ${label.toLowerCase()}` },
+      ]}
+    />
+  );
+}
+
 function SiteDialog({ site, existing, onClose, onSave }: { site?: DashboardSite; existing: DashboardSite[]; onClose: () => void; onSave: (site: DashboardSite) => void }) {
   const [draft, setDraft] = useState<DashboardSite>(site ?? blankSite());
   const [submitted, setSubmitted] = useState(false);
@@ -538,16 +600,28 @@ function SiteDialog({ site, existing, onClose, onSave }: { site?: DashboardSite;
       </label>
       <label className={cx("field", submitted && !draft.region.trim() && "field--invalid")}>
         <span>Region <b>Required</b></span>
-        <input value={draft.region} onChange={(event) => set("region", event.target.value)} placeholder="North America" list="site-region-options" />
+        <ValueWithAddNew
+          label="Region"
+          value={draft.region}
+          options={[...new Set(existing.map((item) => item.region))].filter(Boolean).sort()}
+          placeholder="North America"
+          invalid={submitted && !draft.region.trim()}
+          onChange={(value) => set("region", value)}
+        />
         {submitted && !draft.region.trim() && <small className="field-error">Enter the region.</small>}
       </label>
       <label className={cx("field", "field--wide", submitted && !draft.segment.trim() && "field--invalid")}>
         <span>Segment <b>Required</b></span>
-        <input value={draft.segment} onChange={(event) => set("segment", event.target.value)} placeholder="Family Care" list="site-segment-options" />
+        <ValueWithAddNew
+          label="Segment"
+          value={draft.segment}
+          options={[...new Set(existing.map((item) => item.segment))].filter(Boolean).sort()}
+          placeholder="Family Care"
+          invalid={submitted && !draft.segment.trim()}
+          onChange={(value) => set("segment", value)}
+        />
         {submitted && !draft.segment.trim() && <small className="field-error">Enter the business segment.</small>}
       </label>
-      <datalist id="site-region-options">{[...new Set(existing.map((item) => item.region))].map((region) => <option key={region} value={region} />)}</datalist>
-      <datalist id="site-segment-options">{[...new Set(existing.map((item) => item.segment))].map((segment) => <option key={segment} value={segment} />)}</datalist>
     </div>
     <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => {
       setSubmitted(true);
