@@ -6315,3 +6315,9 @@ h3 {
   .first-login-passkey__actions { align-items: stretch; flex-direction: column-reverse; }
   .first-login-passkey__actions .button { width: 100%; }
 }
+
+/* Whole-row navigation on the admin Sites table. The trailing arrow stays a real link so
+   keyboard and screen-reader users keep a focusable target — the row click is a mouse
+   affordance layered on top, not a replacement for it. */
+.data-table__row--link { cursor: pointer; }
+.data-table__row--link:hover { background: var(--kc-50); }

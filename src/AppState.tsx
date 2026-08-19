@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   currentAssessmentPeriod,
-  dashboardSites,
+  dashboardSites as seedSites,
   initialSiteContacts,
   masterRequirements as seedMasterRequirements,
   ownerRecords as seedOwnerRecords,
@@ -47,6 +47,7 @@ interface PersistedState {
   masterRequirements: MasterRequirement[];
   importHistory: ImportHistoryRecord[];
   siteUsers: SiteUser[];
+  sites: DashboardSite[];
   lastUpdated: string;
 }
 
@@ -70,6 +71,9 @@ interface AppStateValue extends PersistedState {
   addSiteUser: (user: SiteUser) => void;
   updateSiteUser: (user: SiteUser) => void;
   removeSiteUser: (userId: string) => void;
+  addSite: (site: DashboardSite) => void;
+  updateSite: (site: DashboardSite) => void;
+  importSites: (sites: DashboardSite[]) => { added: number; skipped: string[] };
 }
 
 function freshState(): PersistedState {
@@ -80,6 +84,7 @@ function freshState(): PersistedState {
     masterRequirements: structuredClone(seedMasterRequirements),
     importHistory: [],
     siteUsers: structuredClone(seedSiteUsers),
+    sites: structuredClone(seedSites),
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -107,6 +112,7 @@ function loadState(): PersistedState {
         : structuredClone(seedMasterRequirements),
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
       siteUsers: parsed.siteUsers ?? structuredClone(seedSiteUsers),
+      sites: parsed.sites?.length ? parsed.sites : structuredClone(seedSites),
     };
   } catch {
     return freshState();
@@ -154,7 +160,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const missingActionCount = allQuestions.filter((question) =>
       (question.response === "no" || question.response === "partial") && !actionComplete(question.response, question.action),
     ).length;
-    const dashboardSiteRows = dashboardSites.map((site) => site.id === "northstar" ? {
+    const dashboardSiteRows = state.sites.map((site) => site.id === "northstar" ? {
       ...site,
       completion: overallCompletion,
       performance: overallPerformance,
@@ -162,7 +168,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updated: new Date(state.lastUpdated).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
     } : site);
     return { sectionSummaries, overallCompletion, overallPerformance, gapCount, missingActionCount, dashboardSiteRows };
-  }, [state.lastUpdated, state.requirements]);
+  }, [state.lastUpdated, state.requirements, state.sites]);
 
   function touch(update: (current: PersistedState) => PersistedState) {
     setState((current) => ({ ...update(current), lastUpdated: new Date().toISOString() }));
@@ -282,6 +288,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return record;
   }
 
+  function addSite(site: DashboardSite) {
+    touch((current) => ({ ...current, sites: [...current.sites, site] }));
+  }
+
+  function updateSite(site: DashboardSite) {
+    touch((current) => ({
+      ...current,
+      sites: current.sites.map((record) => record.id === site.id ? site : record),
+    }));
+  }
+
+  // Rows whose code already exists are skipped rather than overwritten, so an import can never
+  // silently change site records that assessments and user assignments already point at.
+  function importSites(incoming: DashboardSite[]) {
+    const existingCodes = new Set(state.sites.map((site) => site.code.toLowerCase()));
+    const skipped: string[] = [];
+    const additions: DashboardSite[] = [];
+    incoming.forEach((site) => {
+      const code = site.code.toLowerCase();
+      if (existingCodes.has(code) || additions.some((added) => added.code.toLowerCase() === code)) { skipped.push(site.code); return; }
+      additions.push(site);
+    });
+    if (additions.length) touch((current) => ({ ...current, sites: [...current.sites, ...additions] }));
+    return { added: additions.length, skipped };
+  }
+
   function addSiteUser(user: SiteUser) {
     touch((current) => ({ ...current, siteUsers: [user, ...current.siteUsers] }));
   }
@@ -323,6 +355,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addSiteUser,
     updateSiteUser,
     removeSiteUser,
+    addSite,
+    updateSite,
+    importSites,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

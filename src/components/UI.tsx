@@ -11,6 +11,7 @@ import {
   Info,
   Minus,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { performanceLabel } from "../data";
@@ -502,6 +503,56 @@ export function KcLogo() {
         <path d="M7 20c0-7.2 5.8-13 13-13 5 0 9.4 2.8 11.6 7l-6.2 3.2A6.2 6.2 0 0 0 20 14a6 6 0 1 0 5.5 8.5l6.4 2.8A13 13 0 0 1 7 20Z" />
         <path d="m21 8 7 12-7 12-4.8-2.8 5.4-9.2-5.4-9.2L21 8Z" opacity=".52" />
       </svg>
+    </div>
+  );
+}
+
+/**
+ * Confirmation for destructive actions. Uses role="alertdialog" (not "dialog") because it
+ * interrupts the user to confirm a consequence, and focuses the cancel button so the safe
+ * option is the one that responds to an immediate Enter press.
+ */
+export function ConfirmDialog({
+  title,
+  body,
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
+  eyebrow = "Confirm",
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: ReactNode;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  eyebrow?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const titleId = useId();
+
+  useEffect(() => {
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onCancel]);
+
+  return (
+    <div className="dialog-layer">
+      <button className="dialog-backdrop" aria-label={cancelLabel} onClick={onCancel} />
+      <section className="dialog dialog--compact" role="alertdialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="dialog__header">
+          <div><p className="eyebrow">{eyebrow}</p><h2 id={titleId}>{title}</h2></div>
+          <IconButton label={cancelLabel} onClick={onCancel}><X size={20} /></IconButton>
+        </div>
+        <p className="dialog-context">{body}</p>
+        <div className="dialog__footer">
+          <Button autoFocus variant="tertiary" onClick={onCancel}>{cancelLabel}</Button>
+          <Button variant="danger" icon={<Trash2 size={17} />} onClick={onConfirm}>{confirmLabel}</Button>
+        </div>
+      </section>
     </div>
   );
 }

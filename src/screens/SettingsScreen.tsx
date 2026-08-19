@@ -27,7 +27,7 @@ import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "../Auth";
 import { useGuidedSetup, type UserRole } from "../GuidedSetup";
 import { ThemeSelector, useTheme } from "../Theme";
-import { Button, IconButton, InlineMessage, PageHeader, ProgressBar } from "../components/UI";
+import { Button, ConfirmDialog, IconButton, InlineMessage, PageHeader, ProgressBar } from "../components/UI";
 import { cx } from "../utils";
 
 type SettingsSectionId = "account" | "appearance" | "notifications" | "security" | "guidance" | "support";
@@ -138,12 +138,11 @@ export function SettingsLayout() {
 }
 
 export function AccountSettings() {
-  const { user, demoEnabled } = useAuth();
+  const { user } = useAuth();
   const { profile } = useGuidedSetup();
   return (
     <>
       <PageHeader eyebrow="Personal workspace" title="Account and access" description="Your signed-in account controls your role, work scope, and protected permissions." actions={<span className="managed-badge"><LockKeyhole size={14} /> Organization managed</span>} />
-      {demoEnabled && <InlineMessage tone="info" title="Demo environment">Demo accounts, notification preferences, and passkey metadata are stored in this browser for review. Demo mode can be disabled before the production identity service is connected.</InlineMessage>}
       <section className="settings-card">
         <div className="settings-identity settings-identity--expanded">
           <span className="avatar avatar--large">{user?.initials ?? profile.initials}</span>
@@ -290,7 +289,7 @@ export function SecuritySettings() {
         <div className="security-subsection session-panel"><div className="session-panel__icon"><Laptop size={21} /></div><div><strong>Current session</strong><span>{deviceDescription()}</span><small><span className="session-live-dot" /> Active now · {window.isSecureContext ? "Secure connection" : "Connection needs attention"}</small></div><Button variant="danger" icon={<LogOut size={18} />} onClick={() => setSignOutOpen(true)}>Sign out</Button></div>
       </section>
 
-      {removingId && <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Cancel passkey removal" onClick={() => setRemovingId(null)} /><section className="dialog dialog--compact" role="alertdialog" aria-modal="true" aria-labelledby="remove-passkey-title"><div className="dialog__header"><div><p className="eyebrow">Passkey security</p><h2 id="remove-passkey-title">Remove this passkey?</h2></div><IconButton label="Cancel passkey removal" onClick={() => setRemovingId(null)}><X size={20} /></IconButton></div><p className="dialog-context">You will no longer be able to select this credential when signing in to this application.</p><div className="dialog__footer"><Button variant="tertiary" onClick={() => setRemovingId(null)}>Keep passkey</Button><Button variant="danger" icon={<Trash2 size={17} />} onClick={confirmRemove}>Remove passkey</Button></div></section></div>}
+      {removingId && <ConfirmDialog eyebrow="Passkey security" title="Remove this passkey?" body="You will no longer be able to select this credential when signing in to this application." confirmLabel="Remove passkey" cancelLabel="Keep passkey" onCancel={() => setRemovingId(null)} onConfirm={confirmRemove} />}
       {signOutOpen && <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Cancel sign out" onClick={() => setSignOutOpen(false)} /><section className="dialog dialog--compact" role="alertdialog" aria-modal="true" aria-labelledby="settings-signout-title"><div className="dialog__header"><div><p className="eyebrow">Current session</p><h2 id="settings-signout-title">Sign out of this device?</h2></div><IconButton label="Cancel sign out" onClick={() => setSignOutOpen(false)}><X size={20} /></IconButton></div><p className="dialog-context">Saved work remains available. You will need your password or passkey to return.</p><div className="dialog__footer"><Button variant="tertiary" onClick={() => setSignOutOpen(false)}>Stay signed in</Button><Button variant="danger" icon={<LogOut size={17} />} onClick={confirmSignOut}>Sign out</Button></div></section></div>}
     </>
   );

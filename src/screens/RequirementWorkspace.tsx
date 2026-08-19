@@ -28,7 +28,7 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { actionComplete, requirementRoute, useAppState } from "../AppState";
 import { performanceForResponse, rollupPerformance } from "../data";
 import type { ActionItem, AssessmentQuestion, EvidenceItem, Requirement, ResponseValue } from "../types";
-import { Button, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus } from "../components/UI";
+import { Button, ConfirmDialog, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus } from "../components/UI";
 import { cx } from "../utils";
 
 function requirementState(requirement: Requirement, currentId: string) {
@@ -289,6 +289,7 @@ export default function RequirementWorkspace() {
   const [guidanceOpen, setGuidanceOpen] = useState(false);
   const [evidenceEditor, setEvidenceEditor] = useState<EvidenceItem | null | "new">(null);
   const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
+  const [evidenceRemoving, setEvidenceRemoving] = useState<EvidenceItem | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentIndex = requirement ? requirements.findIndex((item) => item.id === requirement.id) : -1;
@@ -349,12 +350,7 @@ export default function RequirementWorkspace() {
               ))}
             </div>
           </section>
-          <EvidencePanel evidence={requirement.evidence} onAdd={() => setEvidenceEditor("new")} onView={setEvidenceViewer} onEdit={setEvidenceEditor} onDelete={(item) => {
-            if (window.confirm(`Delete “${item.title}”? This cannot be undone.`)) {
-              removeEvidence(requirement.id, item.id);
-              queueSavedState();
-            }
-          }} />
+          <EvidencePanel evidence={requirement.evidence} onAdd={() => setEvidenceEditor("new")} onView={setEvidenceViewer} onEdit={setEvidenceEditor} onDelete={setEvidenceRemoving} />
           <footer className="requirement-footer">
             <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
             <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button></div>
@@ -370,6 +366,7 @@ export default function RequirementWorkspace() {
         queueSavedState();
       }} />}
       {evidenceViewer && <EvidenceViewer item={evidenceViewer} onClose={() => setEvidenceViewer(null)} />}
+      {evidenceRemoving && <ConfirmDialog eyebrow="Evidence" title={`Delete ${evidenceRemoving.title}?`} body="This evidence record will be removed from this requirement. This cannot be undone." confirmLabel="Delete evidence" cancelLabel="Keep evidence" onCancel={() => setEvidenceRemoving(null)} onConfirm={() => { removeEvidence(requirement.id, evidenceRemoving.id); queueSavedState(); setEvidenceRemoving(null); }} />}
     </div>
   );
 }

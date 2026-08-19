@@ -21,15 +21,16 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Trash2,
   Target,
   Upload,
   UsersRound,
   X,
 } from "lucide-react";
 import { useAppState, type ImportHistoryRecord } from "../AppState";
-import { dashboardSites } from "../data";
-import type { MasterRequirement, SiteUser, SiteUserRole } from "../types";
-import { Button, CheckboxList, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../components/UI";
+
+import type { DashboardSite, MasterRequirement, SiteUser, SiteUserRole } from "../types";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../components/UI";
 import { ContactsPanel, OwnersPanel } from "../components/SitePanels";
 import { cx } from "../utils";
 
@@ -60,22 +61,23 @@ const INITIAL_MAPPINGS: ColumnMapping[] = [
   { source: "Sub-section", target: "version", sample: "1.2 Leadership commitment", needsReview: true },
 ];
 
-// Sorted and grouped by region so a list that can run into the hundreds is still scannable —
-// consumed by both the import wizard's site-selection step and the requirement dialog's site
-// scoping picker.
-const siteOptions = [...dashboardSites]
-  .sort((a, b) => a.region.localeCompare(b.region) || a.name.localeCompare(b.name))
-  .map((site) => ({ value: site.id, label: site.name, hint: site.code, group: site.region }));
+// Sorted and grouped by region so a list that can run into the hundreds is still scannable.
+// Derived from live state rather than a module constant, since sites are now editable.
+function buildSiteOptions(sites: DashboardSite[]) {
+  return [...sites]
+    .sort((a, b) => a.region.localeCompare(b.region) || a.name.localeCompare(b.name))
+    .map((site) => ({ value: site.id, label: site.name, hint: site.code, group: site.region }));
+}
 
-function siteNamesFor(siteIds: string[], limit = 3) {
-  const names = siteIds.map((id) => dashboardSites.find((site) => site.id === id)?.name ?? id);
+function siteNamesFor(sites: DashboardSite[], siteIds: string[], limit = 3) {
+  const names = siteIds.map((id) => sites.find((site) => site.id === id)?.name ?? id);
   if (names.length <= limit) return names.join(", ");
   return `${names.slice(0, limit).join(", ")}, and ${names.length - limit} more`;
 }
 
-function siteCodesSummary(siteIds: string[]) {
+function siteCodesSummary(sites: DashboardSite[], siteIds: string[]) {
   if (!siteIds.length) return { text: "All sites", title: undefined };
-  const codes = siteIds.map((id) => dashboardSites.find((site) => site.id === id)?.code ?? id);
+  const codes = siteIds.map((id) => sites.find((site) => site.id === id)?.code ?? id);
   return codes.length <= 2 ? { text: codes.join(", "), title: undefined } : { text: `${codes.length} sites`, title: codes.join(", ") };
 }
 
@@ -113,11 +115,15 @@ export function AdminImportHistoryScreen() {
 }
 
 export function AdminSitesScreen() {
-  const { masterRequirements, siteUsers } = useAppState();
+  const navigate = useNavigate();
+  const { masterRequirements, siteUsers, sites, addSite, updateSite, importSites } = useAppState();
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("all");
-  const regions = [...new Set(dashboardSites.map((site) => site.region))];
-  const rows = dashboardSites.filter((site) =>
+  const [editing, setEditing] = useState<DashboardSite | "new" | null>(null);
+  const [feedback, setFeedback] = useState<{ tone: "success" | "warning"; title: string; body: string } | null>(null);
+  const csvRef = useRef<HTMLInputElement>(null);
+  const regions = [...new Set(sites.map((site) => site.region))];
+  const rows = sites.filter((site) =>
     `${site.name} ${site.code} ${site.region} ${site.segment}`.toLowerCase().includes(query.toLowerCase()) &&
     (region === "all" || site.region === region));
   // A requirement with no site scoping applies everywhere, so it counts toward every site.
@@ -127,11 +133,31 @@ export function AdminSitesScreen() {
 
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Administration" title="Sites" description="Every site in the KC network, its assessment status, and the governed requirements scoped to it." />
+      <PageHeader eyebrow="Administration" title="Sites" description="Every site in the KC network, its assessment status, and the governed requirements scoped to it." actions={<><Button variant="secondary" icon={<Upload size={18} />} onClick={() => csvRef.current?.click()}>Import sites</Button><Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Create site</Button></>} />
+      <input ref={csvRef} className="visually-hidden" type="file" accept=".csv,text/csv" onChange={(event) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file) return;
+        file.text().then((text) => {
+          const { parsed, invalid } = parseSitesCsv(text);
+          if (!parsed.length) {
+            setFeedback({ tone: "warning", title: "Nothing imported", body: invalid.length ? invalid.join(" ") : `No rows found. Expected columns: ${SITE_CSV_COLUMNS}.` });
+            return;
+          }
+          const { added, skipped } = importSites(parsed);
+          const notes = [
+            added ? `${added} site${added === 1 ? "" : "s"} added.` : "No new sites added.",
+            skipped.length ? `Skipped ${skipped.length} existing site code${skipped.length === 1 ? "" : "s"}: ${skipped.join(", ")}.` : "",
+            ...invalid,
+          ].filter(Boolean);
+          setFeedback({ tone: added ? "success" : "warning", title: added ? "Sites imported" : "Import completed with no changes", body: notes.join(" ") });
+        });
+      }} />
+      {feedback && <InlineMessage tone={feedback.tone} title={feedback.title}>{feedback.body}</InlineMessage>}
       <div className="metrics-grid">
-        <MetricCard label="Total sites" value={dashboardSites.length} detail={`Across ${regions.length} regions`} icon={<Building2 size={21} />} tone="brand" />
-        <MetricCard label="Assessment complete" value={dashboardSites.filter((site) => site.completion === 100).length} detail="Reached 100% completion" icon={<CheckCircle2 size={21} />} tone="success" />
-        <MetricCard label="Not started" value={dashboardSites.filter((site) => site.completion === 0).length} detail="No assessment recorded" icon={<Circle size={21} />} tone="warning" />
+        <MetricCard label="Total sites" value={sites.length} detail={`Across ${regions.length} regions`} icon={<Building2 size={21} />} tone="brand" />
+        <MetricCard label="Assessment complete" value={sites.filter((site) => site.completion === 100).length} detail="Reached 100% completion" icon={<CheckCircle2 size={21} />} tone="success" />
+        <MetricCard label="Not started" value={sites.filter((site) => site.completion === 0).length} detail="No assessment recorded" icon={<Circle size={21} />} tone="warning" />
         <MetricCard label="Global requirements" value={globalCount} detail="Apply to every site" icon={<FileText size={21} />} />
       </div>
       <section className="table-card">
@@ -139,12 +165,12 @@ export function AdminSitesScreen() {
           <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sites" /></label>
           <Select label="Filter region" icon={<Filter size={18} />} value={region} onChange={setRegion} options={[{ value: "all", label: "All regions" }, ...regions.map((value) => ({ value, label: value }))]} />
         </div>
-        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site network</p><h2>All sites</h2></div><span>{rows.length} of {dashboardSites.length} shown</span></div>
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site network</p><h2>All sites</h2></div><span>{rows.length} of {sites.length} shown</span></div>
         {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Users</th><th>Completion</th><th>Requirements</th><th>Last updated</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{rows.map((site) => {
           const scoped = scopedCountFor(site.id);
           const users = usersFor(site.id);
           return (
-            <tr key={site.id}>
+            <tr key={site.id} className="data-table__row--link" onClick={() => navigate(`/admin/sites/${site.id}`)}>
               <td data-label="Site"><strong>{site.name}</strong><span>{site.code}</span></td>
               <td data-label="Region">{site.region}</td>
               <td data-label="Segment">{site.segment}</td>
@@ -152,18 +178,23 @@ export function AdminSitesScreen() {
               <td data-label="Completion"><span className={cx("completion-badge", site.completion === 100 ? "completion-badge--complete" : site.completion === 0 ? "completion-badge--not-started" : "completion-badge--in-progress")}>{site.completion}%</span></td>
               <td data-label="Requirements">{scoped ? `${scoped} scoped` : "Global only"}<span>{globalCount} global</span></td>
               <td data-label="Last updated">{site.updated}</td>
-              <td data-label=""><Link className="table-action" to={`/admin/sites/${site.id}`} aria-label={`Open ${site.name}`}><ChevronRight size={18} /></Link></td>
+              <td data-label=""><span className="row-actions"><IconButton label={`Edit ${site.name}`} onClick={(event) => { event.stopPropagation(); setEditing(site); }}><Pencil size={17} /></IconButton><Link className="table-action" to={`/admin/sites/${site.id}`} aria-label={`Open ${site.name}`}><ChevronRight size={18} /></Link></span></td>
             </tr>
           );
         })}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
       </section>
+      {editing && <SiteDialog site={editing === "new" ? undefined : editing} existing={sites} onClose={() => setEditing(null)} onSave={(site) => {
+        if (editing === "new") { addSite(site); setFeedback({ tone: "success", title: "Site created", body: `${site.name} (${site.code}) was added to the network.` }); }
+        else { updateSite(site); setFeedback({ tone: "success", title: "Site updated", body: `${site.name} was updated.` }); }
+        setEditing(null);
+      }} />}
     </div>
   );
 }
 
 export function AdminImportBatchPreviewScreen() {
   const { batchId } = useParams();
-  const { masterRequirements, importHistory, publishImportBatch } = useAppState();
+  const { masterRequirements, importHistory, publishImportBatch, sites } = useAppState();
   const batch = importHistory.find((record) => record.id === batchId);
   const rows = masterRequirements.filter((item) => item.importBatchId === batchId);
   const sectionOrder: string[] = [];
@@ -179,7 +210,7 @@ export function AdminImportBatchPreviewScreen() {
       <PageHeader
         eyebrow="Administration audit"
         title="Preview imported requirements"
-        description={batch ? `${rows.length} requirement${rows.length === 1 ? "" : "s"} from ${batch.fileName}, scoped to ${siteNamesFor(batch.siteIds) || "the selected sites"}.` : "This import batch could not be found."}
+        description={batch ? `${rows.length} requirement${rows.length === 1 ? "" : "s"} from ${batch.fileName}, scoped to ${siteNamesFor(sites, batch.siteIds) || "the selected sites"}.` : "This import batch could not be found."}
         actions={batch && rows.length > 0 && <Button variant="primary" icon={<Check size={17} />} disabled={published} onClick={() => publishImportBatch(batch.id)}>{published ? "Published" : `Publish ${rows.length} requirements`}</Button>}
       />
       {published && <InlineMessage tone="success" title="Already published">This batch's requirements are live in the master requirements catalog.</InlineMessage>}
@@ -202,7 +233,8 @@ export function AdminImportBatchPreviewScreen() {
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch } = useAppState();
+  const { importHistory, publishImportBatch, submitImportBatch, sites } = useAppState();
+  const siteOptions = buildSiteOptions(sites);
   const [step, setStep] = useState(0);
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -238,7 +270,7 @@ export function AdminImportsScreen() {
           {step === 2 && <><div className="import-stage__heading"><span className="stage-icon"><FileSpreadsheet size={23} /></span><div><p className="eyebrow">Step 3 of 7</p><h2>Inspect workbook structure</h2><p>Review detected sheets and records before mapping.</p></div></div><div className="inspection-grid"><div><strong>24</strong><span>Sheets detected</span></div><div><strong>752</strong><span>Requirement rows</span></div><div><strong>0</strong><span>Unknown sheets</span></div><div><strong>2</strong><span>Warnings</span></div></div><div className="inspection-list"><div><FileCheck2 size={18} /><span><strong>Leadership & Engagement</strong><small>68 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><FileCheck2 size={18} /><span><strong>Planning</strong><small>94 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><AlertCircle size={18} /><span><strong>Machine Safety</strong><small>2 blank guidance cells</small></span><span className="warning-label">Warning</span></div></div></>}
           {step === 3 && <><div className="import-stage__heading"><span className="stage-icon"><ArrowRight size={23} /></span><div><p className="eyebrow">Step 4 of 7</p><h2>Map workbook columns</h2><p>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div></div><div className="mapping-table">{mappings.map((mapping, index) => <div key={mapping.source} className={cx(mapping.needsReview && "mapping-table__row--flagged")}><span><strong>{mapping.source}</strong><small>Source column</small></span><ArrowRight size={18} /><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /><span className="mapping-sample">{mapping.sample}</span>{mapping.needsReview ? <span className="warning-label">Needs review</span> : <CheckCircle2 size={18} />}</div>)}</div>{needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}</>}
           {step === 4 && <><div className="import-stage__heading"><span className="stage-icon"><ShieldCheck size={23} /></span><div><p className="eyebrow">Step 5 of 7</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className="validation-summary"><div className="validation-summary__success"><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className="validation-summary__warning"><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHSS_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
-          {step === 5 && <><div className="import-stage__heading"><span className="stage-icon"><FileCheck2 size={23} /></span><div><p className="eyebrow">Step 6 of 7</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className="dry-run-grid"><div><span className="dry-run-dot dry-run-dot--create" /><strong>4</strong><span>Create</span></div><div><span className="dry-run-dot dry-run-dot--update" /><strong>2</strong><span>Update</span></div><div><span className="dry-run-dot dry-run-dot--same" /><strong>746</strong><span>Unchanged</span></div><div><span className="dry-run-dot dry-run-dot--conflict" /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for {siteNamesFor(selectedSiteIds) || "the selected sites"} and writes an administrator audit record.</InlineMessage><label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
+          {step === 5 && <><div className="import-stage__heading"><span className="stage-icon"><FileCheck2 size={23} /></span><div><p className="eyebrow">Step 6 of 7</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className="dry-run-grid"><div><span className="dry-run-dot dry-run-dot--create" /><strong>4</strong><span>Create</span></div><div><span className="dry-run-dot dry-run-dot--update" /><strong>2</strong><span>Update</span></div><div><span className="dry-run-dot dry-run-dot--same" /><strong>746</strong><span>Unchanged</span></div><div><span className="dry-run-dot dry-run-dot--conflict" /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for {siteNamesFor(sites, selectedSiteIds) || "the selected sites"} and writes an administrator audit record.</InlineMessage><label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
           {step === 6 && result && (() => {
             const latest = importHistory.find((record) => record.id === result.id) ?? result;
             const published = latest.publishStatus === "Published";
@@ -277,7 +309,7 @@ export function AdminImportsScreen() {
   );
 }
 
-function RequirementDialog({ item, sections, onClose, onSave }: { item?: MasterRequirement; sections: string[]; onClose: () => void; onSave: (item: MasterRequirement) => void }) {
+function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { item?: MasterRequirement; sections: string[]; siteOptions: ReturnType<typeof buildSiteOptions>; onClose: () => void; onSave: (item: MasterRequirement) => void }) {
   const [draft, setDraft] = useState<MasterRequirement>(item ?? { id: "", title: "", section: sections[0] ?? "", version: "v1", status: "Draft", siteIds: [] });
   const [submitted, setSubmitted] = useState(false);
   const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()));
@@ -308,7 +340,7 @@ function RequirementDialog({ item, sections, onClose, onSave }: { item?: MasterR
 }
 
 export function AdminRequirementsScreen() {
-  const { masterRequirements, addMasterRequirement, updateMasterRequirement } = useAppState();
+  const { masterRequirements, addMasterRequirement, updateMasterRequirement, sites } = useAppState();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
   const [status, setStatus] = useState("Published and draft");
@@ -352,12 +384,12 @@ export function AdminRequirementsScreen() {
           <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
           <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...sections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
-          <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...dashboardSites.map((site) => ({ value: site.id, label: site.name }))]} />
+          <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Governed content</p><h2>Requirements</h2></div><span>{rows.length} records shown</span></div>
-        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td data-label="ID"><strong>{item.id}</strong></td><td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td><td data-label="Section">{item.section}</td><td data-label="Sites" title={siteCodesSummary(item.siteIds).title}>{siteCodesSummary(item.siteIds).text}</td><td data-label="Version">{item.version}</td><td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td><td data-label="Actions"><span className="row-actions row-actions--menu"><IconButton label={`Edit ${item.id}`} onClick={() => setEditing(item)}><Pencil size={17} /></IconButton><IconButton label={`More actions for ${item.id}`} onClick={() => setMenu(menu === item.id ? null : item.id)}><MoreHorizontal size={18} /></IconButton>{menu === item.id && <span className="row-menu"><button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button><button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button></span>}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
+        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td data-label="ID"><strong>{item.id}</strong></td><td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td><td data-label="Section">{item.section}</td><td data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}>{siteCodesSummary(sites, item.siteIds).text}</td><td data-label="Version">{item.version}</td><td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td><td data-label="Actions"><span className="row-actions row-actions--menu"><IconButton label={`Edit ${item.id}`} onClick={() => setEditing(item)}><Pencil size={17} /></IconButton><IconButton label={`More actions for ${item.id}`} onClick={() => setMenu(menu === item.id ? null : item.id)}><MoreHorizontal size={18} /></IconButton>{menu === item.id && <span className="row-menu"><button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button><button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button></span>}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
       </section>
-      {editing && <RequirementDialog item={editing === "new" ? undefined : editing} sections={sections} onClose={() => setEditing(null)} onSave={save} />}
+      {editing && <RequirementDialog item={editing === "new" ? undefined : editing} sections={sections} siteOptions={buildSiteOptions(sites)} onClose={() => setEditing(null)} onSave={save} />}
     </div>
   );
 }
@@ -401,10 +433,11 @@ function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; si
 
 export function AdminSiteDetailScreen() {
   const { siteId } = useParams();
-  const { siteUsers, ownerRecords, siteContacts, addSiteUser, updateSiteUser, removeSiteUser } = useAppState();
+  const { siteUsers, ownerRecords, siteContacts, sites, addSiteUser, updateSiteUser, removeSiteUser } = useAppState();
   const [editing, setEditing] = useState<SiteUser | "new" | null>(null);
+  const [removing, setRemoving] = useState<SiteUser | null>(null);
   const [feedback, setFeedback] = useState("");
-  const site = dashboardSites.find((item) => item.id === siteId);
+  const site = sites.find((item) => item.id === siteId);
   if (!site) {
     return (
       <div className="page-container">
@@ -451,7 +484,7 @@ export function AdminSiteDetailScreen() {
             <td data-label="Email">{user.email}</td>
             <td data-label="Role">{roleLabels[user.role]}</td>
             <td data-label="Status"><span className={cx("publish-badge", user.status === "Inactive" && "publish-badge--draft")}>{user.status}</span></td>
-            <td data-label="Actions"><span className="row-actions"><IconButton label={`Edit ${user.name}`} onClick={() => setEditing(user)}><Pencil size={17} /></IconButton><IconButton label={`Remove ${user.name} from this site`} onClick={() => { removeSiteUser(user.id); setFeedback(`${user.name} was removed from ${currentSite.name}.`); }}><X size={17} /></IconButton></span></td>
+            <td data-label="Actions"><span className="row-actions"><IconButton label={`Edit ${user.name}`} onClick={() => setEditing(user)}><Pencil size={17} /></IconButton><IconButton label={`Remove ${user.name} from this site`} onClick={() => setRemoving(user)}><Trash2 size={17} /></IconButton></span></td>
           </tr>
         ))}</tbody></table></div> : <EmptyState icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
       </section>
@@ -467,6 +500,96 @@ export function AdminSiteDetailScreen() {
       </section>
 
       {editing && <SiteUserDialog user={editing === "new" ? undefined : editing} siteId={site.id} onClose={() => setEditing(null)} onSave={saveUser} />}
+      {removing && <ConfirmDialog eyebrow="Site access" title={`Remove ${removing.name} from this site?`} body={`${removing.name} will lose access to ${currentSite.name}. This does not delete any assessment work they have recorded.`} confirmLabel="Remove user" cancelLabel="Keep user" onCancel={() => setRemoving(null)} onConfirm={() => { removeSiteUser(removing.id); setFeedback(`${removing.name} was removed from ${currentSite.name}.`); setRemoving(null); }} />}
     </div>
   );
+}
+
+const SITE_CSV_COLUMNS = "Site name,Site code,Region,Segment";
+
+function slugifySiteId(code: string) {
+  return code.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `site-${Date.now().toString().slice(-6)}`;
+}
+
+function blankSite(): DashboardSite {
+  return { id: "", name: "", code: "", region: "", segment: "", completion: 0, performance: "not-assessed", gaps: 0, updated: "Not started" };
+}
+
+function SiteDialog({ site, existing, onClose, onSave }: { site?: DashboardSite; existing: DashboardSite[]; onClose: () => void; onSave: (site: DashboardSite) => void }) {
+  const [draft, setDraft] = useState<DashboardSite>(site ?? blankSite());
+  const [submitted, setSubmitted] = useState(false);
+  const trimmedCode = draft.code.trim();
+  const duplicateCode = Boolean(trimmedCode) && existing.some((item) => item.code.toLowerCase() === trimmedCode.toLowerCase() && item.id !== draft.id);
+  const valid = Boolean(draft.name.trim() && trimmedCode && draft.region.trim() && draft.segment.trim()) && !duplicateCode;
+  const set = (key: keyof DashboardSite, value: string) => setDraft((current) => ({ ...current, [key]: value }));
+  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close site editor" onClick={onClose} /><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="site-dialog-title">
+    <div className="dialog__header"><div><p className="eyebrow">Site network</p><h2 id="site-dialog-title">{site ? `Edit ${site.name}` : "Create site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
+    <div className="dialog-form form-grid">
+      <label className={cx("field", "field--wide", submitted && !draft.name.trim() && "field--invalid")}>
+        <span>Site name <b>Required</b></span>
+        <input value={draft.name} onChange={(event) => set("name", event.target.value)} placeholder="For example, Northstar Manufacturing" />
+        {submitted && !draft.name.trim() && <small className="field-error">Enter the site name.</small>}
+      </label>
+      <label className={cx("field", (submitted && !trimmedCode) || duplicateCode ? "field--invalid" : undefined)}>
+        <span>Site code <b>Required</b></span>
+        <input value={draft.code} onChange={(event) => set("code", event.target.value)} placeholder="KC-NSM-042" />
+        {submitted && !trimmedCode && <small className="field-error">Enter the KC site code.</small>}
+        {duplicateCode && <small className="field-error">This site code already exists.</small>}
+      </label>
+      <label className={cx("field", submitted && !draft.region.trim() && "field--invalid")}>
+        <span>Region <b>Required</b></span>
+        <input value={draft.region} onChange={(event) => set("region", event.target.value)} placeholder="North America" list="site-region-options" />
+        {submitted && !draft.region.trim() && <small className="field-error">Enter the region.</small>}
+      </label>
+      <label className={cx("field", "field--wide", submitted && !draft.segment.trim() && "field--invalid")}>
+        <span>Segment <b>Required</b></span>
+        <input value={draft.segment} onChange={(event) => set("segment", event.target.value)} placeholder="Family Care" list="site-segment-options" />
+        {submitted && !draft.segment.trim() && <small className="field-error">Enter the business segment.</small>}
+      </label>
+      <datalist id="site-region-options">{[...new Set(existing.map((item) => item.region))].map((region) => <option key={region} value={region} />)}</datalist>
+      <datalist id="site-segment-options">{[...new Set(existing.map((item) => item.segment))].map((segment) => <option key={segment} value={segment} />)}</datalist>
+    </div>
+    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => {
+      setSubmitted(true);
+      if (!valid) return;
+      onSave({ ...draft, name: draft.name.trim(), code: trimmedCode, region: draft.region.trim(), segment: draft.segment.trim(), id: draft.id || slugifySiteId(trimmedCode) });
+    }}>{site ? "Save changes" : "Create site"}</Button></div>
+  </section></div>;
+}
+
+interface SiteImportOutcome {
+  parsed: DashboardSite[];
+  invalid: string[];
+}
+
+/** Minimal CSV reader: handles quoted fields and embedded commas, which is all the site
+ *  columns need. Rows missing any required column are reported rather than silently dropped. */
+function parseSitesCsv(text: string): SiteImportOutcome {
+  // Excel writes a UTF-8 BOM; strip it by code point rather than embedding the literal
+  // character in a regex, which trips the no-irregular-whitespace lint rule.
+  const body = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+  const rows = body.split(/\r?\n/).filter((line) => line.trim());
+  const invalid: string[] = [];
+  const parsed: DashboardSite[] = [];
+  const splitRow = (line: string) => {
+    const cells: string[] = [];
+    let cell = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      if (char === '"') {
+        if (quoted && line[index + 1] === '"') { cell += '"'; index += 1; } else quoted = !quoted;
+      } else if (char === "," && !quoted) { cells.push(cell); cell = ""; } else cell += char;
+    }
+    cells.push(cell);
+    return cells.map((value) => value.trim());
+  };
+  const startsWithHeader = rows[0]?.toLowerCase().includes("site name") || rows[0]?.toLowerCase().includes("site code");
+  rows.slice(startsWithHeader ? 1 : 0).forEach((line, index) => {
+    const [name, code, region, segment] = splitRow(line);
+    const rowNumber = index + (startsWithHeader ? 2 : 1);
+    if (!name || !code || !region || !segment) { invalid.push(`Row ${rowNumber}: needs all four columns (${SITE_CSV_COLUMNS}).`); return; }
+    parsed.push({ ...blankSite(), id: slugifySiteId(code), name, code, region, segment });
+  });
+  return { parsed, invalid };
 }
