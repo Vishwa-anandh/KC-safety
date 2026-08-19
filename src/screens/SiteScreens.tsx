@@ -201,7 +201,7 @@ export function SiteInformationScreen() {
   return (
     <div className="page-container">
       <PageHeader eyebrow="Site workspace" title="Site information" description="Maintain leadership and contact details for your assigned site. Core site identity is governed centrally." actions={<Button variant="primary" icon={<Save size={18} />} onClick={save} disabled={saved} data-tour="site-save">Save changes</Button>} />
-      {confirmation ? <InlineMessage tone="success" title="Site contacts saved">The updated contact information is now available across this site workspace.</InlineMessage> : <InlineMessage tone="info" title="Site identity is read-only">Site name, code, region, and segment come from the KC site master and cannot be changed here.</InlineMessage>}
+      {confirmation && <InlineMessage tone="success" title="Site contacts saved">The updated contact information is now available across this site workspace.</InlineMessage>}
       {errors.size > 0 && <InlineMessage tone="danger" title="Review the highlighted fields">Complete every contact and use a valid email address before saving.</InlineMessage>}
       <section className="form-card" data-tour="site-contacts-form">
         <div className="form-card__header"><div><p className="eyebrow">Local leadership</p><h2>Site contacts</h2><span>People responsible for site-level EHS&S coordination.</span></div>{saved ? <SaveStatus /> : <span className="unsaved-state">Unsaved changes</span>}</div>
