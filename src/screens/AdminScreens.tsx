@@ -81,6 +81,27 @@ function siteCodesSummary(sites: DashboardSite[], siteIds: string[]) {
   return codes.length <= 2 ? { text: codes.join(", "), title: undefined } : { text: `${codes.length} sites`, title: codes.join(", ") };
 }
 
+/**
+ * Publishing a batch is the one event that matters to people outside administration —
+ * a site contributor's requirement set just changed. Shared by the preview screen and the
+ * wizard's result step so both produce an identical notification.
+ */
+function notifyBatchPublished(
+  notify: ReturnType<typeof useAppState>["notify"],
+  batch: ImportHistoryRecord,
+  requirementCount: number,
+  allSites: DashboardSite[],
+) {
+  const scope = batch.siteIds.length ? siteNamesFor(allSites, batch.siteIds) : "all sites";
+  const title = `${requirementCount} requirement${requirementCount === 1 ? "" : "s"} published to ${scope}`;
+  const body = `Published from ${batch.fileName}. Audit reference ${batch.id}.`;
+  // Emitted once per audience because the two roles have no route in common: /admin/requirements
+  // is administrator-only and /assessment is site-contributor-only. A single notification
+  // carrying either link would bounce half its recipients off RequireRole to their home page.
+  notify({ title, body, category: "master-data", audience: ["administrator"], link: "/admin/requirements" });
+  notify({ title, body, category: "master-data", audience: ["site-contributor"], link: "/assessment" });
+}
+
 function StepIndicator({ current }: { current: number }) {
   return <ol className="step-indicator" aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
     const state = index < current ? "complete" : index === current ? "current" : "upcoming";
@@ -194,7 +215,7 @@ export function AdminSitesScreen() {
 
 export function AdminImportBatchPreviewScreen() {
   const { batchId } = useParams();
-  const { masterRequirements, importHistory, publishImportBatch, sites } = useAppState();
+  const { masterRequirements, importHistory, publishImportBatch, sites, notify } = useAppState();
   const batch = importHistory.find((record) => record.id === batchId);
   const rows = masterRequirements.filter((item) => item.importBatchId === batchId);
   const sectionOrder: string[] = [];
@@ -211,7 +232,7 @@ export function AdminImportBatchPreviewScreen() {
         eyebrow="Administration audit"
         title="Preview imported requirements"
         description={batch ? `${rows.length} requirement${rows.length === 1 ? "" : "s"} from ${batch.fileName}, scoped to ${siteNamesFor(sites, batch.siteIds) || "the selected sites"}.` : "This import batch could not be found."}
-        actions={batch && rows.length > 0 && <Button variant="primary" icon={<Check size={17} />} disabled={published} onClick={() => publishImportBatch(batch.id)}>{published ? "Published" : `Publish ${rows.length} requirements`}</Button>}
+        actions={batch && rows.length > 0 && <Button variant="primary" icon={<Check size={17} />} disabled={published} onClick={() => { publishImportBatch(batch.id); notifyBatchPublished(notify, batch, rows.length, sites); }}>{published ? "Published" : `Publish ${rows.length} requirements`}</Button>}
       />
       {published && <InlineMessage tone="success" title="Already published">This batch's requirements are live in the master requirements catalog.</InlineMessage>}
       {!rows.length && <EmptyState icon={<FileSpreadsheet size={28} />} title="No requirements in this batch" description="This import batch has no linked master requirement rows." />}
@@ -233,7 +254,7 @@ export function AdminImportBatchPreviewScreen() {
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch, sites } = useAppState();
+  const { importHistory, publishImportBatch, submitImportBatch, sites, notify } = useAppState();
   const siteOptions = buildSiteOptions(sites);
   const [step, setStep] = useState(0);
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
@@ -251,7 +272,17 @@ export function AdminImportsScreen() {
     setFile(selected); setFileError("");
   }
   function advance() {
-    if (step === 5 && file) { const record = submitImportBatch(file.name, selectedSiteIds); setResult(record); setStep(6); return; }
+    if (step === 5 && file) {
+      const record = submitImportBatch(file.name, selectedSiteIds);
+      notify({
+        title: `${record.fileName} imported`,
+        body: `${record.created + record.updated} requirements are staged as drafts and stay invisible to sites until published.`,
+        category: "master-data",
+        audience: ["administrator"],
+        link: `/admin/imports/${record.id}/preview`,
+      });
+      setResult(record); setStep(6); return;
+    }
     setStep((value) => Math.min(6, value + 1));
   }
   function resetImport() {
@@ -291,7 +322,7 @@ export function AdminImportsScreen() {
                 </div>
                 <p className="result-state__audit">Audit reference <strong>{latest.id}</strong></p>
                 <div className="result-state__primary">
-                  {!published && <Button variant="primary" icon={<Check size={17} />} onClick={() => publishImportBatch(latest.id)}>Publish {requirementCount} requirements</Button>}
+                  {!published && <Button variant="primary" icon={<Check size={17} />} onClick={() => { publishImportBatch(latest.id); notifyBatchPublished(notify, latest, requirementCount, sites); }}>Publish {requirementCount} requirements</Button>}
                   <Button variant="secondary" icon={<FileText size={17} />} onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>{published ? "View imported requirements" : "Review before publishing"}</Button>
                 </div>
                 <div className="result-state__links">
@@ -433,7 +464,7 @@ function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; si
 
 export function AdminSiteDetailScreen() {
   const { siteId } = useParams();
-  const { siteUsers, ownerRecords, siteContacts, sites, addSiteUser, updateSiteUser, removeSiteUser } = useAppState();
+  const { siteUsers, ownerRecords, siteContacts, sites, addSiteUser, updateSiteUser, removeSiteUser, notify } = useAppState();
   const [editing, setEditing] = useState<SiteUser | "new" | null>(null);
   const [removing, setRemoving] = useState<SiteUser | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -459,6 +490,14 @@ export function AdminSiteDetailScreen() {
     const duplicate = isNew && siteUsers.some((record) => record.email.toLowerCase() === user.email.toLowerCase() && record.siteId === user.siteId);
     if (duplicate) { setFeedback(`${user.email} is already assigned to this site.`); setEditing(null); return; }
     if (isNew) addSiteUser(user); else updateSiteUser(user);
+    notify({
+      title: isNew ? `${user.name} assigned to ${currentSite.name}` : `${user.name} updated for ${currentSite.name}`,
+      body: `${roleLabels[user.role]} · ${user.status}`,
+      category: "assignment",
+      audience: ["administrator"],
+      link: `/admin/sites/${currentSite.id}`,
+      siteId: currentSite.id,
+    });
     setFeedback(`${user.name} was ${isNew ? "assigned to" : "updated for"} ${currentSite.name}.`);
     setEditing(null);
   }

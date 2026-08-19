@@ -247,7 +247,7 @@ function OwnerDialog({ owner, onClose, onSave }: { owner: OwnerRecord; onClose: 
 }
 
 export function OwnersScreen() {
-  const { ownerRecords, updateOwner } = useAppState();
+  const { ownerRecords, updateOwner, notify } = useAppState();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [editing, setEditing] = useState<OwnerRecord | null>(null);
@@ -272,7 +272,19 @@ export function OwnersScreen() {
         />
       </div>
       {filtered.length ? <div className="owner-grid" data-tour="owner-list">{filtered.map((owner) => <OwnerCard owner={owner} onEdit={setEditing} key={owner.id} />)}</div> : <EmptyState icon={<Search size={26} />} title="No owners found" description="Try another name or category." />}
-      {editing && <OwnerDialog owner={editing} onClose={() => setEditing(null)} onSave={(owner) => { updateOwner(owner); setSavedName(owner.program); setEditing(null); }} />}
+      {editing && <OwnerDialog owner={editing} onClose={() => setEditing(null)} onSave={(owner) => {
+        updateOwner(owner);
+        // Split by audience: /owners is site-contributor-only, so an administrator given that
+        // link would be redirected to their own home instead of the record.
+        const ownerNote = {
+          title: `${owner.program} owners updated`,
+          body: `${owner.primaryName} is Primary Owner, with ${owner.backupName} as Backup Owner.`,
+          category: "assignment" as const,
+        };
+        notify({ ...ownerNote, audience: ["site-contributor"], link: "/owners" });
+        notify({ ...ownerNote, audience: ["administrator"], link: "/admin/sites/northstar" });
+        setSavedName(owner.program); setEditing(null);
+      }} />}
     </div>
   );
 }
@@ -292,7 +304,7 @@ function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => vo
 }
 
 export function ActionsScreen() {
-  const { requirements, updateQuestion } = useAppState();
+  const { requirements, updateQuestion, notify } = useAppState();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "complete" | "needs-info">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
@@ -353,7 +365,20 @@ export function ActionsScreen() {
           return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description needed</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner needed</span>}</td><td data-label="Status"><span className={cx("detail-status", ready ? "detail-status--complete" : "detail-status--missing")}>{ready ? "Complete" : "Needs information"}</span></td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;
         })}</tbody></table></div> : <EmptyState icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
       </section>
-      {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => { updateQuestion(editing.requirement.id, editing.question.id, { action }); setEditing(null); setSaved(true); }} />}
+      {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
+        updateQuestion(editing.requirement.id, editing.question.id, { action });
+        // Only worth telling someone about when the gap is still real.
+        if (!action.owner.trim()) {
+          notify({
+            title: `Action on ${editing.requirement.number} still needs an owner`,
+            body: editing.requirement.title,
+            category: "action",
+            audience: ["site-contributor"],
+            link: "/actions",
+          });
+        }
+        setEditing(null); setSaved(true);
+      }} />}
     </div>
   );
 }

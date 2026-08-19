@@ -8,11 +8,13 @@ import {
   ownerRecords as seedOwnerRecords,
   requirements as seedRequirements,
   siteUsers as seedSiteUsers,
+  notifications as seedNotifications,
   rollupPerformance,
   sections as seedSections,
 } from "./data";
 import type {
   ActionItem,
+  AppNotification,
   AssessmentPeriod,
   DashboardSite,
   EvidenceItem,
@@ -23,6 +25,7 @@ import type {
   SectionSummary,
   SiteContacts,
   SiteUser,
+  SiteUserRole,
 } from "./types";
 
 const STORAGE_KEY = "ehss-phase-one-state-v1";
@@ -48,6 +51,7 @@ interface PersistedState {
   importHistory: ImportHistoryRecord[];
   siteUsers: SiteUser[];
   sites: DashboardSite[];
+  notifications: AppNotification[];
   lastUpdated: string;
 }
 
@@ -74,6 +78,9 @@ interface AppStateValue extends PersistedState {
   addSite: (site: DashboardSite) => void;
   updateSite: (site: DashboardSite) => void;
   importSites: (sites: DashboardSite[]) => { added: number; skipped: string[] };
+  notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
+  markNotificationRead: (id: string, role: SiteUserRole) => void;
+  markAllNotificationsRead: (role: SiteUserRole) => void;
 }
 
 function freshState(): PersistedState {
@@ -85,6 +92,7 @@ function freshState(): PersistedState {
     importHistory: [],
     siteUsers: structuredClone(seedSiteUsers),
     sites: structuredClone(seedSites),
+    notifications: structuredClone(seedNotifications),
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -113,6 +121,7 @@ function loadState(): PersistedState {
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
       siteUsers: parsed.siteUsers ?? structuredClone(seedSiteUsers),
       sites: parsed.sites?.length ? parsed.sites : structuredClone(seedSites),
+      notifications: (parsed.notifications ?? structuredClone(seedNotifications)).map((record) => ({ ...record, audience: record.audience ?? [], readBy: record.readBy ?? [] })),
     };
   } catch {
     return freshState();
@@ -288,6 +297,37 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return record;
   }
 
+  // Newest first, matching importHistory. `notify` is called from screens rather than from
+  // inside the other mutators because AppState has no access to the signed-in user — the
+  // calling screen does, along with the record the event is about.
+  function notify(input: Omit<AppNotification, "id" | "createdAt" | "readBy">) {
+    const record: AppNotification = {
+      ...input,
+      id: `ntf-${Date.now().toString(36)}-${Math.floor(performance.now() * 1000).toString(36)}`,
+      createdAt: new Date().toISOString(),
+      readBy: [],
+    };
+    touch((current) => ({ ...current, notifications: [record, ...current.notifications] }));
+  }
+
+  function markNotificationRead(id: string, role: SiteUserRole) {
+    touch((current) => ({
+      ...current,
+      notifications: current.notifications.map((record) => record.id === id && !record.readBy.includes(role)
+        ? { ...record, readBy: [...record.readBy, role] }
+        : record),
+    }));
+  }
+
+  function markAllNotificationsRead(role: SiteUserRole) {
+    touch((current) => ({
+      ...current,
+      notifications: current.notifications.map((record) => record.audience.includes(role) && !record.readBy.includes(role)
+        ? { ...record, readBy: [...record.readBy, role] }
+        : record),
+    }));
+  }
+
   function addSite(site: DashboardSite) {
     touch((current) => ({ ...current, sites: [...current.sites, site] }));
   }
@@ -358,6 +398,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addSite,
     updateSite,
     importSites,
+    notify,
+    markNotificationRead,
+    markAllNotificationsRead,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

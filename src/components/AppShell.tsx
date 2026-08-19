@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import {
   Activity,
   BarChart3,
+  Bell,
   Building2,
   ChevronDown,
   ChevronRight,
@@ -21,9 +22,11 @@ import {
   X,
 } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAppState } from "../AppState";
 import { useAuth } from "../Auth";
 import { assignedSite } from "../data";
 import { useGuidedSetup, type UserRole } from "../GuidedSetup";
+import type { AppNotification, NotificationCategory } from "../types";
 import { ThemeSelector, useTheme } from "../Theme";
 import { IconButton, KcLogo } from "./UI";
 import { cx } from "../utils";
@@ -95,6 +98,121 @@ function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: Us
         </div>
       ))}
     </nav>
+  );
+}
+
+
+function relativeTime(iso: string) {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(minutes) || minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+const notificationIcons: Record<NotificationCategory, typeof Bell> = {
+  assessment: ClipboardCheck,
+  action: Activity,
+  assignment: UsersRound,
+  "master-data": FileText,
+  site: Building2,
+};
+
+/**
+ * Notification centre. Modeled on ProfileMenu — same popover conventions (useId, outside
+ * pointerdown + Escape to close, aria-controls/expanded, role="dialog", --up placement).
+ * Notifications are addressed by role, and read state is tracked per role, so each demo
+ * login sees its own list and its own unread count.
+ */
+function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" | "up" }) {
+  const { role } = useGuidedSetup();
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useAppState();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const menuId = useId();
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const mine = notifications.filter((item) => item.audience.includes(role));
+  const unread = mine.filter((item) => !item.readBy.includes(role)).length;
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePress);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  function openNotification(item: AppNotification) {
+    markNotificationRead(item.id, role);
+    setOpen(false);
+    if (item.link) navigate(item.link);
+  }
+
+  return (
+    <div className="notification-menu-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="notification-button"
+        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-controls={menuId}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Bell size={19} />
+        {unread > 0 && <span className="notification-badge" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
+      </button>
+
+      {open && (
+        <div id={menuId} className={cx("notification-panel", menuPlacement === "up" && "notification-panel--up")} role="dialog" aria-label="Notifications">
+          <div className="notification-panel__header">
+            <div>
+              <p className="eyebrow">Notifications</p>
+              <strong>{unread ? `${unread} unread` : "All caught up"}</strong>
+            </div>
+            {unread > 0 && <button type="button" onClick={() => markAllNotificationsRead(role)}>Mark all as read</button>}
+          </div>
+          {mine.length ? (
+            <ul className="notification-list">
+              {mine.map((item) => {
+                const Icon = notificationIcons[item.category];
+                const isUnread = !item.readBy.includes(role);
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={cx("notification-item", isUnread && "notification-item--unread")}
+                      onClick={() => openNotification(item)}
+                    >
+                      <span className="notification-item__icon"><Icon size={17} /></span>
+                      <span className="notification-item__copy">
+                        <strong>{item.title}</strong>
+                        <small>{item.body}</small>
+                        <time dateTime={item.createdAt}>{relativeTime(item.createdAt)}</time>
+                      </span>
+                      {isUnread && <span className="notification-item__dot" aria-label="Unread" />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="notification-empty">No notifications yet. Activity relevant to your role will appear here.</p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -221,6 +339,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
         <SideNav collapsed={collapsed} role={role} />
         <div className="sidebar-footer">
+          <NotificationMenu menuPlacement="up" />
           <ProfileMenu menuPlacement="up" />
         </div>
         <button
@@ -267,7 +386,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <span>{role === "site-contributor" ? assignedSite.code : profile.scope}</span>
         </div>
         <div className="mobile-shell-strip__actions">
-          <IconButton label="Help and guided setup" onClick={openHelp} data-tour="help">
+          <NotificationMenu />
+            <IconButton label="Help and guided setup" onClick={openHelp} data-tour="help">
             <CircleHelp size={18} />
           </IconButton>
           <ProfileMenu compact />

@@ -113,3 +113,21 @@ export interface SiteUser {
   siteId: string;
   status: "Active" | "Inactive";
 }
+
+export type NotificationCategory = "assessment" | "action" | "assignment" | "master-data" | "site";
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  category: NotificationCategory;
+  createdAt: string;
+  /** Roles this notification is addressed to. */
+  audience: SiteUserRole[];
+  /** Per-role read state. Kept on the record rather than in a separate collection so each
+   *  signed-in role marks its own copy read without affecting the others. */
+  readBy: SiteUserRole[];
+  /** Route opened when the notification is clicked. */
+  link?: string;
+  siteId?: string;
+}
