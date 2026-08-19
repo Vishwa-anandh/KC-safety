@@ -16,6 +16,24 @@
   font-variation-settings: "slnt" 0, "wdth" 100, "GRAD" 0, "ROND" 0;
   text-rendering: optimizeLegibility;
 
+  /* Channel triplets for the accent ramp. Needed because many surfaces use the accent at low
+     alpha (rgb(... / 0.14)), which cannot be expressed from a hex token alone. Overridden by
+     [data-accent] so nav, hero, and glow tints track the selected palette. */
+  --accent-rgb: 23 104 159;
+  --accent-soft-rgb: 60 147 203;
+  --accent-hero-from: #062a43;
+  --accent-hero-mid: #084f75;
+  --accent-hero-to: #07637b;
+  --accent-hero-glow-a: 94 188 230;
+  --accent-hero-glow-b: 104 211 192;
+  --accent-dark-glow-rgb: 104 181 219;
+  --accent-dark-scroll-rgb: 152 208 232;
+  --accent-nav-dark-mid: #0b314a;
+  --accent-nav-dark-to: #09283d;
+  --accent-nav-from: #f9fcfe;
+  --accent-nav-mid: #eff8fc;
+  --accent-nav-to: #e6f2f8;
+
   --kc-50: #f2f9fd;
   --kc-100: #e4f3fa;
   --kc-200: #c5e5f4;
@@ -74,26 +92,26 @@
   --border-glass: rgb(255 255 255 / 0.5);
 
   --nav-background:
-    radial-gradient(circle at 20% 0%, rgb(60 147 203 / 0.11), transparent 18rem),
-    linear-gradient(180deg, #f9fcfe, #eff8fc 68%, #e6f2f8);
-  --nav-border: rgb(23 104 159 / 0.14);
-  --nav-divider: rgb(23 104 159 / 0.11);
+    radial-gradient(circle at 20% 0%, rgb(var(--accent-soft-rgb) / 0.11), transparent 18rem),
+    linear-gradient(180deg, var(--accent-nav-from), var(--accent-nav-mid) 68%, var(--accent-nav-to));
+  --nav-border: rgb(var(--accent-rgb) / 0.14);
+  --nav-divider: rgb(var(--accent-rgb) / 0.11);
   --nav-text-strong: #0f172a;
   --nav-text: #475569;
   --nav-text-muted: #64748b;
   --nav-group-text: #617d8f;
-  --nav-mark-border: #c5e5f4;
-  --nav-mark-background: #e4f3fa;
-  --nav-accent: #17689f;
-  --nav-hover: rgb(23 104 159 / 0.07);
-  --nav-icon-hover: rgb(23 104 159 / 0.09);
-  --nav-active-background: linear-gradient(100deg, rgb(23 104 159 / 0.13), rgb(60 147 203 / 0.055));
-  --nav-active-collapsed: rgb(23 104 159 / 0.095);
-  --nav-active-shadow: 0 9px 24px rgb(23 104 159 / 0.11);
+  --nav-mark-border: var(--kc-200);
+  --nav-mark-background: var(--kc-100);
+  --nav-accent: var(--kc-700);
+  --nav-hover: rgb(var(--accent-rgb) / 0.07);
+  --nav-icon-hover: rgb(var(--accent-rgb) / 0.09);
+  --nav-active-background: linear-gradient(100deg, rgb(var(--accent-rgb) / 0.13), rgb(var(--accent-soft-rgb) / 0.055));
+  --nav-active-collapsed: rgb(var(--accent-rgb) / 0.095);
+  --nav-active-shadow: 0 9px 24px rgb(var(--accent-rgb) / 0.11);
   --nav-active-icon-background: #fff;
-  --nav-scrollbar-thumb: rgb(23 104 159 / 0.24);
-  --nav-scrollbar-thumb-hover: rgb(23 104 159 / 0.46);
-  --nav-scrollbar-thumb-active: rgb(23 104 159 / 0.7);
+  --nav-scrollbar-thumb: rgb(var(--accent-rgb) / 0.24);
+  --nav-scrollbar-thumb-hover: rgb(var(--accent-rgb) / 0.46);
+  --nav-scrollbar-thumb-active: rgb(var(--accent-rgb) / 0.7);
 
   --scrollbar-track: transparent;
   --scrollbar-thumb: rgb(100 116 139 / 0.42);
@@ -168,8 +186,8 @@
   --border-glass: rgb(114 192 223 / 0.22);
 
   --nav-background:
-    radial-gradient(circle at 20% 0%, rgb(104 181 219 / 0.19), transparent 18rem),
-    linear-gradient(180deg, var(--kc-950), #0b314a 68%, #09283d);
+    radial-gradient(circle at 20% 0%, rgb(var(--accent-dark-glow-rgb) / 0.19), transparent 18rem),
+    linear-gradient(180deg, var(--kc-950), var(--accent-nav-dark-mid) 68%, var(--accent-nav-dark-to));
   --nav-border: rgb(255 255 255 / 0.1);
   --nav-divider: rgb(255 255 255 / 0.08);
   --nav-text-strong: #fff;
@@ -185,9 +203,9 @@
   --nav-active-collapsed: rgb(255 255 255 / 0.085);
   --nav-active-shadow: 0 9px 24px rgb(2 19 31 / 0.2);
   --nav-active-icon-background: #fff;
-  --nav-scrollbar-thumb: rgb(152 208 232 / 0.26);
-  --nav-scrollbar-thumb-hover: rgb(152 208 232 / 0.52);
-  --nav-scrollbar-thumb-active: rgb(152 208 232 / 0.78);
+  --nav-scrollbar-thumb: rgb(var(--accent-dark-scroll-rgb) / 0.26);
+  --nav-scrollbar-thumb-hover: rgb(var(--accent-dark-scroll-rgb) / 0.52);
+  --nav-scrollbar-thumb-active: rgb(var(--accent-dark-scroll-rgb) / 0.78);
 
   --scrollbar-thumb: rgb(118 139 157 / 0.48);
   --scrollbar-thumb-hover: rgb(123 200 230 / 0.68);
@@ -254,7 +272,7 @@ body {
   min-width: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 72% -10%, rgb(60 147 203 / 0.08), transparent 32rem),
+    radial-gradient(circle at 72% -10%, rgb(var(--accent-soft-rgb) / 0.08), transparent 32rem),
     var(--neutral-50);
   color: var(--neutral-900);
   font-family: var(--font-sans);
@@ -506,7 +524,7 @@ h3 {
   width: max-content;
   max-width: 230px;
   padding: 0.52rem 0.68rem;
-  border: 1px solid rgb(152 208 232 / 0.24);
+  border: 1px solid rgb(var(--accent-dark-scroll-rgb) / 0.24);
   border-radius: 10px;
   background: linear-gradient(145deg, var(--brand-deep), var(--brand-deepest));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 12px 30px rgb(2 19 31 / 0.24);
@@ -527,7 +545,7 @@ h3 {
   position: absolute;
   width: 8px;
   height: 8px;
-  border: 1px solid rgb(152 208 232 / 0.2);
+  border: 1px solid rgb(var(--accent-dark-scroll-rgb) / 0.2);
   background: var(--kc-950);
   content: "";
 }
@@ -809,7 +827,7 @@ h3 {
   height: 24px;
   border-radius: 0 6px 6px 0;
   background: var(--kc-300);
-  box-shadow: 0 0 12px rgb(104 181 219 / 0.55);
+  box-shadow: 0 0 12px rgb(var(--accent-dark-glow-rgb) / 0.55);
   content: "";
   transform: translateY(-50%);
 }
@@ -902,7 +920,7 @@ h3 {
   width: max-content;
   max-width: 220px;
   padding: 0.52rem 0.68rem;
-  border: 1px solid rgb(152 208 232 / 0.24);
+  border: 1px solid rgb(var(--accent-dark-scroll-rgb) / 0.24);
   border-radius: 10px;
   background: linear-gradient(145deg, var(--brand-deep), var(--brand-deepest));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 12px 30px rgb(2 19 31 / 0.28);
@@ -925,7 +943,7 @@ h3 {
   left: -5px;
   width: 8px;
   height: 8px;
-  border: 1px solid rgb(152 208 232 / 0.2);
+  border: 1px solid rgb(var(--accent-dark-scroll-rgb) / 0.2);
   border-top: 0;
   border-right: 0;
   background: var(--kc-950);
@@ -1817,7 +1835,7 @@ h3 {
   border: 1px solid var(--kc-200);
   border-radius: var(--radius-xl);
   background:
-    radial-gradient(circle at 92% 20%, rgb(60 147 203 / 0.18), transparent 17rem),
+    radial-gradient(circle at 92% 20%, rgb(var(--accent-soft-rgb) / 0.18), transparent 17rem),
     linear-gradient(135deg, var(--surface-panel), var(--kc-50));
   padding: 1.15rem 1.25rem;
   box-shadow: var(--shadow-1);
@@ -1831,7 +1849,7 @@ h3 {
   border-radius: 15px;
   background: var(--brand-solid-hover);
   color: #fff;
-  box-shadow: 0 8px 18px rgb(23 104 159 / 0.18);
+  box-shadow: 0 8px 18px rgb(var(--accent-rgb) / 0.18);
 }
 
 .site-identity-card__copy h2 {
@@ -2846,7 +2864,7 @@ h3 {
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-xl);
   background:
-    radial-gradient(circle at 95% 0%, rgb(60 147 203 / 0.12), transparent 15rem),
+    radial-gradient(circle at 95% 0%, rgb(var(--accent-soft-rgb) / 0.12), transparent 15rem),
     var(--surface-panel);
   padding: 1.2rem 1.25rem;
   box-shadow: var(--shadow-1);
@@ -4018,8 +4036,8 @@ h3 {
   min-height: 100vh;
   grid-template-rows: auto 1fr auto;
   background:
-    radial-gradient(circle at 18% 0%, rgb(60 147 203 / 0.19), transparent 26rem),
-    radial-gradient(circle at 86% 100%, rgb(23 104 159 / 0.14), transparent 28rem),
+    radial-gradient(circle at 18% 0%, rgb(var(--accent-soft-rgb) / 0.19), transparent 26rem),
+    radial-gradient(circle at 86% 100%, rgb(var(--accent-rgb) / 0.14), transparent 28rem),
     var(--neutral-50);
 }
 
@@ -5649,9 +5667,9 @@ h3 {
   flex-direction: column;
   overflow: hidden;
   background:
-    radial-gradient(circle at 8% 12%, rgb(94 188 230 / 0.28), transparent 23rem),
-    radial-gradient(circle at 92% 88%, rgb(104 211 192 / 0.2), transparent 24rem),
-    linear-gradient(145deg, #062a43, #084f75 58%, #07637b);
+    radial-gradient(circle at 8% 12%, rgb(var(--accent-hero-glow-a) / 0.28), transparent 23rem),
+    radial-gradient(circle at 92% 88%, rgb(var(--accent-hero-glow-b) / 0.2), transparent 24rem),
+    linear-gradient(145deg, var(--accent-hero-from), var(--accent-hero-mid) 58%, var(--accent-hero-to));
   color: white;
   padding: clamp(1.4rem, 4vw, 3.25rem);
 }
@@ -5862,8 +5880,8 @@ h3 {
 }
 
 @keyframes passkey-attention {
-  0% { box-shadow: 0 0 0 0 rgb(60 147 203 / 0.4), var(--shadow-2); }
-  55% { box-shadow: 0 0 0 8px rgb(60 147 203 / 0.14), var(--shadow-2); }
+  0% { box-shadow: 0 0 0 0 rgb(var(--accent-soft-rgb) / 0.4), var(--shadow-2); }
+  55% { box-shadow: 0 0 0 8px rgb(var(--accent-soft-rgb) / 0.14), var(--shadow-2); }
 }
 
 .passkey-setup-message {
@@ -6499,6 +6517,21 @@ h3 {
    component picks the new colour up without any per-component change. */
 
 :root[data-accent="kc-brand"] {
+  --accent-rgb: 0 71 187;
+  --accent-soft-rgb: 59 116 246;
+  --accent-hero-from: #001c45;
+  --accent-hero-mid: #00306f;
+  --accent-hero-to: #0047bb;
+  --accent-hero-glow-a: 96 150 250;
+  --accent-hero-glow-b: 147 187 253;
+  --accent-dark-glow-rgb: 96 150 250;
+  --accent-dark-scroll-rgb: 147 187 253;
+  --accent-nav-dark-mid: #052a63;
+  --accent-nav-dark-to: #04204e;
+  --accent-nav-from: #fafbff;
+  --accent-nav-mid: #f2f6ff;
+  --accent-nav-to: #e8effd;
+
   --kc-50: #eff5ff;
   --kc-100: #dbe8fe;
   --kc-200: #bfd7fe;
@@ -6521,6 +6554,7 @@ h3 {
 /* Dark mode needs the ramp inverted for contrast, mirroring how the default
    palette lightens 300-900 under [data-theme="dark"]. */
 :root[data-theme="dark"][data-accent="kc-brand"] {
+  --kc-950: #041534;
   --kc-50: #0f1f3d;
   --kc-100: #14284d;
   --kc-200: #1f3a6b;
