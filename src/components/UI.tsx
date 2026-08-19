@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   Check,
@@ -99,7 +100,9 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   const [query, setQuery] = useState("");
+  const [anchor, setAnchor] = useState<{ left: number; top: number; width: number; maxHeight: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
@@ -108,11 +111,47 @@ export function Select({
     ? options.filter((option) => option.label.toLowerCase().includes(query.trim().toLowerCase()))
     : options;
 
+  // The popover renders in a portal on document.body (see below), so it must be positioned
+  // manually against the trigger. Recomputed on open, scroll, and resize.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const trigger = wrapRef.current?.getBoundingClientRect();
+      if (!trigger) return;
+      const GAP = 6;
+      const MARGIN = 12;
+      const wanted = Math.min(320, Math.max(120, filteredOptions.length * 36 + (searchable ? 56 : 12)));
+      const spaceBelow = window.innerHeight - trigger.bottom - GAP - MARGIN;
+      const spaceAbove = trigger.top - GAP - MARGIN;
+      // Prefer below, but drop above when there is meaningfully more room there. Either way the
+      // popover is capped to the space actually available, so it can never run off-screen —
+      // a plain flip still overflowed when neither side could fit the full list.
+      const openUp = spaceBelow < wanted && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(120, Math.min(wanted, openUp ? spaceAbove : spaceBelow));
+      setAnchor({
+        left: Math.max(MARGIN, Math.min(trigger.left, window.innerWidth - trigger.width - MARGIN)),
+        top: openUp ? trigger.top - GAP - maxHeight : trigger.bottom + GAP,
+        width: trigger.width,
+        maxHeight,
+      });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open, searchable, filteredOptions.length]);
+
   useEffect(() => {
     if (!open) return;
     (searchable ? searchRef.current : listRef.current)?.focus();
     const closeOnOutsidePress = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+      // The popover is portalled outside wrapRef, so it must be checked separately —
+      // otherwise pointerdown on an option would close the list before its click landed.
+      const target = event.target as Node;
+      if (!wrapRef.current?.contains(target) && !popoverRef.current?.contains(target)) setOpen(false);
     };
     const closeOnEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -180,42 +219,50 @@ export function Select({
         <span>{current?.label}</span>
         <ChevronDown size={16} className={cx("select-control__chevron", open && "select-control__chevron--open")} />
       </button>
-      {open && searchable && (
-        <div className="select-popover select-popover--searchable">
-          <input
-            ref={searchRef}
-            className="select-popover__search"
-            type="text"
-            value={query}
-            onChange={(event) => { setQuery(event.target.value); setHighlighted(0); }}
-            onKeyDown={handleListKeyDown}
-            placeholder={`Search ${label.toLowerCase()}`}
-            aria-label={`Search ${label}`}
-          />
-          <ul
-            ref={listRef}
-            role="listbox"
-            aria-label={label}
-            aria-activedescendant={filteredOptions.length ? `${listId}-${highlighted}` : undefined}
-            className="select-popover__list"
-            tabIndex={-1}
-          >
-            {filteredOptions.length ? filteredOptions.map(renderOption) : <li className="select-popover__empty">No matches</li>}
-          </ul>
-        </div>
-      )}
-      {open && !searchable && (
-        <ul
-          ref={listRef}
-          role="listbox"
-          aria-label={label}
-          aria-activedescendant={options.length ? `${listId}-${highlighted}` : undefined}
-          className="select-popover"
-          tabIndex={-1}
-          onKeyDown={handleListKeyDown}
+      {open && anchor && createPortal(
+        <div
+          ref={popoverRef}
+          className="select-portal"
+          style={{ left: anchor.left, top: anchor.top, minWidth: anchor.width, maxHeight: anchor.maxHeight }}
         >
-          {options.map(renderOption)}
-        </ul>
+          {searchable ? (
+            <div className="select-popover select-popover--searchable">
+              <input
+                ref={searchRef}
+                className="select-popover__search"
+                type="text"
+                value={query}
+                onChange={(event) => { setQuery(event.target.value); setHighlighted(0); }}
+                onKeyDown={handleListKeyDown}
+                placeholder={`Search ${label.toLowerCase()}`}
+                aria-label={`Search ${label}`}
+              />
+              <ul
+                ref={listRef}
+                role="listbox"
+                aria-label={label}
+                aria-activedescendant={filteredOptions.length ? `${listId}-${highlighted}` : undefined}
+                className="select-popover__list"
+                tabIndex={-1}
+              >
+                {filteredOptions.length ? filteredOptions.map(renderOption) : <li className="select-popover__empty">No matches</li>}
+              </ul>
+            </div>
+          ) : (
+            <ul
+              ref={listRef}
+              role="listbox"
+              aria-label={label}
+              aria-activedescendant={options.length ? `${listId}-${highlighted}` : undefined}
+              className="select-popover"
+              tabIndex={-1}
+              onKeyDown={handleListKeyDown}
+            >
+              {options.map(renderOption)}
+            </ul>
+          )}
+        </div>,
+        document.body,
       )}
     </div>
   );

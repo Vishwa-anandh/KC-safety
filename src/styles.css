@@ -2122,15 +2122,23 @@ h3 {
   box-shadow: 0 0 0 3px var(--kc-100);
 }
 
+/* The popover renders in a portal on document.body so it can never be clipped by, or add
+   scroll height to, an ancestor scroll container (dialogs, table wraps). The wrapper below
+   is fixed-positioned from the trigger's rect in JS; the popover itself is static within it. */
+.select-portal {
+  position: fixed;
+  z-index: 400;
+  display: flex;
+}
+
+/* max-height is set inline from the space actually available, so the list inherits it and
+   scrolls internally rather than overflowing the viewport. */
+.select-portal > * { max-height: 100%; }
+
 .select-popover {
-  position: absolute;
-  z-index: 60;
-  top: calc(100% + 0.4rem);
-  left: 0;
   width: max-content;
   min-width: 100%;
   max-width: 320px;
-  max-height: 280px;
   overflow-y: auto;
   margin: 0;
   padding: 0.35rem;
