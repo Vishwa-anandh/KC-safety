@@ -1,6 +1,7 @@
-import { Mail } from "lucide-react";
-import type { OwnerRecord, SiteContacts } from "../types";
+import { Mail, UsersRound } from "lucide-react";
+import type { OwnerRecord, SiteContacts, SiteUser, SiteUserRole } from "../types";
 import { EmptyState } from "./UI";
+import { cx } from "../utils";
 
 const initialsOf = (name: string) => name.split(" ").filter(Boolean).map((part) => part[0]).join("");
 
@@ -48,6 +49,32 @@ export function OwnersPanel({ owners }: { owners: OwnerRecord[] | null }) {
           <div className="owner-person"><span className="avatar avatar--soft">{initialsOf(owner.backupName)}</span><div><small>Backup Owner</small><strong>{owner.backupName}</strong><a href={`mailto:${owner.backupEmail}`}>{owner.backupEmail}</a></div></div>
         </article>
       ))}
+    </div>
+  );
+}
+
+const siteUserRoleLabels: Record<SiteUserRole, string> = {
+  "site-contributor": "Site contributor",
+  "enterprise-viewer": "Regional / enterprise viewer",
+  administrator: "Administrator",
+};
+
+/** Read-only list of the people assigned to a site, shared by oversight screens. */
+export function SiteUsersPanel({ users }: { users: SiteUser[] }) {
+  if (!users.length) return <EmptyState icon={<UsersRound size={26} />} title="No users assigned" description="No one has been given access to this site yet." />;
+  return (
+    <div className="data-table-wrap">
+      <table className="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>{users.map((user) => (
+          <tr key={user.id}>
+            <td data-label="Name"><strong>{user.name}</strong></td>
+            <td data-label="Email">{user.email}</td>
+            <td data-label="Role">{siteUserRoleLabels[user.role]}</td>
+            <td data-label="Status"><span className={cx("publish-badge", user.status === "Inactive" && "publish-badge--draft")}>{user.status}</span></td>
+          </tr>
+        ))}</tbody>
+      </table>
     </div>
   );
 }

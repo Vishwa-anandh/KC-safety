@@ -20,7 +20,7 @@ import { useGuidedSetup } from "../GuidedSetup";
 import { performanceForResponse, performanceLabel, responseLabel, sections as seedSections } from "../data";
 import type { DashboardSite, Performance } from "../types";
 import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../components/UI";
-import { ContactsPanel } from "../components/SitePanels";
+import { ContactsPanel, SiteUsersPanel } from "../components/SitePanels";
 import { cx } from "../utils";
 
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
@@ -206,7 +206,7 @@ export function SiteSectionDetailScreen() {
 
 export function SiteDrilldownScreen() {
   const { siteId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirements, siteContacts } = useAppState();
+  const { dashboardSiteRows, sectionSummaries, requirements, siteContacts, siteUsers } = useAppState();
   const { role } = useGuidedSetup();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const siteSections = site.id === "northstar" ? sectionSummaries : seedSections;
@@ -222,6 +222,7 @@ export function SiteDrilldownScreen() {
       <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHSS_${site.code}_assessment.csv`)}>Export site view</Button>} />
       <InlineMessage tone="info" title={canEditAssignedSite ? "Assigned site—editing available" : "Read-only enterprise view"}>{canEditAssignedSite ? "Open any section below to continue work in your assigned site assessment." : "You can inspect this site's assessment details. Enterprise and administrative oversight does not grant site editing access."}</InlineMessage>
       <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>
+      <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site users</h2></div><span>{siteUsers.filter((user) => user.siteId === site.id).length} assigned</span></div><SiteUsersPanel users={siteUsers.filter((user) => user.siteId === site.id)} /></section>
       <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
       <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Assessment detail</p><h2>Operating System sections</h2></div><PerformanceBadge performance={site.performance} /></div><div className="section-drilldown-list" data-tour="drilldown-sections">{siteSections.filter((section) => section.kind === "operating-system").map((section, index) => {
         // `requirements` is one global list of real, answered assessment data tied to the one

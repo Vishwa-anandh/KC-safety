@@ -113,7 +113,7 @@ export function AdminImportHistoryScreen() {
 }
 
 export function AdminSitesScreen() {
-  const { masterRequirements } = useAppState();
+  const { masterRequirements, siteUsers } = useAppState();
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("all");
   const regions = [...new Set(dashboardSites.map((site) => site.region))];
@@ -123,6 +123,7 @@ export function AdminSitesScreen() {
   // A requirement with no site scoping applies everywhere, so it counts toward every site.
   const globalCount = masterRequirements.filter((item) => item.siteIds.length === 0).length;
   const scopedCountFor = (siteId: string) => masterRequirements.filter((item) => item.siteIds.includes(siteId)).length;
+  const usersFor = (siteId: string) => siteUsers.filter((user) => user.siteId === siteId);
 
   return (
     <div className="page-container">
@@ -139,13 +140,15 @@ export function AdminSitesScreen() {
           <Select label="Filter region" icon={<Filter size={18} />} value={region} onChange={setRegion} options={[{ value: "all", label: "All regions" }, ...regions.map((value) => ({ value, label: value }))]} />
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Site network</p><h2>All sites</h2></div><span>{rows.length} of {dashboardSites.length} shown</span></div>
-        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Completion</th><th>Requirements</th><th>Last updated</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{rows.map((site) => {
+        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Users</th><th>Completion</th><th>Requirements</th><th>Last updated</th><th><span className="sr-only">Open</span></th></tr></thead><tbody>{rows.map((site) => {
           const scoped = scopedCountFor(site.id);
+          const users = usersFor(site.id);
           return (
             <tr key={site.id}>
               <td data-label="Site"><strong>{site.name}</strong><span>{site.code}</span></td>
               <td data-label="Region">{site.region}</td>
               <td data-label="Segment">{site.segment}</td>
+              <td data-label="Users">{users.length ? <>{users.length}<span>{users.filter((user) => user.status === "Active").length} active</span></> : "None assigned"}</td>
               <td data-label="Completion"><span className={cx("completion-badge", site.completion === 100 ? "completion-badge--complete" : site.completion === 0 ? "completion-badge--not-started" : "completion-badge--in-progress")}>{site.completion}%</span></td>
               <td data-label="Requirements">{scoped ? `${scoped} scoped` : "Global only"}<span>{globalCount} global</span></td>
               <td data-label="Last updated">{site.updated}</td>
