@@ -3777,11 +3777,17 @@ h3 {
   color: var(--warning);
 }
 
-.mapping-table > div {
+.mapping-table {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) auto minmax(170px, 1fr) minmax(200px, 1.3fr) auto;
+  column-gap: 0.75rem;
+}
+
+.mapping-table > div {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   align-items: center;
-  gap: 0.75rem;
   padding: 0.75rem;
   border-bottom: 1px solid var(--neutral-200);
 }
