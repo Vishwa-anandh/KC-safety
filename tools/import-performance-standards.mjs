@@ -3,7 +3,7 @@
  * (markdown tables, one sheet per standard) into the app's Requirement/SectionSummary shape.
  *
  * Usage:
- *   node tools/import-performance-standards.mjs <path-to-md> [--out src/data/performance-standards.ts]
+ *   node tools/import-performance-standards.mjs <path-to-md> [--out src/demo/fixtures/performance-standards.ts]
  *   node tools/import-performance-standards.mjs <path-to-md> --report   (data-quality report only)
  *
  * Source shape (per standard sheet):
@@ -174,7 +174,7 @@ function main() {
   }
   const reportOnly = rest.includes("--report");
   const outIndex = rest.indexOf("--out");
-  const outPath = outIndex >= 0 ? rest[outIndex + 1] : "src/data/performance-standards.ts";
+  const outPath = outIndex >= 0 ? rest[outIndex + 1] : "src/demo/fixtures/performance-standards.ts";
 
   const sheets = parseSheets(readFileSync(resolve(sourceArg), "utf8"));
   const standards = [];
@@ -213,7 +213,7 @@ function main() {
     `// ${standards.length} standards, ${requirements.length} requirements, ${warnings.length} incomplete cells.\n\n`;
 
   const body =
-    `import type { Requirement, SectionSummary } from "../types";\n\n` +
+    `import type { Requirement, SectionSummary } from "../../types";\n\n` +
     `/** OSHPS 19 is the only standard with a 4th "Templates, Tools, Related Links" column. */\n` +
     `export type ImportedRequirement = Requirement & { relatedLinks?: string[] };\n\n` +
     `export const performanceStandardSections: SectionSummary[] = ${JSON.stringify(sections, null, 2)};\n\n` +

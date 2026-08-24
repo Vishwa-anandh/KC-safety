@@ -163,6 +163,7 @@
   --neutral-700: #d5dee6;
   --neutral-800: #e8eef3;
   --neutral-900: #f7f9fb;
+  --neutral-950: #ffffff;
 
   --success: #6fe0ad;
   --success-surface: #0f2d24;
@@ -1735,6 +1736,19 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.metrics-grid--2x2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.dashboard-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
 .metric-card {
   position: relative;
   display: grid;
@@ -2019,6 +2033,7 @@ h3 {
 .assessment-summary-strip > div {
   display: grid;
   align-content: center;
+  justify-items: start;
   min-height: 92px;
   gap: 0.3rem;
   padding: 1rem 1.25rem;
@@ -3412,12 +3427,16 @@ h3 {
 
 .dashboard-insights {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .insight-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-lg);
   background: var(--surface-panel);
@@ -4548,7 +4567,9 @@ h3 {
 
   .metrics-grid,
   .metrics-grid--three,
+  .metrics-grid--2x2,
   .assessment-summary-strip,
+  .dashboard-summary,
   .dashboard-insights,
   .owner-grid,
   .inspection-grid,
@@ -5909,6 +5930,7 @@ h3 {
   .login-story h1 { font-size: clamp(2.25rem, 4vw, 3.5rem); }
   .demo-role-grid { grid-template-columns: 1fr; }
   .demo-role-card { min-height: 66px; }
+  .dashboard-summary { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
