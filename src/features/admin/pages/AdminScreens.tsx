@@ -350,7 +350,8 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
   }
   function addQuestion() {
     const id = `${requirementId}-q-${Date.now().toString(36)}`;
-    onChange([...questions, { id, number: String(questions.length + 1), text: "", expectedEvidence: [] }]);
+    const nextNumber = Math.max(0, ...questions.map((question) => Number(question.number) || 0)) + 1;
+    onChange([...questions, { id, number: String(nextNumber), text: "", expectedEvidence: [] }]);
   }
   return (
     <div className="question-editor-list">
