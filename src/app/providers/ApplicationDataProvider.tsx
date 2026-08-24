@@ -8,6 +8,7 @@ import type {
   ActionItem,
   AppNotification,
   AssessmentPeriod,
+  AssessmentQuestion,
   DashboardSite,
   EvidenceItem,
   MasterRequirement,
@@ -198,10 +199,35 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     touch((current) => ({ ...current, masterRequirements: [requirement, ...current.masterRequirements] }));
   }
 
+  // Master Requirements is the source of truth for question definitions: saving a requirement
+  // here also reconciles its questions into the matching live `Requirement` (joined by
+  // `requirement.number === masterRequirement.id`) — updating kept questions' text/evidence in
+  // place (response/action/period are the contributor's own data and are never touched), adding
+  // new ones as unanswered, and hard-deleting ones removed from the master list.
   function updateMasterRequirement(requirement: MasterRequirement) {
     touch((current) => ({
       ...current,
       masterRequirements: current.masterRequirements.map((record) => record.id === requirement.id ? requirement : record),
+      requirements: current.requirements.map((liveRequirement) => {
+        if (liveRequirement.number !== requirement.id) return liveRequirement;
+        const keptQuestions = liveRequirement.questions
+          .filter((question) => requirement.questions.some((masterQuestion) => masterQuestion.id === question.id))
+          .map((question) => {
+            const masterQuestion = requirement.questions.find((item) => item.id === question.id)!;
+            return { ...question, number: masterQuestion.number, text: masterQuestion.text, expectedEvidence: masterQuestion.expectedEvidence };
+          });
+        const addedQuestions: AssessmentQuestion[] = requirement.questions
+          .filter((masterQuestion) => !liveRequirement.questions.some((question) => question.id === masterQuestion.id))
+          .map((masterQuestion) => ({
+            id: masterQuestion.id,
+            number: masterQuestion.number,
+            text: masterQuestion.text,
+            expectedEvidence: masterQuestion.expectedEvidence,
+            response: null,
+            period: currentAssessmentPeriod,
+          }));
+        return { ...liveRequirement, questions: [...keptQuestions, ...addedQuestions] };
+      }),
     }));
   }
 

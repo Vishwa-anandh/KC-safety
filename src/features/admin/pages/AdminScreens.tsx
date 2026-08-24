@@ -30,7 +30,7 @@ import {
 import { useAdministration } from "../model/useAdministration";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
-import type { DashboardSite, MasterRequirement, SiteUser, SiteUserRole } from "../../../shared/types";
+import type { DashboardSite, MasterQuestion, MasterRequirement, SiteUser, SiteUserRole } from "../../../shared/types";
 import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
@@ -341,13 +341,52 @@ export function AdminImportsScreen() {
   );
 }
 
+function QuestionsEditor({ questions, onChange, requirementId, submitted }: { questions: MasterQuestion[]; onChange: (questions: MasterQuestion[]) => void; requirementId: string; submitted: boolean }) {
+  function updateQuestion(id: string, patch: Partial<MasterQuestion>) {
+    onChange(questions.map((question) => question.id === id ? { ...question, ...patch } : question));
+  }
+  function removeQuestion(id: string) {
+    onChange(questions.filter((question) => question.id !== id));
+  }
+  function addQuestion() {
+    const id = `${requirementId}-q-${Date.now().toString(36)}`;
+    onChange([...questions, { id, number: String(questions.length + 1), text: "", expectedEvidence: [] }]);
+  }
+  return (
+    <div className="question-editor-list">
+      {!questions.length && <p className="question-editor-empty">No assessment questions yet. Add the first one below.</p>}
+      {questions.map((question, index) => {
+        const invalid = submitted && !question.text.trim();
+        return (
+          <div className={cx("question-editor-row", invalid && "question-editor-row--invalid")} key={question.id}>
+            <div className="question-editor-row__header">
+              <span className="question-number">{index + 1}</span>
+              <IconButton label={`Delete question ${index + 1}`} onClick={() => removeQuestion(question.id)}><Trash2 size={17} /></IconButton>
+            </div>
+            <label className="field">
+              <span>Question text <b>Required</b></span>
+              <textarea rows={2} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
+              {invalid && <small className="field-error">Enter the question text.</small>}
+            </label>
+            <label className="field">
+              <span>Evidence required <small>One item per line</small></span>
+              <textarea rows={2} value={question.expectedEvidence.join("\n")} onChange={(event) => updateQuestion(question.id, { expectedEvidence: event.target.value.split("\n") })} placeholder="For example, Current risk register" />
+            </label>
+          </div>
+        );
+      })}
+      <Button variant="secondary" icon={<Plus size={17} />} onClick={addQuestion}>Add question</Button>
+    </div>
+  );
+}
+
 function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { item?: MasterRequirement; sections: string[]; siteOptions: ReturnType<typeof buildSiteOptions>; onClose: () => void; onSave: (item: MasterRequirement) => void }) {
   const [draft, setDraft] = useState<MasterRequirement>(item ?? { id: "", title: "", section: sections[0] ?? "", version: "v1", status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()));
+  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()) && draft.questions.every((question) => question.text.trim()));
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
   const sectionOptions = sections.map((value) => ({ value, label: value }));
-  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close requirement editor" onClick={onClose} /><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="master-dialog-title">
+  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close requirement editor" onClick={onClose} /><section className="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="master-dialog-title">
     <div className="dialog__header"><div><p className="eyebrow">Governed content</p><h2 id="master-dialog-title">{item ? `Edit ${item.id}` : "Add requirement"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
     <div className="dialog-form form-grid">
       <label className={cx("field", submitted && !draft.id.trim() && "field--invalid")}><span>Requirement ID <b>Required</b></span><input value={draft.id} disabled={Boolean(item)} onChange={(event) => update("id", event.target.value)} placeholder="For example, OS 2.4.1" />{submitted && !draft.id.trim() && <small className="field-error">Enter a unique requirement ID.</small>}</label>
@@ -366,8 +405,25 @@ function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { i
         <span>Sites <small>Leave empty to apply to all sites</small></span>
         <CheckboxList label="Sites" searchable options={siteOptions} selected={draft.siteIds} onChange={(values) => setDraft((current) => ({ ...current, siteIds: values }))} />
       </label>
+      {item && (
+        <div className="field field--wide">
+          <span>Assessment questions</span>
+          <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
+        </div>
+      )}
     </div>
-    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => { setSubmitted(true); if (valid) onSave({ ...draft, id: draft.id.trim(), title: draft.title.trim(), section: draft.section.trim(), version: draft.version.trim() }); }}>{item ? "Save changes" : "Add requirement"}</Button></div>
+    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => {
+      setSubmitted(true);
+      if (!valid) return;
+      onSave({
+        ...draft,
+        id: draft.id.trim(),
+        title: draft.title.trim(),
+        section: draft.section.trim(),
+        version: draft.version.trim(),
+        questions: draft.questions.map((question) => ({ ...question, text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
+      });
+    }}>{item ? "Save changes" : "Add requirement"}</Button></div>
   </section></div>;
 }
 

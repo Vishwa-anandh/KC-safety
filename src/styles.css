@@ -2366,6 +2366,40 @@ h3 {
   box-shadow: 0 0 0 3px var(--kc-100);
 }
 
+.question-editor-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.question-editor-row {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  padding: 0.9rem;
+}
+
+.question-editor-row--invalid {
+  border-color: var(--danger-border);
+  box-shadow: 0 0 0 3px var(--danger-surface);
+}
+
+.question-editor-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.question-editor-empty {
+  border: 1px dashed var(--neutral-300);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  color: var(--neutral-500);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
 .field-control-with-icon {
   position: relative;
   display: flex;
