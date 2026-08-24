@@ -2366,31 +2366,6 @@ h3 {
   box-shadow: 0 0 0 3px var(--kc-100);
 }
 
-.question-editor-list {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.question-editor-row {
-  display: grid;
-  gap: 0.65rem;
-  border: 1px solid var(--neutral-200);
-  border-radius: var(--radius-lg);
-  background: var(--surface-panel);
-  padding: 0.9rem;
-}
-
-.question-editor-row--invalid {
-  border-color: var(--danger-border);
-  box-shadow: 0 0 0 3px var(--danger-surface);
-}
-
-.question-editor-row__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .question-editor-empty {
   border: 1px dashed var(--neutral-300);
   border-radius: var(--radius-lg);
@@ -2398,6 +2373,168 @@ h3 {
   color: var(--neutral-500);
   font-size: 0.78rem;
   text-align: center;
+}
+
+/* Generic "this value failed validation" treatment for a bare input/textarea outside a
+   labeled .field (the requirement editor's header controls) — mirrors .field--invalid input. */
+.field-invalid-input {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px var(--danger-surface);
+}
+
+/* Admin requirement editor: the identity/title/version controls sit directly in the
+   requirement-header card (no wrapping .field), styled to read like the header they replace. */
+.requirement-id-input {
+  border: 1px solid var(--kc-200);
+  border-radius: 999px;
+  background: var(--kc-50);
+  color: var(--kc-800);
+  padding: 0.22rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  outline: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.requirement-id-input:disabled {
+  opacity: 0.75;
+}
+
+.requirement-id-input:focus {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.requirement-title-input {
+  width: 100%;
+  max-width: 720px;
+  margin-top: 0.2rem;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  outline: 0;
+  background: var(--surface-input);
+  color: var(--neutral-900);
+  padding: 0.5rem 0.65rem;
+  font-size: clamp(1.2rem, 2.2vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1.3;
+  resize: vertical;
+}
+
+.requirement-title-input:focus {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.requirement-version-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.requirement-version-field span {
+  color: var(--neutral-500);
+  font-size: 0.72rem;
+}
+
+.requirement-version-field input {
+  width: 70px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  outline: 0;
+  background: var(--surface-input);
+  color: var(--neutral-900);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.requirement-version-field input:focus {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.requirement-header > .field {
+  margin-top: 1rem;
+}
+
+/* Editable variant of question-card__header's read-only <h3> question text. */
+.question-card__header .question-text-input {
+  width: 100%;
+  margin-top: 0.2rem;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  outline: 0;
+  background: var(--surface-input);
+  color: var(--neutral-900);
+  padding: 0.55rem 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.question-card__header .question-text-input:focus {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+/* Administrator evidence is authored per question. Individual rows make that ownership clear
+ * and let an editor add, amend, or remove one evidence expectation without changing siblings. */
+.question-evidence__editor {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.question-evidence__item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.question-evidence__item input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  outline: 0;
+  background: var(--surface-input);
+  color: var(--neutral-900);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.question-evidence__item input:focus {
+  border-color: var(--kc-600);
+  box-shadow: 0 0 0 3px var(--kc-100);
+}
+
+.question-evidence__editor > .button {
+  justify-self: start;
+}
+
+.question-evidence__title small {
+  margin-left: auto;
+  color: var(--neutral-500);
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.question-evidence__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--neutral-800);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.question-evidence__toggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--kc-600);
 }
 
 .field-control-with-icon {
@@ -2554,6 +2691,20 @@ h3 {
   color: var(--neutral-500);
   font-size: 0.7rem;
 }
+
+/* Master requirement titles are the primary scan target. Reserve a larger, stable column so
+ * meaningful titles do not wrap prematurely while IDs, versions, status, and actions stay compact. */
+.data-table--requirements {
+  table-layout: fixed;
+}
+
+.data-table--requirements th:nth-child(1) { width: 12%; }
+.data-table--requirements th:nth-child(2) { width: 30%; }
+.data-table--requirements th:nth-child(3) { width: 16%; }
+.data-table--requirements th:nth-child(4) { width: 14%; }
+.data-table--requirements th:nth-child(5) { width: 9%; }
+.data-table--requirements th:nth-child(6) { width: 11%; }
+.data-table--requirements th:nth-child(7) { width: 8%; }
 
 .data-table td:nth-child(3) {
   max-width: 390px;
@@ -2905,6 +3056,61 @@ h3 {
   line-height: 1.5;
 }
 
+.question-evidence--attachments {
+  background: var(--kc-50);
+}
+
+.question-evidence__attachments-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.question-evidence__attachments-header > .button {
+  flex: 0 0 auto;
+}
+
+.question-evidence__attachments-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.question-evidence__attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 9px;
+  background: var(--surface-panel);
+  padding: 0.45rem 0.55rem;
+}
+
+.question-evidence__attachment-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--neutral-800);
+  text-align: left;
+  cursor: pointer;
+}
+
+.question-evidence__attachment-copy strong,
+.question-evidence__attachment-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.question-evidence__attachment-copy strong { font-size: 0.76rem; }
+.question-evidence__attachment-copy small { color: var(--neutral-500); font-size: 0.68rem; }
+.question-evidence__attachment-actions { display: flex; flex: 0 0 auto; gap: 0.15rem; }
+.question-evidence__attachment-empty { margin: 0; color: var(--neutral-500); font-size: 0.74rem; }
+
 .master-protection-note {
   display: flex;
   align-items: center;
@@ -2923,6 +3129,30 @@ h3 {
 .requirement-main {
   min-width: 0;
   padding: 1.5rem var(--page-gutter) 4rem;
+}
+
+/* Used only by the admin requirement editor, which renders requirement-main standalone
+   (no navigator/guidance columns flanking it) — without a cap it stretches to the full
+   viewport width and every row (ID/section, title/status, the sites picker) ends up with
+   large dead gaps. The real assessment page doesn't need this: its 3-column layout already
+   bounds the middle column's width. */
+.requirement-main--editor {
+  width: min(100%, 900px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* The administrator editor uses the same responsive workspace model as self-assessment: a
+ * navigable master-requirement rail on desktop and the editing canvas beside it. The explicit
+ * two-column grid also avoids reserving the self-assessment guidance column. */
+.requirement-layout--admin-editor {
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+}
+
+.requirement-layout--admin-editor .requirement-main--editor {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .breadcrumbs {
@@ -2976,10 +3206,28 @@ h3 {
   margin-top: 0.8rem;
 }
 
+/* Lets the title (h1, or the editable textarea in the admin editor) actually claim the row's
+   available width — without this, a flex child with no flex-grow sizes to its own content
+   (a bare <textarea>'s browser-default width), leaving the status control stranded far to the
+   right of a much narrower title box. */
+.requirement-header__title > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 .requirement-header__title h1 {
   max-width: 720px;
   margin-top: 0.2rem;
   font-size: clamp(1.45rem, 2.6vw, 1.9rem);
+}
+
+.requirement-header__controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
 .requirement-text {
@@ -3094,6 +3342,23 @@ h3 {
   margin-left: 0.35rem;
   color: var(--neutral-400);
   font-weight: 500;
+}
+
+.response-clear {
+  margin-top: 0.65rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--kc-700);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.response-clear:hover {
+  color: var(--kc-900);
+  text-decoration: underline;
 }
 
 .response-options {
@@ -3220,6 +3485,13 @@ h3 {
   border-color: var(--neutral-200);
   background: var(--neutral-50);
 }
+
+.action-editor--optional {
+  border-color: var(--neutral-200);
+  background: var(--neutral-50);
+}
+
+.action-editor-add { margin-top: 1rem; }
 
 .action-editor__header {
   display: flex;
@@ -3928,7 +4200,26 @@ h3 {
   gap: 0.6rem 0.75rem;
 }
 
-/* Fixed 420px to match every other search box in the app, rather than growing to fill. */
+/* The requirement editor is deliberately narrower than the full application canvas. Its site
+ * search should therefore take the available toolbar space instead of remaining at the generic
+ * 420px width and leaving an awkward gap beside the bulk actions. */
+.requirement-main--editor .checkbox-list__toolbar .search-control { flex: 1 1 320px; min-width: 0; }
+
+/* The search input is nested inside the shared bordered control. Reset any browser or more
+ * specific form styling on that inner element so focus produces one clear outline around the
+ * complete search field rather than a second, inset blue border. */
+.checkbox-list__toolbar .search-control > input {
+  min-height: 0;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  outline: 0 !important;
+  padding: 0;
+}
+
+.action-editor__header > .button { margin-left: auto; }
+
+/* Keep the reusable checkbox list's standard width everywhere else. */
 .checkbox-list__toolbar .search-control { flex: 0 1 420px; min-width: 0; }
 .checkbox-list__bulk {
   display: flex;
@@ -3995,6 +4286,33 @@ h3 {
   color: var(--neutral-500);
   font-size: 0.82rem;
   text-align: center;
+}
+
+.requirement-selected-sites {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  color: var(--neutral-600);
+  font-size: 0.74rem;
+}
+
+.requirement-selected-sites > strong { color: var(--neutral-800); font-size: 0.76rem; }
+
+.requirement-selected-sites__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.requirement-selected-sites__list > span {
+  border: 1px solid var(--kc-200);
+  border-radius: 999px;
+  background: var(--kc-50);
+  padding: 0.2rem 0.45rem;
+  color: var(--kc-800);
+  font-size: 0.7rem;
+  font-weight: 650;
 }
 
 .validation-summary {
@@ -4728,7 +5046,8 @@ h3 {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .question-card__header > .status-badge {
+  .question-card__header > .status-badge,
+  .question-card__header > .icon-button {
     grid-column: 2;
     justify-self: start;
   }
@@ -5108,6 +5427,7 @@ h3 {
 }
 
 .readonly-response > span:first-child { color: var(--neutral-500); font-size: 0.78rem; font-weight: 650; }
+.readonly-response small { margin-left: auto; color: var(--neutral-500); font-size: 0.74rem; }
 
 .readonly-action {
   margin-top: 0.9rem;
@@ -5120,6 +5440,48 @@ h3 {
 .readonly-action p { margin: 0; color: var(--neutral-800); font-size: 0.85rem; }
 .readonly-action p.eyebrow { margin-bottom: 0.3rem; }
 .readonly-action > span { display: block; margin-top: 0.4rem; color: var(--neutral-500); font-size: 0.76rem; }
+
+.readonly-action__details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  margin-top: 0.55rem;
+  color: var(--neutral-600);
+  font-size: 0.76rem;
+}
+
+.response-history { margin-top: 0.9rem; border-top: 1px solid var(--neutral-200); padding-top: 0.75rem; }
+.response-history__trigger { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; border: 1px solid var(--neutral-200); border-radius: 10px; background: var(--surface-elevated); color: var(--neutral-800); padding: 0.6rem 0.75rem; cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 650; }
+.response-history__trigger > span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.response-history__trigger > span:last-child { color: var(--neutral-500); font-size: 0.76rem; font-weight: 550; }
+.response-history__trigger:hover { border-color: var(--kc-300); background: var(--kc-50); }
+.response-history__trigger:focus-visible { outline: 3px solid var(--kc-500); outline-offset: 2px; }
+.response-history__trigger svg { transition: transform 160ms ease; }
+.response-history__chevron--open { transform: rotate(180deg); }
+.response-history__timeline { position: relative; display: grid; gap: 0.75rem; margin: 0.9rem 0 0 0.45rem; padding: 0 0 0 1.15rem; border-left: 2px solid var(--neutral-200); list-style: none; }
+.response-history__entry { position: relative; }
+.response-history__marker { position: absolute; top: 1rem; left: -1.48rem; width: 10px; height: 10px; border: 2px solid var(--surface-panel); border-radius: 50%; background: var(--kc-600); box-shadow: 0 0 0 1px var(--kc-300); }
+.response-history__entry-card { border: 1px solid var(--neutral-200); border-radius: 10px; background: var(--neutral-25); padding: 0.8rem; }
+.response-history__entry-header, .response-history__response { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.response-history__entry-header > div { display: grid; gap: 0.15rem; }
+.response-history__entry-header strong { color: var(--neutral-900); font-size: 0.84rem; }
+.response-history__entry-header div > span { color: var(--neutral-500); font-size: 0.74rem; }
+.response-history__response { margin-top: 0.65rem; }
+.response-history__response > span:first-child { color: var(--neutral-500); font-size: 0.76rem; font-weight: 650; }
+.response-history__action { margin-top: 0.65rem; border-radius: 8px; background: var(--surface-panel); padding: 0.65rem; }
+.response-history__action > strong { font-size: 0.78rem; }
+.response-history__action > p { margin: 0.25rem 0 0; color: var(--neutral-800); font-size: 0.8rem; }
+.response-history__action > div { display: flex; flex-wrap: wrap; gap: 0.3rem 0.75rem; margin-top: 0.45rem; color: var(--neutral-500); font-size: 0.73rem; }
+.response-history__evidence { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.65rem; color: var(--neutral-500); font-size: 0.74rem; }
+.response-history__evidence ul { flex-basis: 100%; margin: 0.2rem 0 0 1.3rem; padding: 0; }
+
+@media (max-width: 620px) {
+  .response-history__trigger, .response-history__entry-header { align-items: flex-start; }
+  .response-history__trigger { flex-wrap: wrap; }
+  .response-history__entry-header { flex-direction: column; }
+  .response-history__timeline { margin-left: 0.25rem; padding-left: 0.9rem; }
+  .response-history__marker { left: -1.23rem; }
+}
 
 .history-list {
   display: grid;
@@ -5218,6 +5580,9 @@ h3 {
 }
 
 .row-menu button:hover { background: var(--kc-50); color: var(--kc-800); }
+
+.row-menu .row-menu__delete { color: var(--danger); }
+.row-menu .row-menu__delete:hover { background: var(--danger-surface); color: var(--danger); }
 
 .theme-options { grid-template-columns: 1fr; }
 

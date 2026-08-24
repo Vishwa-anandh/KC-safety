@@ -23,9 +23,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSites } from "../model/useSites";
+import { useAuth } from "../../auth";
 import { actionComplete, assessmentPeriods } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
-import type { AssessmentPeriod, AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
+import type { ActionItem, AssessmentPeriod, AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
 import { Button, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
@@ -293,41 +294,42 @@ export function OwnersScreen() {
 
 interface GapRow { requirement: Requirement; question: AssessmentQuestion }
 
-function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => void; onSave: (action: { description: string; owner: string }) => void }) {
+function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => void; onSave: (action: ActionItem) => void }) {
   const [description, setDescription] = useState(row.question.action?.description ?? "");
   const [owner, setOwner] = useState(row.question.action?.owner ?? "");
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<NonNullable<ActionItem["status"]>>(row.question.action?.status ?? "Open");
+  const [followUp, setFollowUp] = useState(row.question.action?.followUp ?? "");
   return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close action editor" onClick={onClose} /><section className="dialog" role="dialog" aria-modal="true" aria-labelledby="action-dialog-title">
     <div className="dialog__header"><div><p className="eyebrow">{row.requirement.number} · Question {row.question.number}</p><h2 id="action-dialog-title">Complete corrective action</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
     <p className="dialog-context">{row.question.text}</p>
-    <div className="dialog-form"><label className={cx("field", submitted && !description.trim() && "field--invalid")}><span>Action description <b>Required</b></span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} />{submitted && !description.trim() && <small className="field-error">Describe the work needed to close the gap.</small>}</label><label className={cx("field", submitted && !owner.trim() && "field--invalid")}><span>Action owner <b>Required</b></span><input value={owner} onChange={(event) => setOwner(event.target.value)} />{submitted && !owner.trim() && <small className="field-error">Assign an accountable owner.</small>}</label></div>
-    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Save size={17} />} onClick={() => { setSubmitted(true); if (description.trim() && owner.trim()) onSave({ description: description.trim(), owner: owner.trim() }); }}>Save action</Button></div>
+    <div className="dialog-form"><label className="field"><span>Action description</span><textarea rows={4} value={description} placeholder="Describe the work needed to close this gap" onChange={(event) => setDescription(event.target.value)} /></label><label className="field"><span>Action owner</span><input value={owner} placeholder="Assign an accountable owner" onChange={(event) => setOwner(event.target.value)} /></label><div className="field"><span>Action status</span><Select label="Action status" value={status} onChange={(value) => setStatus(value as NonNullable<ActionItem["status"]>)} options={[{ value: "Open", label: "Open" }, { value: "In progress", label: "In progress" }, { value: "Complete", label: "Complete" }]} /></div><label className="field"><span>Follow-up</span><textarea rows={3} value={followUp} placeholder="Add the next step or follow-up update" onChange={(event) => setFollowUp(event.target.value)} /></label></div>
+    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Save size={17} />} onClick={() => onSave({ description: description.trim(), owner: owner.trim(), status, followUp: followUp.trim() })}>Save action</Button></div>
   </section></div>;
 }
 
 export function ActionsScreen() {
-  const { requirements, updateQuestion, notify } = useSites();
+  const { requirements, updateQuestion } = useSites();
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<"all" | "complete" | "needs-info">("all");
+  const [status, setStatus] = useState<"all" | "Open" | "In progress" | "Complete">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
   const [period, setPeriod] = useState<"all" | AssessmentPeriod>("all");
   const [editing, setEditing] = useState<GapRow | null>(null);
   const [saved, setSaved] = useState(false);
   const actions = useMemo(() => requirements.flatMap((requirement) => requirement.questions.filter((question) => question.response === "no" || question.response === "partial").map((question) => ({ requirement, question }))), [requirements]);
-  const complete = actions.filter(({ question }) => actionComplete(question.response, question.action)).length;
+  const complete = actions.filter(({ question }) => (question.action?.status ?? "Open") === "Complete").length;
   const filtered = actions.filter(({ requirement, question }) => {
-    const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""}`.toLowerCase().includes(query.toLowerCase());
-    const isComplete = actionComplete(question.response, question.action);
-    return matchesQuery && (status === "all" || (status === "complete" ? isComplete : !isComplete)) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
+    const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""} ${question.action?.followUp ?? ""}`.toLowerCase().includes(query.toLowerCase());
+    return matchesQuery && (status === "all" || (question.action?.status ?? "Open") === status) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
   });
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Site workspace" title="Actions summary" description="Review and complete corrective actions created from No and Partial assessment responses." />
+      <PageHeader eyebrow="Site workspace" title="Actions summary" description="Track corrective actions automatically created from No and Partial assessment responses." />
       {saved && <InlineMessage tone="success" title="Corrective action saved">The Actions summary and assessment requirement are now synchronized.</InlineMessage>}
       <div className="metrics-grid metrics-grid--three">
         <MetricCard label="Total gaps" value={actions.length} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" />
-        <MetricCard label="Complete action details" value={complete} detail="Description and owner present" icon={<CheckCircle2 size={21} />} tone="success" />
-        <MetricCard label="Needs information" value={actions.length - complete} detail="Missing description or owner" icon={<FileWarning size={21} />} tone="warning" />
+        <MetricCard label="Completed actions" value={complete} detail="Marked complete by the action owner" icon={<CheckCircle2 size={21} />} tone="success" />
+        <MetricCard label="Open actions" value={actions.length - complete} detail="Open or in progress" icon={<FileWarning size={21} />} tone="warning" />
       </div>
       <section className="table-card">
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><span>{filtered.length} of {actions.length} shown</span></div>
@@ -340,8 +342,9 @@ export function ActionsScreen() {
             onChange={(value) => setStatus(value as typeof status)}
             options={[
               { value: "all", label: "All action states" },
-              { value: "needs-info", label: "Needs information" },
-              { value: "complete", label: "Complete details" },
+              { value: "Open", label: "Open" },
+              { value: "In progress", label: "In progress" },
+              { value: "Complete", label: "Complete" },
             ]}
           />
           <Select
@@ -362,23 +365,13 @@ export function ActionsScreen() {
             options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]}
           />
         </div>
-        {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {
-          const ready = actionComplete(question.response, question.action);
-          return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description needed</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner needed</span>}</td><td data-label="Status"><span className={cx("detail-status", ready ? "detail-status--complete" : "detail-status--missing")}>{ready ? "Complete" : "Needs information"}</span></td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;
+        {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th>Follow-up</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {
+          const actionStatus = question.action?.status ?? "Open";
+          return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description not added</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner not assigned</span>}</td><td data-label="Status"><span className={cx("detail-status", actionStatus === "Complete" ? "detail-status--complete" : "detail-status--missing")}>{actionStatus}</span></td><td data-label="Follow-up">{question.action?.followUp || <span className="missing-value">No follow-up added</span>}</td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;
         })}</tbody></table></div> : <EmptyState icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
       </section>
       {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
-        updateQuestion(editing.requirement.id, editing.question.id, { action });
-        // Only worth telling someone about when the gap is still real.
-        if (!action.owner.trim()) {
-          notify({
-            title: `Action on ${editing.requirement.number} still needs an owner`,
-            body: editing.requirement.title,
-            category: "action",
-            audience: ["site-contributor"],
-            link: "/actions",
-          });
-        }
+        updateQuestion(editing.requirement.id, editing.question.id, { action }, user?.name);
         setEditing(null); setSaved(true);
       }} />}
     </div>

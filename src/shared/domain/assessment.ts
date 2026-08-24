@@ -1,8 +1,8 @@
 import type { ActionItem, Performance, ResponseValue } from "../types";
 
 export function actionComplete(response: ResponseValue, action?: ActionItem) {
-  if (response !== "no" && response !== "partial") return response === "yes";
-  return Boolean(action?.description.trim() && action?.owner.trim());
+  void action;
+  return Boolean(response);
 }
 
 export const assessmentPeriods = ["2026 Q1", "2026 Q2", "2026 Q3"] as const;

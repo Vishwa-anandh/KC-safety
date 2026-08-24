@@ -14,9 +14,49 @@ import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts
 
 const STORAGE_KEY = "ehss-phase-one-state-v1";
 
+function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
+  return records.map((requirement) => ({
+    ...requirement,
+    questions: requirement.questions.map((question) => {
+      const action = question.action ?? (question.response === "no" || question.response === "partial"
+        ? { description: "", owner: "", status: "Open" as const, followUp: "" }
+        : undefined);
+      const responseHistory = question.response ? {
+        respondedAt: question.respondedAt ?? "2026-08-01T09:00:00.000Z",
+        respondedBy: question.respondedBy ?? "Maya Patel",
+      } : {};
+      const normalizedAction = action ? {
+        ...action,
+        status: action.status ?? "Open",
+        followUp: action.followUp ?? "",
+        createdAt: action.createdAt ?? "2026-08-01T09:00:00.000Z",
+        createdBy: action.createdBy ?? "Maya Patel",
+        updatedAt: action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+        updatedBy: action.updatedBy ?? "Maya Patel",
+      } : undefined;
+      const evidence = requirement.evidence.filter((item) => item.questionId === question.id).map((item) => ({ ...item }));
+      const history = question.history?.length ? question.history : question.response ? [{
+        id: `${question.id}-seed-response`,
+        event: "Response recorded" as const,
+        recordedAt: question.respondedAt ?? "2026-08-01T09:00:00.000Z",
+        recordedBy: question.respondedBy ?? "Maya Patel",
+        response: question.response,
+        action: normalizedAction ? { ...normalizedAction } : undefined,
+        evidence,
+      }] : [];
+      return {
+        ...question,
+        ...responseHistory,
+        action: normalizedAction,
+        history,
+      };
+    }),
+  }));
+}
+
 function freshSnapshot(): AppSnapshot {
   return {
-    requirements: structuredClone(requirements),
+    requirements: normalizeActionMetadata(structuredClone(requirements)),
     sections: structuredClone(sections),
     siteContacts: structuredClone(initialSiteContacts),
     ownerRecords: structuredClone(ownerRecords),
@@ -30,6 +70,27 @@ function freshSnapshot(): AppSnapshot {
   };
 }
 
+function restoreMasterRequirements(records: AppSnapshot["masterRequirements"] | undefined, fallback: AppSnapshot["masterRequirements"]) {
+  if (!records?.length) return fallback;
+  const fixtureById = new Map(fallback.map((requirement) => [requirement.id, requirement]));
+  return records.map((requirement) => {
+    const fixture = fixtureById.get(requirement.id);
+    // Older persisted demo snapshots stored the master list before its question/evidence content
+    // existed. Hydrate only those seeded records from the current fixture; administrator-created
+    // drafts (which do not have a fixture match) retain their intentionally empty question list.
+    const questions = requirement.questions?.length ? requirement.questions : fixture?.questions ?? [];
+    return {
+      ...requirement,
+      siteIds: requirement.siteIds ?? [],
+      questions: questions.map((question) => ({
+        ...question,
+        expectedEvidence: question.expectedEvidence ?? [],
+        evidenceRequired: question.evidenceRequired ?? question.expectedEvidence?.length > 0,
+      })),
+    };
+  });
+}
+
 function restoreSnapshot(): AppSnapshot {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -40,15 +101,35 @@ function restoreSnapshot(): AppSnapshot {
       ...fallback,
       ...parsed,
       requirements: parsed.requirements?.length
-        ? parsed.requirements.map((requirement) => ({
+        ? normalizeActionMetadata(parsed.requirements.map((requirement) => ({
           ...requirement,
-          questions: requirement.questions.map((question) => ({ ...question, period: question.period ?? currentAssessmentPeriod })),
-        }))
+          questions: requirement.questions.map((question) => ({
+            ...question,
+            period: question.period ?? currentAssessmentPeriod,
+            respondedAt: question.response ? question.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
+            respondedBy: question.response ? question.respondedBy ?? "Maya Patel" : undefined,
+            action: question.action ? {
+              ...question.action,
+              status: question.action.status ?? "Open",
+              followUp: question.action.followUp ?? "",
+              createdAt: question.action.createdAt ?? "2026-08-01T09:00:00.000Z",
+              createdBy: question.action.createdBy ?? "Maya Patel",
+              updatedAt: question.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+              updatedBy: question.action.updatedBy ?? "Maya Patel",
+            } : question.response === "no" || question.response === "partial"
+              ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
+              : undefined,
+          })),
+          // Requirement-level evidence was the original demo shape. Preserve it by associating
+          // old records with the first question that requests evidence.
+          evidence: (requirement.evidence ?? []).map((evidence) => evidence.questionId ? evidence : {
+            ...evidence,
+            questionId: requirement.questions.find((question) => question.evidenceRequired ?? question.expectedEvidence?.length)?.id ?? requirement.questions[0]?.id,
+          }),
+        })))
         : fallback.requirements,
       ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : fallback.ownerRecords,
-      masterRequirements: parsed.masterRequirements?.length
-        ? parsed.masterRequirements.map((requirement) => ({ ...requirement, siteIds: requirement.siteIds ?? [], questions: requirement.questions ?? [] }))
-        : fallback.masterRequirements,
+      masterRequirements: restoreMasterRequirements(parsed.masterRequirements, fallback.masterRequirements),
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
       siteUsers: parsed.siteUsers ?? fallback.siteUsers,
       sites: parsed.sites?.length ? parsed.sites : fallback.sites,

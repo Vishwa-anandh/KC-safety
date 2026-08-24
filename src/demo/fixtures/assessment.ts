@@ -188,6 +188,7 @@ export const initialRequirement: Requirement = {
   evidence: [
     {
       id: "ev-1",
+      questionId: "q-1",
       type: "file",
       title: "Leadership accountability matrix",
       detail: "KC-NSM-EHS-RACI-v4.pdf · 1.8 MB",
@@ -196,6 +197,7 @@ export const initialRequirement: Requirement = {
     },
     {
       id: "ev-2",
+      questionId: "q-2",
       type: "link",
       title: "August operating review minutes",
       detail: "sharepoint.example.com/sites/northstar/ehss/reviews",

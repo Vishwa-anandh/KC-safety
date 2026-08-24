@@ -7,6 +7,7 @@ import type { AppSnapshot, DataSourceStatus, ImportHistoryRecord } from "../../d
 import type {
   ActionItem,
   AppNotification,
+  AssessmentHistoryEvent,
   AssessmentPeriod,
   AssessmentQuestion,
   DashboardSite,
@@ -22,6 +23,23 @@ import type {
 
 type PersistedState = AppSnapshot;
 
+function appendQuestionHistory(question: AssessmentQuestion, event: AssessmentHistoryEvent, actorName: string, recordedAt: string, evidence: EvidenceItem[], coalesce = false): AssessmentQuestion {
+  const history = question.history ?? [];
+  const entry = {
+    id: `${question.id}-${recordedAt}-${event.toLowerCase().replaceAll(" ", "-")}`,
+    event,
+    recordedAt,
+    recordedBy: actorName,
+    response: question.response,
+    action: question.action ? { ...question.action } : undefined,
+    evidence: evidence.map((item) => ({ ...item })),
+  };
+  const previous = history.at(-1);
+  const previousTime = previous ? new Date(previous.recordedAt).getTime() : 0;
+  const shouldCoalesce = coalesce && previous?.event === event && previous.recordedBy === actorName && new Date(recordedAt).getTime() - previousTime < 5 * 60 * 1000;
+  return { ...question, history: shouldCoalesce ? [...history.slice(0, -1), { ...entry, id: previous.id }] : [...history, entry] };
+}
+
 interface ApplicationDataValue extends PersistedState {
   dataSourceStatus: DataSourceStatus;
   sectionSummaries: SectionSummary[];
@@ -30,14 +48,15 @@ interface ApplicationDataValue extends PersistedState {
   overallPerformance: ReturnType<typeof rollupPerformance>;
   gapCount: number;
   missingActionCount: number;
-  updateQuestion: (requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }) => void;
-  addEvidence: (requirementId: string, item: EvidenceItem) => void;
-  updateEvidence: (requirementId: string, item: EvidenceItem) => void;
-  removeEvidence: (requirementId: string, evidenceId: string) => void;
+  updateQuestion: (requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }, actorName?: string) => void;
+  addEvidence: (requirementId: string, item: EvidenceItem, actorName?: string) => void;
+  updateEvidence: (requirementId: string, item: EvidenceItem, actorName?: string) => void;
+  removeEvidence: (requirementId: string, evidenceId: string, actorName?: string) => void;
   saveSiteContacts: (contacts: SiteContacts) => void;
   updateOwner: (owner: OwnerRecord) => void;
   addMasterRequirement: (requirement: MasterRequirement) => void;
   updateMasterRequirement: (requirement: MasterRequirement) => void;
+  removeMasterRequirement: (requirementId: string) => void;
   submitImportBatch: (fileName: string, siteIds: string[]) => ImportHistoryRecord;
   publishImportBatch: (batchId: string) => void;
   addSiteUser: (user: SiteUser) => void;
@@ -124,9 +143,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     const overallCompletion = allQuestions.length ? Math.round((completed / allQuestions.length) * 100) : 0;
     const overallPerformance = rollupPerformance(allQuestions.map((question) => question.response));
     const gapCount = allQuestions.filter((question) => question.response === "no" || question.response === "partial").length;
-    const missingActionCount = allQuestions.filter((question) =>
-      (question.response === "no" || question.response === "partial") && !actionComplete(question.response, question.action),
-    ).length;
+    const missingActionCount = 0;
     const dashboardSiteRows = state.sites.map((site) => site.id === "northstar" ? {
       ...site,
       completion: overallCompletion,
@@ -141,46 +158,91 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     setState((current) => ({ ...update(current), lastUpdated: new Date().toISOString() }));
   }
 
-  function updateQuestion(requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }) {
+  function updateQuestion(requirementId: string, questionId: string, update: { response?: ResponseValue; action?: ActionItem; period?: AssessmentPeriod }, actorName = "Site contributor") {
     // Setting a response tags it with the current assessment period unless a period was
     // explicitly given — this is descriptive metadata on the one live response, not a new
     // versioning axis (there is still exactly one response per question).
     const tagged = update.response !== undefined && update.period === undefined
       ? { ...update, period: currentAssessmentPeriod }
       : update;
+    const changedAt = new Date().toISOString();
     touch((current) => ({
       ...current,
       requirements: current.requirements.map((requirement) => requirement.id === requirementId ? {
         ...requirement,
-        questions: requirement.questions.map((question) => question.id === questionId ? { ...question, ...tagged } : question),
+        questions: requirement.questions.map((question) => {
+          if (question.id !== questionId) return question;
+          // A No or Partial response is itself the trigger for an in-app corrective action.
+          // Preserve any action already being worked on; a Yes response may still carry an
+          // optional action added by the user, but never creates one automatically.
+          const response = tagged.response ?? question.response;
+          const autoAction = (response === "no" || response === "partial") && !question.action && tagged.action === undefined
+            ? { description: "", owner: "", status: "Open" as const, followUp: "", createdAt: changedAt, createdBy: actorName, updatedAt: changedAt, updatedBy: actorName }
+            : undefined;
+          const action = tagged.action ? {
+            ...tagged.action,
+            status: tagged.action.status ?? question.action?.status ?? "Open",
+            followUp: tagged.action.followUp ?? question.action?.followUp ?? "",
+            createdAt: question.action?.createdAt ?? changedAt,
+            createdBy: question.action?.createdBy ?? actorName,
+            updatedAt: changedAt,
+            updatedBy: actorName,
+          } : autoAction;
+          const responseHistory = update.response !== undefined
+            ? { respondedAt: changedAt, respondedBy: actorName }
+            : {};
+          const nextQuestion = { ...question, ...tagged, ...responseHistory, ...(action ? { action } : {}) };
+          const responseChanged = update.response !== undefined && update.response !== question.response;
+          const actionChanged = Object.prototype.hasOwnProperty.call(update, "action");
+          const event: AssessmentHistoryEvent | undefined = responseChanged
+            ? (question.response ? "Response changed" : "Response recorded")
+            : actionChanged
+              ? (tagged.action ? (question.action ? "Action updated" : "Action added") : "Action removed")
+              : undefined;
+          return event
+            ? appendQuestionHistory(nextQuestion, event, actorName, changedAt, requirement.evidence.filter((item) => item.questionId === questionId), event === "Action updated")
+            : nextQuestion;
+        }),
       } : requirement),
     }));
   }
 
-  function addEvidence(requirementId: string, item: EvidenceItem) {
+  function addEvidence(requirementId: string, item: EvidenceItem, actorName = "Site contributor") {
+    const changedAt = new Date().toISOString();
     touch((current) => ({
       ...current,
       requirements: current.requirements.map((requirement) => requirement.id === requirementId
-        ? { ...requirement, evidence: [...requirement.evidence, item] }
+        ? (() => {
+          const evidence = [...requirement.evidence, item];
+          return { ...requirement, evidence, questions: requirement.questions.map((question) => question.id === item.questionId ? appendQuestionHistory(question, "Evidence added", actorName, changedAt, evidence.filter((record) => record.questionId === question.id)) : question) };
+        })()
         : requirement),
     }));
   }
 
-  function updateEvidence(requirementId: string, item: EvidenceItem) {
+  function updateEvidence(requirementId: string, item: EvidenceItem, actorName = "Site contributor") {
+    const changedAt = new Date().toISOString();
     touch((current) => ({
       ...current,
       requirements: current.requirements.map((requirement) => requirement.id === requirementId
-        ? { ...requirement, evidence: requirement.evidence.map((evidence) => evidence.id === item.id ? item : evidence) }
+        ? (() => {
+          const evidence = requirement.evidence.map((record) => record.id === item.id ? item : record);
+          return { ...requirement, evidence, questions: requirement.questions.map((question) => question.id === item.questionId ? appendQuestionHistory(question, "Evidence updated", actorName, changedAt, evidence.filter((record) => record.questionId === question.id)) : question) };
+        })()
         : requirement),
     }));
   }
 
-  function removeEvidence(requirementId: string, evidenceId: string) {
+  function removeEvidence(requirementId: string, evidenceId: string, actorName = "Site contributor") {
+    const changedAt = new Date().toISOString();
     touch((current) => ({
       ...current,
-      requirements: current.requirements.map((requirement) => requirement.id === requirementId
-        ? { ...requirement, evidence: requirement.evidence.filter((evidence) => evidence.id !== evidenceId) }
-        : requirement),
+      requirements: current.requirements.map((requirement) => {
+        if (requirement.id !== requirementId) return requirement;
+        const removed = requirement.evidence.find((item) => item.id === evidenceId);
+        const evidence = requirement.evidence.filter((item) => item.id !== evidenceId);
+        return { ...requirement, evidence, questions: requirement.questions.map((question) => question.id === removed?.questionId ? appendQuestionHistory(question, "Evidence removed", actorName, changedAt, evidence.filter((record) => record.questionId === question.id)) : question) };
+      }),
     }));
   }
 
@@ -197,6 +259,16 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
 
   function addMasterRequirement(requirement: MasterRequirement) {
     touch((current) => ({ ...current, masterRequirements: [requirement, ...current.masterRequirements] }));
+  }
+
+  function removeMasterRequirement(requirementId: string) {
+    touch((current) => ({
+      ...current,
+      masterRequirements: current.masterRequirements.filter((requirement) => requirement.id !== requirementId),
+      // Master requirements govern the site assessment. Removing one therefore removes its
+      // matching live requirement and its question-scoped evidence from the demo assessment.
+      requirements: current.requirements.filter((requirement) => requirement.number !== requirementId),
+    }));
   }
 
   // Master Requirements is the source of truth for question definitions: saving a requirement
@@ -218,7 +290,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
           .filter((question) => requirement.questions.some((masterQuestion) => masterQuestion.id === question.id))
           .map((question) => {
             const masterQuestion = requirement.questions.find((item) => item.id === question.id)!;
-            return { ...question, number: masterQuestion.number, text: masterQuestion.text, expectedEvidence: masterQuestion.expectedEvidence };
+            return { ...question, number: masterQuestion.number, text: masterQuestion.text, expectedEvidence: masterQuestion.expectedEvidence, evidenceRequired: masterQuestion.evidenceRequired ?? masterQuestion.expectedEvidence.length > 0 };
           });
         const addedQuestions: AssessmentQuestion[] = requirement.questions
           .filter((masterQuestion) => !liveRequirement.questions.some((question) => question.id === masterQuestion.id))
@@ -227,6 +299,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
             number: masterQuestion.number,
             text: masterQuestion.text,
             expectedEvidence: masterQuestion.expectedEvidence,
+            evidenceRequired: masterQuestion.evidenceRequired ?? masterQuestion.expectedEvidence.length > 0,
             response: null,
             period: currentAssessmentPeriod,
           }));
@@ -379,6 +452,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     updateOwner,
     addMasterRequirement,
     updateMasterRequirement,
+    removeMasterRequirement,
     submitImportBatch,
     publishImportBatch,
     addSiteUser,

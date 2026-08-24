@@ -38,6 +38,15 @@ export interface SectionSummary {
 export interface ActionItem {
   description: string;
   owner: string;
+  /** Lifecycle state for the corrective action created from a gap response. */
+  status?: "Open" | "In progress" | "Complete";
+  /** Optional update, next step, or review note for the action owner. */
+  followUp?: string;
+  /** Immutable origin and latest-update details shown in the administrator action log. */
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
 }
 
 export interface EvidenceItem {
@@ -47,6 +56,19 @@ export interface EvidenceItem {
   detail: string;
   uploadedBy: string;
   uploadedAt: string;
+  questionId?: string;
+}
+
+export type AssessmentHistoryEvent = "Response recorded" | "Response changed" | "Action added" | "Action updated" | "Action removed" | "Evidence added" | "Evidence updated" | "Evidence removed";
+
+export interface AssessmentHistoryEntry {
+  id: string;
+  event: AssessmentHistoryEvent;
+  recordedAt: string;
+  recordedBy: string;
+  response: ResponseValue;
+  action?: ActionItem;
+  evidence: EvidenceItem[];
 }
 
 export interface AssessmentQuestion {
@@ -55,8 +77,13 @@ export interface AssessmentQuestion {
   text: string;
   response: ResponseValue;
   period: AssessmentPeriod;
+  respondedAt?: string;
+  respondedBy?: string;
   action?: ActionItem;
   expectedEvidence?: string[];
+  evidenceRequired?: boolean;
+  /** Append-only snapshots used by the enterprise question history timeline. */
+  history?: AssessmentHistoryEntry[];
 }
 
 export interface Requirement {
@@ -117,6 +144,7 @@ export interface MasterQuestion {
   number: string;
   text: string;
   expectedEvidence: string[];
+  evidenceRequired?: boolean;
 }
 
 export interface MasterRequirement {

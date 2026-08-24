@@ -5,6 +5,8 @@ export function useAdministration() {
   const {
     importHistory,
     masterRequirements,
+    requirements,
+    assignedSite,
     siteUsers,
     sites,
     ownerRecords,
@@ -16,6 +18,7 @@ export function useAdministration() {
     submitImportBatch,
     addMasterRequirement,
     updateMasterRequirement,
+    removeMasterRequirement,
     addSiteUser,
     updateSiteUser,
     removeSiteUser,
@@ -24,6 +27,8 @@ export function useAdministration() {
   return {
     importHistory,
     masterRequirements,
+    requirements,
+    assignedSite,
     siteUsers,
     sites,
     ownerRecords,
@@ -35,6 +40,7 @@ export function useAdministration() {
     submitImportBatch,
     addMasterRequirement,
     updateMasterRequirement,
+    removeMasterRequirement,
     addSiteUser,
     updateSiteUser,
     removeSiteUser,

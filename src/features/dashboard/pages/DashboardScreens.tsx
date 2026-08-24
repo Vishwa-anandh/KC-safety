@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   Clock3,
@@ -17,16 +18,36 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDashboard } from "../model/useDashboard";
+import { useAuth } from "../../auth";
 import { useGuidedSetup } from "../../onboarding";
 import { performanceForResponse, performanceLabel, responseLabel } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
-import type { DashboardSite, Performance } from "../../../shared/types";
+import type { AssessmentQuestion, DashboardSite, Performance, Requirement } from "../../../shared/types";
+import type { AssignedSite } from "../../../data-access/contracts";
 import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, SiteUsersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
   return <div className="distribution-row"><div className="distribution-row__label"><span>{label}</span><strong>{value}</strong></div><div className="distribution-track"><span className={`distribution-fill distribution-fill--${tone}`} style={{ width: `${total ? (value / total) * 100 : 0}%` }} /></div></div>;
+}
+
+function QuestionResponseHistory({ question }: { question: AssessmentQuestion }) {
+  const [open, setOpen] = useState(false);
+  const entries = [...(question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
+  if (!entries.length) return null;
+  return <div className="response-history">
+    <button type="button" className="response-history__trigger" aria-expanded={open} onClick={() => setOpen((current) => !current)}><span><Clock3 size={16} /> Response history</span><span>{entries.length} {entries.length === 1 ? "entry" : "entries"}<ChevronDown size={16} className={cx(open && "response-history__chevron--open")} /></span></button>
+    {open && <ol className="response-history__timeline">{entries.map((entry, index) => <li key={entry.id} className="response-history__entry">
+      <span className="response-history__marker" />
+      <div className="response-history__entry-card">
+        <div className="response-history__entry-header"><div><strong>{entry.event}</strong><span>{entry.recordedBy} · {new Date(entry.recordedAt).toLocaleString()}</span></div>{index === 0 && <span className="publish-badge">Latest</span>}</div>
+        <div className="response-history__response"><span>Response</span><span className={cx("response-chip", `response-chip--${entry.response ?? "none"}`)}>{responseLabel(entry.response)}</span></div>
+        {entry.action && <div className="response-history__action"><strong>Corrective action</strong><p>{entry.action.description || "No action description added."}</p><div><span>Owner · {entry.action.owner || "Not assigned"}</span><span>Status · {entry.action.status ?? "Open"}</span><span>Follow-up · {entry.action.followUp || "Not added"}</span></div></div>}
+        <div className="response-history__evidence"><Paperclip size={14} /><span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>{entry.evidence.length > 0 && <ul>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}</div>
+      </div>
+    </li>)}</ol>}
+  </div>;
 }
 
 function DashboardTable({ sites }: { sites: DashboardSite[] }) {
@@ -36,11 +57,15 @@ function DashboardTable({ sites }: { sites: DashboardSite[] }) {
   ))}</tbody></table></div>;
 }
 
-function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "All assessment areas") {
-  const columns = ["Site", "Site code", "Region", "Segment", "Completion", "Performance", "Gaps", "Assessment area", "Last updated"];
+function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "All assessment areas", requirements: Requirement[] = [], assignedSite?: AssignedSite) {
+  const columns = ["Record type", "Site", "Site code", "Region", "Segment", "Completion", "Performance", "Gaps", "Assessment area", "Last updated", "Requirement ID", "Requirement", "Question", "Evidence title", "Evidence type", "Evidence reference", "Uploaded by", "Uploaded at"];
   const escapeCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
-  const rows = sites.map((site) => [site.name, site.code, site.region, site.segment, `${site.completion}%`, performanceLabel(site.performance), site.gaps, focus, site.updated]);
-  const csv = [columns, ...rows].map((row) => row.map(escapeCell).join(",")).join("\r\n");
+  const rows = sites.map((site) => ["Site summary", site.name, site.code, site.region, site.segment, `${site.completion}%`, performanceLabel(site.performance), site.gaps, focus, site.updated, "", "", "", "", "", "", "", ""]);
+  const evidenceRows = assignedSite ? requirements.flatMap((requirement) => requirement.evidence.map((evidence) => {
+    const question = requirement.questions.find((item) => item.id === evidence.questionId);
+    return ["Evidence", assignedSite.name, assignedSite.code, assignedSite.region, assignedSite.segment, "", "", "", focus, "", requirement.number, requirement.title, question ? `${question.number}. ${question.text}` : "", evidence.title, evidence.type, evidence.detail, evidence.uploadedBy, evidence.uploadedAt];
+  })) : [];
+  const csv = [columns, ...rows, ...evidenceRows].map((row) => row.map(escapeCell).join(",")).join("\r\n");
   const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -50,7 +75,8 @@ function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "A
 type CompletionFilter = "all" | "complete" | "in-progress" | "not-started";
 
 export function DashboardScreen() {
-  const { dashboardSiteRows, sectionSummaries } = useDashboard();
+  const { dashboardSiteRows, sectionSummaries, requirements, assignedSite } = useDashboard();
+  const { user } = useAuth();
   const [region, setRegion] = useState("All regions");
   const [segment, setSegment] = useState("All segments");
   const [performance, setPerformance] = useState<"All levels" | Performance>("All levels");
@@ -79,12 +105,12 @@ export function DashboardScreen() {
   const activeFilters = [region !== "All regions" && region, segment !== "All segments" && segment, performance !== "All levels" && performanceLabel(performance), completion !== "all" && completion.replace("-", " "), focus !== "All assessment areas" && focus].filter(Boolean) as string[];
 
   function reset() { setRegion("All regions"); setSegment("All segments"); setPerformance("All levels"); setCompletion("all"); setFocus("All assessment areas"); setQuery(""); }
-  function exportDashboard() { downloadSiteExport(sites, `EHSS_assessment_dashboard_${new Date().toISOString().slice(0, 10)}.csv`, focus); setExported(true); window.setTimeout(() => setExported(false), 2600); }
+  function exportDashboard() { downloadSiteExport(sites, `Maitsys_Assure_dashboard_${new Date().toISOString().slice(0, 10)}.csv`, focus, user?.role === "administrator" ? requirements : [], user?.role === "administrator" ? assignedSite : undefined); setExported(true); window.setTimeout(() => setExported(false), 2600); }
 
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Enterprise oversight" title="EHS&S assessment dashboard" description="Track completion and self-assessed performance across the sites in your authorized scope." actions={<Button variant="primary" icon={<ArrowDownToLine size={18} />} onClick={exportDashboard} disabled={!sites.length} data-tour="dashboard-export">Export to Excel</Button>} />
-      {exported && <InlineMessage className="floating-feedback" tone="success" title="Export downloaded">The current filtered site view was downloaded and can be opened in Excel.</InlineMessage>}
+      <PageHeader eyebrow="Enterprise oversight" title="Maitsys Assure dashboard" description="Track completion and self-assessed performance across the sites in your authorized scope." actions={<Button variant="primary" icon={<ArrowDownToLine size={18} />} onClick={exportDashboard} disabled={!sites.length} data-tour="dashboard-export">Export to Excel</Button>} />
+      {exported && <InlineMessage className="floating-feedback" tone="success" title="Export downloaded">The current filtered site view{user?.role === "administrator" ? " and question-level evidence register" : ""} were downloaded and can be opened in Excel.</InlineMessage>}
       <div className="dashboard-summary">
         <div className="metrics-grid metrics-grid--2x2">
           <MetricCard label="Sites in scope" value={total} detail={`Across ${regions.length} regions`} icon={<MapPin size={21} />} tone="brand" />
@@ -143,13 +169,11 @@ export function DashboardScreen() {
 
 export function SiteSectionDetailScreen() {
   const { siteId, sectionId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirements, sections } = useDashboard();
+  const { dashboardSiteRows, sectionSummaries, requirementsForSite, sections } = useDashboard();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const siteSections = site.id === "northstar" ? sectionSummaries : sections;
   const section = siteSections.find((item) => item.id === sectionId);
-  // Same gating as the drill-down list: real per-question answers exist only for the one real
-  // site, so other mock sites must not borrow Northstar's answers.
-  const requirement = site.id === "northstar" ? requirements.find((item) => item.sectionId === sectionId) : undefined;
+  const requirement = requirementsForSite(site.id).find((item) => item.sectionId === sectionId);
 
   if (!section) {
     return (
@@ -195,19 +219,21 @@ export function SiteSectionDetailScreen() {
                 <div className="readonly-response">
                   <span>Response</span>
                   <span className={cx("response-chip", `response-chip--${question.response ?? "none"}`)}>{responseLabel(question.response)}</span>
+                  {question.response && <small>Recorded by {question.respondedBy ?? question.action?.createdBy ?? "Site contributor"}{question.respondedAt ? ` · ${new Date(question.respondedAt).toLocaleString()}` : ""}</small>}
                 </div>
-                {question.action?.description && (
+                {question.action && (
                   <div className="readonly-action">
-                    <p className="eyebrow">Corrective action</p>
-                    <p>{question.action.description}</p>
-                    {question.action.owner && <span>Owner · {question.action.owner}</span>}
+                    <p className="eyebrow">Corrective action · {question.action.createdBy ?? "Site contributor"}</p>
+                    <p>{question.action.description || "No action description added yet."}</p>
+                    <div className="readonly-action__details"><span>Owner · {question.action.owner || "Not assigned"}</span><span>Status · {question.action.status ?? "Open"}</span><span>Follow-up · {question.action.followUp || "Not added"}</span><span>Updated by {question.action.updatedBy ?? question.action.createdBy ?? "Site contributor"}{question.action.updatedAt ? ` · ${new Date(question.action.updatedAt).toLocaleString()}` : ""}</span></div>
                   </div>
                 )}
+                <QuestionResponseHistory question={question} />
               </article>
             ))}
           </div>
         ) : (
-          <EmptyState icon={<Search size={27} />} title="Question-level detail not available" description="Individual assessment responses are only recorded for sites with live self-assessment data. Completion and performance summaries above are tracked for every site in your authorized scope." />
+          <EmptyState icon={<Search size={27} />} title="No question-level responses" description="This site has not started the selected section yet." />
         )}
       </section>
     </div>
@@ -216,7 +242,7 @@ export function SiteSectionDetailScreen() {
 
 export function SiteDrilldownScreen() {
   const { siteId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirements, siteContacts, siteUsers, sections } = useDashboard();
+  const { dashboardSiteRows, sectionSummaries, requirementsForSite, siteContacts, siteUsers, sections } = useDashboard();
   const { role } = useGuidedSetup();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const siteSections = site.id === "northstar" ? sectionSummaries : sections;
@@ -229,16 +255,12 @@ export function SiteDrilldownScreen() {
   return (
     <div className="page-container">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
-      <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHSS_${site.code}_assessment.csv`)}>Export site view</Button>} />
+      <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `Maitsys_Assure_${site.code}_assessment.csv`)}>Export site view</Button>} />
       <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Self-assessed performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>
       <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site users</h2></div><span>{siteUsers.filter((user) => user.siteId === site.id).length} assigned</span></div><SiteUsersPanel users={siteUsers.filter((user) => user.siteId === site.id)} /></section>
       <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
       <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Assessment detail</p><h2>Operating System sections</h2></div><PerformanceBadge performance={site.performance} /></div><div className="section-drilldown-list" data-tour="drilldown-sections">{siteSections.filter((section) => section.kind === "operating-system").map((section, index) => {
-        // `requirements` is one global list of real, answered assessment data tied to the one
-        // real site ("northstar") — every mock dashboard site shares the same sectionId space,
-        // so this lookup must stay gated to that one real site. Otherwise a different site's
-        // drill-down would show Northstar's actual answers as if they belonged to it.
-        const requirement = site.id === "northstar" ? requirements.find((item) => item.sectionId === section.id) : undefined;
+        const requirement = requirementsForSite(site.id).find((item) => item.sectionId === section.id);
         return <article key={section.id} className="section-drilldown-row"><div className="section-drilldown-row__name"><span className="section-index">{index + 1}</span><div><strong>{section.name}</strong><span>{section.questions} questions · {section.gaps} gaps</span></div></div><div><span className="mobile-label">Completion</span><ProgressBar value={section.completion} /></div><div><span className="mobile-label">Self-assessed performance</span><PerformanceBadge performance={section.performance} compact /></div>{canEditAssignedSite && requirement ? <Link className="button button--tertiary button--compact" to={requirementRoute(requirement)}><span>Open</span><ArrowRight size={16} /></Link> : <Link className="button button--tertiary button--compact" to={`/sites/${site.id}/sections/${section.id}`}><span>View</span><ArrowRight size={16} /></Link>}</article>;
       })}</div></section>
     </div>

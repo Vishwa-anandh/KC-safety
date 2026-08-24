@@ -321,7 +321,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="brand-lockup">
           <KcLogo />
           <div aria-hidden={collapsed}>
-            <strong>EHS&S</strong>
+            <strong>Maitsys Assure</strong>
             <span>Self-Assessment</span>
           </div>
         </div>
@@ -370,7 +370,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <div className="brand-lockup">
                 <KcLogo />
                 <div>
-                  <strong>EHS&S</strong>
+                  <strong>Maitsys Assure</strong>
                   <span>Self-Assessment</span>
                 </div>
               </div>

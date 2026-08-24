@@ -66,8 +66,8 @@ export default function LoginScreen() {
 
   return (
     <main className="login-page">
-      <section className="login-story" aria-label="KC EHS&S product introduction">
-        <div className="login-story__brand"><KcLogo /><div><strong>EHS&S</strong><span>Self-Assessment</span></div></div>
+      <section className="login-story" aria-label="Maitsys Assure product introduction">
+        <div className="login-story__brand"><KcLogo /><div><strong>Maitsys Assure</strong><span>Self-Assessment</span></div></div>
         <div className="login-story__content">
           <h1>Move every site from assessment to action.</h1>
           <p>Complete governed assessments, close corrective-action gaps, and give enterprise leaders a trusted view of progress.</p>
@@ -77,7 +77,7 @@ export default function LoginScreen() {
             <span><CheckCircle2 size={18} /><span>Guided first-time setup</span></span>
           </div>
         </div>
-        <p className="login-story__footer">Kimberly-Clark EHS&S</p>
+        <p className="login-story__footer">Maitsys Assure</p>
       </section>
 
       <section className="login-access">
@@ -115,7 +115,7 @@ export default function LoginScreen() {
             </div>
           )}
         </div>
-        <p className="login-support">Need access help? <a href="mailto:ehss-support@example.com?subject=EHS%26S%20sign-in%20help">Contact EHS&S support</a></p>
+        <p className="login-support">Need access help? <a href="mailto:ehss-support@example.com?subject=Maitsys%20Assure%20sign-in%20help">Contact Maitsys Assure support</a></p>
       </section>
     </main>
   );

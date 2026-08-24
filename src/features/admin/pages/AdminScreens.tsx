@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Circle,
   Copy,
+  ChevronDown,
   Download,
   FileCheck2,
   FileInput,
@@ -16,7 +17,10 @@ import {
   FileText,
   Filter,
   History,
+  ListChecks,
   MoreHorizontal,
+  Menu,
+  Paperclip,
   Pencil,
   Plus,
   Search,
@@ -31,7 +35,7 @@ import { useAdministration } from "../model/useAdministration";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
 import type { DashboardSite, MasterQuestion, MasterRequirement, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -301,7 +305,7 @@ export function AdminImportsScreen() {
           {step === 1 && <><div className="import-stage__heading"><span className="stage-icon"><FileInput size={23} /></span><div><p className="eyebrow">Step 2 of 7</p><h2>Upload source workbook</h2><p>Select the approved KC Operating System and Performance Standards workbook.</p></div></div><input ref={inputRef} className="visually-hidden" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => selectFile(event.target.files?.[0])} />{!file ? <button className={cx("dropzone", "dropzone--large", fileError && "dropzone--invalid")} data-tour="import-upload" onClick={() => inputRef.current?.click()} onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0]); }} onDragOver={(event) => event.preventDefault()}><span className="dropzone__icon"><Upload size={25} /></span><strong>Choose an Excel workbook or drag it here</strong><span>.xlsx files · Maximum 25 MB</span></button> : <div className="selected-file" data-tour="import-upload"><span className="selected-file__icon"><FileSpreadsheet size={24} /></span><div><strong>{file.name}</strong><span>{(file.size / 1024 / 1024).toFixed(2)} MB · Ready to inspect</span></div><Button variant="tertiary" size="compact" onClick={() => inputRef.current?.click()}>Replace</Button><CheckCircle2 size={21} /></div>}{fileError && <InlineMessage tone="danger" title="Workbook not accepted">{fileError}</InlineMessage>}</>}
           {step === 2 && <><div className="import-stage__heading"><span className="stage-icon"><FileSpreadsheet size={23} /></span><div><p className="eyebrow">Step 3 of 7</p><h2>Inspect workbook structure</h2><p>Review detected sheets and records before mapping.</p></div></div><div className="inspection-grid"><div><strong>24</strong><span>Sheets detected</span></div><div><strong>752</strong><span>Requirement rows</span></div><div><strong>0</strong><span>Unknown sheets</span></div><div><strong>2</strong><span>Warnings</span></div></div><div className="inspection-list"><div><FileCheck2 size={18} /><span><strong>Leadership & Engagement</strong><small>68 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><FileCheck2 size={18} /><span><strong>Planning</strong><small>94 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><AlertCircle size={18} /><span><strong>Machine Safety</strong><small>2 blank guidance cells</small></span><span className="warning-label">Warning</span></div></div></>}
           {step === 3 && <><div className="import-stage__heading"><span className="stage-icon"><ArrowRight size={23} /></span><div><p className="eyebrow">Step 4 of 7</p><h2>Map workbook columns</h2><p>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div></div><div className="mapping-table">{mappings.map((mapping, index) => <div key={mapping.source} className={cx(mapping.needsReview && "mapping-table__row--flagged")}><span><strong>{mapping.source}</strong><small>Source column</small></span><ArrowRight size={18} /><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /><span className="mapping-sample">{mapping.sample}</span>{mapping.needsReview ? <span className="warning-label">Needs review</span> : <CheckCircle2 size={18} />}</div>)}</div>{needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}</>}
-          {step === 4 && <><div className="import-stage__heading"><span className="stage-icon"><ShieldCheck size={23} /></span><div><p className="eyebrow">Step 5 of 7</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className="validation-summary"><div className="validation-summary__success"><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className="validation-summary__warning"><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHSS_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
+          {step === 4 && <><div className="import-stage__heading"><span className="stage-icon"><ShieldCheck size={23} /></span><div><p className="eyebrow">Step 5 of 7</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className="validation-summary"><div className="validation-summary__success"><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className="validation-summary__warning"><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("Maitsys_Assure_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
           {step === 5 && <><div className="import-stage__heading"><span className="stage-icon"><FileCheck2 size={23} /></span><div><p className="eyebrow">Step 6 of 7</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className="dry-run-grid"><div><span className="dry-run-dot dry-run-dot--create" /><strong>4</strong><span>Create</span></div><div><span className="dry-run-dot dry-run-dot--update" /><strong>2</strong><span>Update</span></div><div><span className="dry-run-dot dry-run-dot--same" /><strong>746</strong><span>Unchanged</span></div><div><span className="dry-run-dot dry-run-dot--conflict" /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for {siteNamesFor(sites, selectedSiteIds) || "the selected sites"} and writes an administrator audit record.</InlineMessage><label className="confirmation-check"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
           {step === 6 && result && (() => {
             const latest = importHistory.find((record) => record.id === result.id) ?? result;
@@ -341,6 +345,9 @@ export function AdminImportsScreen() {
   );
 }
 
+// Rendered inline on AdminRequirementDetailScreen rather than in a dialog, styled like the site
+// contributor's assessment question cards (question-card / question-evidence) so an admin edits
+// questions in the same visual language a contributor sees them in.
 function QuestionsEditor({ questions, onChange, requirementId, submitted }: { questions: MasterQuestion[]; onChange: (questions: MasterQuestion[]) => void; requirementId: string; submitted: boolean }) {
   function updateQuestion(id: string, patch: Partial<MasterQuestion>) {
     onChange(questions.map((question) => question.id === id ? { ...question, ...patch } : question));
@@ -348,32 +355,52 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
   function removeQuestion(id: string) {
     onChange(questions.filter((question) => question.id !== id));
   }
+  function updateEvidenceItem(question: MasterQuestion, index: number, value: string) {
+    const expectedEvidence = question.expectedEvidence.map((item, itemIndex) => itemIndex === index ? value : item);
+    updateQuestion(question.id, { expectedEvidence });
+  }
+  function addEvidenceItem(question: MasterQuestion) {
+    updateQuestion(question.id, { expectedEvidence: [...question.expectedEvidence, ""] });
+  }
+  function removeEvidenceItem(question: MasterQuestion, index: number) {
+    updateQuestion(question.id, { expectedEvidence: question.expectedEvidence.filter((_, itemIndex) => itemIndex !== index) });
+  }
   function addQuestion() {
-    const id = `${requirementId}-q-${Date.now().toString(36)}`;
+    const id = `${requirementId || "draft"}-q-${Date.now().toString(36)}`;
     const nextNumber = Math.max(0, ...questions.map((question) => Number(question.number) || 0)) + 1;
-    onChange([...questions, { id, number: String(nextNumber), text: "", expectedEvidence: [] }]);
+    onChange([...questions, { id, number: String(nextNumber), text: "", expectedEvidence: [], evidenceRequired: false }]);
   }
   return (
-    <div className="question-editor-list">
+    <div className="question-list">
       {!questions.length && <p className="question-editor-empty">No assessment questions yet. Add the first one below.</p>}
       {questions.map((question, index) => {
         const invalid = submitted && !question.text.trim();
+        const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
         return (
-          <div className={cx("question-editor-row", invalid && "question-editor-row--invalid")} key={question.id}>
-            <div className="question-editor-row__header">
+          <article className={cx("question-card", invalid && "question-card--invalid")} key={question.id}>
+            <div className="question-card__header">
               <span className="question-number">{index + 1}</span>
+              <div>
+                <p>Question {index + 1}</p>
+                <textarea rows={2} className="question-text-input" value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
+                {invalid && <small className="field-error">Enter the question text.</small>}
+              </div>
               <IconButton label={`Delete question ${index + 1}`} onClick={() => removeQuestion(question.id)}><Trash2 size={17} /></IconButton>
             </div>
-            <label className="field">
-              <span>Question text <b>Required</b></span>
-              <textarea rows={2} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
-              {invalid && <small className="field-error">Enter the question text.</small>}
-            </label>
-            <label className="field">
-              <span>Evidence required <small>One item per line</small></span>
-              <textarea rows={2} value={question.expectedEvidence.join("\n")} onChange={(event) => updateQuestion(question.id, { expectedEvidence: event.target.value.split("\n") })} placeholder="For example, Current risk register" />
-            </label>
-          </div>
+            <div className="question-evidence question-evidence--editable">
+              <label className="question-evidence__toggle"><input type="checkbox" checked={evidenceRequired} onChange={(event) => updateQuestion(question.id, { evidenceRequired: event.target.checked })} /> <span>Evidence required for this question</span></label>
+              {evidenceRequired && <><span className="question-evidence__title"><Paperclip size={14} /> Required evidence <small>Shown only with Question {index + 1}</small></span>
+              <div className="question-evidence__editor">
+                {question.expectedEvidence.map((item, evidenceIndex) => (
+                  <div className="question-evidence__item" key={`${question.id}-evidence-${evidenceIndex}`}>
+                    <input value={item} onChange={(event) => updateEvidenceItem(question, evidenceIndex, event.target.value)} placeholder="For example, Current risk register" aria-label={`Evidence item ${evidenceIndex + 1} for question ${index + 1}`} />
+                    <IconButton label={`Remove evidence item ${evidenceIndex + 1} from question ${index + 1}`} onClick={() => removeEvidenceItem(question, evidenceIndex)}><Trash2 size={16} /></IconButton>
+                  </div>
+                ))}
+                <Button variant="tertiary" icon={<Plus size={16} />} onClick={() => addEvidenceItem(question)}>Add evidence item</Button>
+              </div></>}
+            </div>
+          </article>
         );
       })}
       <Button variant="secondary" icon={<Plus size={17} />} onClick={addQuestion}>Add question</Button>
@@ -381,62 +408,200 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
   );
 }
 
-function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { item?: MasterRequirement; sections: string[]; siteOptions: ReturnType<typeof buildSiteOptions>; onClose: () => void; onSave: (item: MasterRequirement) => void }) {
-  const [draft, setDraft] = useState<MasterRequirement>(item ?? { id: "", title: "", section: sections[0] ?? "", version: "v1", status: "Draft", siteIds: [], questions: [] });
-  const [submitted, setSubmitted] = useState(false);
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()) && draft.questions.every((question) => question.text.trim()));
-  const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const sectionOptions = sections.map((value) => ({ value, label: value }));
-  return <div className="dialog-layer"><button className="dialog-backdrop" aria-label="Close requirement editor" onClick={onClose} /><section className="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="master-dialog-title">
-    <div className="dialog__header"><div><p className="eyebrow">Governed content</p><h2 id="master-dialog-title">{item ? `Edit ${item.id}` : "Add requirement"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
-    <div className="dialog-form form-grid">
-      <label className={cx("field", submitted && !draft.id.trim() && "field--invalid")}><span>Requirement ID <b>Required</b></span><input value={draft.id} disabled={Boolean(item)} onChange={(event) => update("id", event.target.value)} placeholder="For example, OS 2.4.1" />{submitted && !draft.id.trim() && <small className="field-error">Enter a unique requirement ID.</small>}</label>
-      <label className={cx("field", submitted && !/^v\d+$/i.test(draft.version.trim()) && "field--invalid")}><span>Version <b>Required</b></span><input value={draft.version} onChange={(event) => update("version", event.target.value)} placeholder="v1" />{submitted && !/^v\d+$/i.test(draft.version.trim()) && <small className="field-error">Use a version such as v1 or v12.</small>}</label>
-      <label className={cx("field", "field--wide", submitted && !draft.title.trim() && "field--invalid")}><span>Requirement title <b>Required</b></span><textarea rows={3} value={draft.title} onChange={(event) => update("title", event.target.value)} />{submitted && !draft.title.trim() && <small className="field-error">Enter the requirement title.</small>}</label>
-      <label className={cx("field", submitted && !draft.section.trim() && "field--invalid")}>
-        <span>Section <b>Required</b></span>
-        <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
-        {submitted && !draft.section.trim() && <small className="field-error">Choose the governed section.</small>}
+function AdminRequirementNavigator({
+  requirements,
+  current,
+  onNavigate,
+  onViewAll,
+  onClose,
+}: {
+  requirements: MasterRequirement[];
+  current: MasterRequirement;
+  onNavigate: (requirement: MasterRequirement) => void;
+  onViewAll: () => void;
+  onClose?: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = requirements.filter((requirement) =>
+    `${requirement.id} ${requirement.title} ${requirement.section}`.toLowerCase().includes(query.toLowerCase()),
+  );
+  const published = requirements.filter((requirement) => requirement.status === "Published").length;
+
+  return (
+    <aside className="assessment-navigator admin-requirement-navigator" aria-label="Master requirement navigator">
+      <div className="assessment-navigator__header">
+        <div><p className="eyebrow">Master content</p><h2>Requirements</h2></div>
+        {onClose && <IconButton label="Close requirement navigator" onClick={onClose}><X size={19} /></IconButton>}
+      </div>
+      <ProgressBar value={requirements.length ? Math.round((published / requirements.length) * 100) : 0} label="Requirements published" />
+      <label className="navigator-search">
+        <Search size={17} />
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
       </label>
-      <label className="field">
-        <span>Status</span>
-        <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
-      </label>
-      <label className="field field--wide">
-        <span>Sites <small>Leave empty to apply to all sites</small></span>
-        <CheckboxList label="Sites" searchable options={siteOptions} selected={draft.siteIds} onChange={(values) => setDraft((current) => ({ ...current, siteIds: values }))} />
-      </label>
-      {item && (
-        <div className="field field--wide">
-          <span>Assessment questions</span>
-          <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
+      <div className="navigator-group">
+        <div className="navigator-group__trigger" aria-expanded="true"><ChevronDown size={17} /><span>Master requirements</span><small>{published} of {requirements.length}</small></div>
+        <div className="navigator-items">
+          {filtered.map((requirement) => {
+            const isCurrent = requirement.id === current.id;
+            return (
+              <button key={requirement.id} className={cx("navigator-item", isCurrent && "navigator-item--current")} onClick={() => onNavigate(requirement)}>
+                {isCurrent ? <span className="nav-state nav-state--current"><Circle size={12} fill="currentColor" /></span> : requirement.status === "Published" ? <CheckCircle2 size={17} className="nav-state nav-state--complete" /> : <Circle size={16} className="nav-state nav-state--incomplete" />}
+                <span><small>{requirement.id} · {requirement.section}</small>{requirement.title}</span>
+                <ChevronRight size={16} />
+              </button>
+            );
+          })}
+          {!filtered.length && <p className="navigator-empty">No requirements match your search.</p>}
         </div>
-      )}
+      </div>
+      <Button className="next-incomplete" variant="secondary" icon={<ListChecks size={18} />} onClick={onViewAll}>All requirements</Button>
+    </aside>
+  );
+}
+
+export function AdminRequirementDetailScreen() {
+  const { requirementId } = useParams();
+  const navigate = useNavigate();
+  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const isNew = !requirementId;
+  const existing = requirementId ? masterRequirements.find((item) => item.id === requirementId) : undefined;
+  const sections = [...new Set(masterRequirements.map((item) => item.section))];
+  const defaultSection = sections[0] ?? "";
+  const siteOptions = buildSiteOptions(sites);
+  const sectionOptions = sections.map((value) => ({ value, label: value }));
+  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, version: "v1", status: "Draft", siteIds: [], questions: [] });
+  const [submitted, setSubmitted] = useState(false);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  // React reuses this route component when only :requirementId changes. Resetting the editor
+  // from the route record keeps the header, fields, and left navigator in lockstep after a
+  // requirement is selected from the navigator.
+  useEffect(() => {
+    setDraft(existing ?? { id: "", title: "", section: defaultSection, version: "v1", status: "Draft", siteIds: [], questions: [] });
+    setSubmitted(false);
+    setPendingNavigation(null);
+  }, [defaultSection, existing, requirementId]);
+
+  if (requirementId && !existing) {
+    return (
+      <div className="page-container">
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
+        <EmptyState icon={<Search size={27} />} title="Requirement not found" description="This master requirement does not exist or was removed." />
+      </div>
+    );
+  }
+
+  const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
+  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()) && draft.questions.every((question) => question.text.trim()));
+  const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
+  const navigatorCurrent = masterRequirements.find((item) => item.id === requirementId) ?? draft;
+
+  function requestNavigation(target: MasterRequirement | "list") {
+    setNavigatorOpen(false);
+    if (target === "list" || target.id !== draft.id) {
+      if (hasUnsavedChanges) { setPendingNavigation(target); return; }
+      navigate(target === "list" ? "/admin/requirements" : `/admin/requirements/${target.id}`);
+    }
+  }
+
+  function confirmNavigation() {
+    const target = pendingNavigation;
+    setPendingNavigation(null);
+    if (!target) return;
+    navigate(target === "list" ? "/admin/requirements" : `/admin/requirements/${target.id}`);
+  }
+
+  function save() {
+    setSubmitted(true);
+    if (!valid) return;
+    const trimmedId = draft.id.trim();
+    const duplicateId = isNew && masterRequirements.some((record) => record.id.toLowerCase() === trimmedId.toLowerCase());
+    if (duplicateId) {
+      navigate("/admin/requirements", { state: { feedback: `Requirement ${trimmedId} already exists. Open it to edit the existing record.` } });
+      return;
+    }
+    const cleaned: MasterRequirement = {
+      ...draft,
+      id: trimmedId,
+      title: draft.title.trim(),
+      section: draft.section.trim(),
+      version: draft.version.trim(),
+      questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
+    };
+    if (isNew) addMasterRequirement(cleaned); else updateMasterRequirement(cleaned);
+    navigate("/admin/requirements", { state: { feedback: `${cleaned.id} was ${isNew ? "added" : "updated"}.` } });
+  }
+
+  return (
+    <div className="requirement-page admin-requirement-page">
+      <div className="requirement-mobile-toolbar admin-requirement-mobile-toolbar">
+        <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
+        <Button variant="secondary" onClick={() => requestNavigation("list")}>All requirements</Button>
+      </div>
+      <div className="requirement-layout requirement-layout--admin-editor">
+        <div className="requirement-layout__navigator"><AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} /></div>
+        <div className="requirement-main requirement-main--editor">
+        <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">{isNew ? "New requirement" : draft.id}</span></nav>
+        <header className="requirement-header">
+          <div className="requirement-header__meta">
+            <input className={cx("requirement-id-input", submitted && !draft.id.trim() && "field-invalid-input")} style={{ width: `${Math.max(8, draft.id.length + 2)}ch` }} value={draft.id} disabled={!isNew} onChange={(event) => update("id", event.target.value)} placeholder="For example, OS 2.4.1" aria-label="Requirement ID" />
+            <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
+          </div>
+          <div className="requirement-header__title">
+            <div>
+              <p className="eyebrow">Requirement</p>
+              <textarea className={cx("requirement-title-input", submitted && !draft.title.trim() && "field-invalid-input")} rows={2} value={draft.title} onChange={(event) => update("title", event.target.value)} placeholder="Requirement title" aria-label="Requirement title" />
+            </div>
+            <div className="requirement-header__controls">
+              <label className="requirement-version-field"><span>Version</span><input className={cx(submitted && !/^v\d+$/i.test(draft.version.trim()) && "field-invalid-input")} value={draft.version} onChange={(event) => update("version", event.target.value)} placeholder="v1" aria-label="Version" /></label>
+              <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
+            </div>
+          </div>
+          <div className="requirement-header__footer">
+            <span>{draft.siteIds.length ? `${draft.siteIds.length} of ${sites.length} sites scoped` : "Applies to all sites"}</span>
+          </div>
+          <div className="field field--wide">
+            <span>Sites <small>Leave empty to apply to all sites</small></span>
+            <CheckboxList label="Sites" searchable options={siteOptions} selected={draft.siteIds} onChange={(values) => setDraft((current) => ({ ...current, siteIds: values }))} />
+            <div className="requirement-selected-sites" aria-live="polite">
+              <strong>Selected sites</strong>
+              {draft.siteIds.length ? <span className="requirement-selected-sites__list">{siteOptions.filter((site) => draft.siteIds.includes(site.value)).map((site) => <span key={site.value}>{site.label}</span>)}</span> : <span>All sites</span>}
+            </div>
+          </div>
+          {submitted && !valid && <InlineMessage tone="danger" title="Complete required fields">Requirement ID, title, section, a valid version (for example v1), and text for every question are required before saving.</InlineMessage>}
+        </header>
+        <section className="questions-section" aria-labelledby="admin-questions-title">
+          <div className="section-title-row"><div><p className="eyebrow">Assessment questions</p><h2 id="admin-questions-title">Add, edit, or remove questions</h2></div><span className="question-count">{draft.questions.length} questions</span></div>
+          <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
+        </section>
+        <footer className="requirement-footer">
+          <div><Button variant="secondary" onClick={() => navigate("/admin/requirements")}>Cancel</Button>{!isNew && <Button variant="tertiary" icon={<Trash2 size={17} />} onClick={() => setDeleteConfirmOpen(true)}>Delete requirement</Button>}</div>
+          <Button variant="primary" icon={<Check size={17} />} onClick={save}>{isNew ? "Add requirement" : "Save changes"}</Button>
+        </footer>
+      </div>
+      </div>
+      {navigatorOpen && <div className="sheet-layer"><button className="sheet-backdrop" aria-label="Close requirement navigator" onClick={() => setNavigatorOpen(false)} /><div className="sheet sheet--left"><AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} onClose={() => setNavigatorOpen(false)} /></div></div>}
+      {pendingNavigation && <ConfirmDialog eyebrow="Unsaved changes" title="Leave this requirement without saving?" body="Your changes to this requirement will be discarded. Save changes before continuing if you want to keep them." confirmLabel="Leave without saving" cancelLabel="Keep editing" onCancel={() => setPendingNavigation(null)} onConfirm={confirmNavigation} />}
+      {deleteConfirmOpen && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${draft.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { removeMasterRequirement(draft.id); navigate("/admin/requirements", { state: { feedback: `${draft.id} was deleted.` } }); }} />}
     </div>
-    <div className="dialog__footer"><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => {
-      setSubmitted(true);
-      if (!valid) return;
-      onSave({
-        ...draft,
-        id: draft.id.trim(),
-        title: draft.title.trim(),
-        section: draft.section.trim(),
-        version: draft.version.trim(),
-        questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
-      });
-    }}>{item ? "Save changes" : "Add requirement"}</Button></div>
-  </section></div>;
+  );
 }
 
 export function AdminRequirementsScreen() {
-  const { masterRequirements, addMasterRequirement, updateMasterRequirement, sites } = useAdministration();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites } = useAdministration();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
   const [status, setStatus] = useState("Published and draft");
   const [siteFilter, setSiteFilter] = useState("all");
-  const [editing, setEditing] = useState<MasterRequirement | "new" | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState("");
+  const [deleting, setDeleting] = useState<MasterRequirement | null>(null);
+  // Add/edit now happens on its own page (AdminRequirementDetailScreen); it hands the save
+  // outcome back via router state rather than a local callback.
+  const [feedback, setFeedback] = useState(() => (location.state as { feedback?: string } | null)?.feedback ?? "");
   // The row menu previously only closed by re-clicking its own trigger, so clicking anywhere
   // else left it hanging open (and opening another row's menu left both visible).
   useEffect(() => {
@@ -458,15 +623,9 @@ export function AdminRequirementsScreen() {
     (section === "All sections" || item.section === section) &&
     (status === "Published and draft" || item.status === status) &&
     (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
-  function save(item: MasterRequirement) {
-    const duplicateId = editing === "new" && masterRequirements.some((record) => record.id.toLowerCase() === item.id.toLowerCase());
-    if (duplicateId) { setFeedback(`Requirement ${item.id} already exists. Open it to edit the existing record.`); setEditing(null); return; }
-    if (editing === "new") addMasterRequirement(item); else updateMasterRequirement(item);
-    setFeedback(`${item.id} was ${editing === "new" ? "added" : "updated"}.`); setEditing(null);
-  }
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirement, guidance, evidence, hierarchy, and version content." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")} data-tour="add-requirement">Add requirement</Button>} />
+      <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirement, guidance, evidence, hierarchy, and version content." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate("/admin/requirements/new")} data-tour="add-requirement">Add requirement</Button>} />
       {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
       <section className="table-card">
         <div className="dashboard-filter-bar" data-tour="requirement-filters">
@@ -476,9 +635,34 @@ export function AdminRequirementsScreen() {
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
         <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Governed content</p><h2>Requirements</h2></div><span>{rows.length} records shown</span></div>
-        {rows.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead><tbody>{rows.map((item) => <tr key={item.id}><td data-label="ID"><strong>{item.id}</strong></td><td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td><td data-label="Section">{item.section}</td><td data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}>{siteCodesSummary(sites, item.siteIds).text}</td><td data-label="Version">{item.version}</td><td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td><td data-label="Actions"><span className="row-actions row-actions--menu"><IconButton label={`Edit ${item.id}`} onClick={() => setEditing(item)}><Pencil size={17} /></IconButton><IconButton label={`More actions for ${item.id}`} onClick={() => setMenu(menu === item.id ? null : item.id)}><MoreHorizontal size={18} /></IconButton>{menu === item.id && <span className="row-menu"><button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button><button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button></span>}</span></td></tr>)}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
+        {rows.length ? (
+          <div className="data-table-wrap">
+            <table className="data-table data-table--requirements">
+              <thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>{rows.map((item) => (
+                <tr key={item.id} className="data-table__row--link" onClick={() => navigate(`/admin/requirements/${item.id}`)}>
+                  <td data-label="ID"><strong>{item.id}</strong></td>
+                  <td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td>
+                  <td data-label="Section">{item.section}</td>
+                  <td data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}>{siteCodesSummary(sites, item.siteIds).text}</td>
+                  <td data-label="Version">{item.version}</td>
+                  <td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td>
+                  <td data-label="Actions"><span className="row-actions row-actions--menu">
+                    <IconButton label={`Edit ${item.id}`} onClick={(event) => { event.stopPropagation(); navigate(`/admin/requirements/${item.id}`); }}><Pencil size={17} /></IconButton>
+                    <IconButton label={`More actions for ${item.id}`} onClick={(event) => { event.stopPropagation(); setMenu(menu === item.id ? null : item.id); }}><MoreHorizontal size={18} /></IconButton>
+                    {menu === item.id && <span className="row-menu" onClick={(event) => event.stopPropagation()}>
+                      <button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button>
+                      <button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button>
+                      <button className="row-menu__delete" onClick={() => { setDeleting(item); setMenu(null); }}><Trash2 size={15} /> Delete requirement</button>
+                    </span>}
+                  </span></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        ) : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
       </section>
-      {editing && <RequirementDialog item={editing === "new" ? undefined : editing} sections={sections} siteOptions={buildSiteOptions(sites)} onClose={() => setEditing(null)} onSave={save} />}
+      {deleting && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${deleting.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleting(null)} onConfirm={() => { removeMasterRequirement(deleting.id); setFeedback(`${deleting.id} was deleted.`); setDeleting(null); }} />}
     </div>
   );
 }

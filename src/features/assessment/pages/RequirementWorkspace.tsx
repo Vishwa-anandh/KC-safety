@@ -26,10 +26,11 @@ import {
 } from "lucide-react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../model/useAssessment";
+import { useAuth } from "../../auth";
 import { actionComplete, performanceForResponse, rollupPerformance } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
 import type { ActionItem, AssessmentQuestion, EvidenceItem, Requirement, ResponseValue } from "../../../shared/types";
-import { Button, ConfirmDialog, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus } from "../../../shared/ui/UI";
+import { Button, ConfirmDialog, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 function requirementState(requirement: Requirement, currentId: string) {
@@ -108,7 +109,7 @@ function AssessmentNavigator({
   );
 }
 
-function ResponseSelector({ value, onChange, questionId }: { value: ResponseValue; onChange: (value: Exclude<ResponseValue, null>) => void; questionId: string }) {
+function ResponseSelector({ value, onChange, questionId }: { value: ResponseValue; onChange: (value: ResponseValue) => void; questionId: string }) {
   const options: Array<{ value: Exclude<ResponseValue, null>; label: string; performance: string; description: string }> = [
     { value: "no", label: "No", performance: "Initial", description: "The requirement is not in place." },
     { value: "partial", label: "Partial", performance: "Emerging", description: "Some elements are in place." },
@@ -116,7 +117,7 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
   ];
   return (
     <fieldset className="response-fieldset">
-      <legend>Response <span>Choose one</span></legend>
+      <legend>Response <span>Choose one if assessed</span></legend>
       <div className="response-options">
         {options.map((option) => (
           <label key={option.value} className={cx("response-option", `response-option--${option.value}`, value === option.value && "response-option--selected")}>
@@ -126,40 +127,60 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
           </label>
         ))}
       </div>
+      {value && <button type="button" className="response-clear" onClick={() => onChange(null)}>Clear response</button>}
     </fieldset>
   );
 }
 
-function ActionEditor({ action, response, onChange }: { action?: ActionItem; response: ResponseValue; onChange: (action: ActionItem) => void }) {
-  const required = response === "no" || response === "partial";
-  if (!required && !action) return null;
+function ActionEditor({ action, response, onChange, onRemove }: { action?: ActionItem; response: ResponseValue; onChange: (action: ActionItem) => void; onRemove: () => void }) {
+  if (!response) return null;
+  const requiredByResponse = response === "no" || response === "partial";
+  if (!action) return <Button className="action-editor-add" variant="tertiary" icon={<Plus size={17} />} onClick={() => onChange({ description: "", owner: "", status: "Open", followUp: "" })}>Add corrective action <span>(optional)</span></Button>;
+  const update = (change: Partial<ActionItem>) => onChange({
+    description: action.description,
+    owner: action.owner,
+    status: action.status ?? "Open",
+    followUp: action.followUp ?? "",
+    ...change,
+  });
   return (
-    <div className={cx("action-editor", required ? "action-editor--required" : "action-editor--retained")}>
+    <div className="action-editor action-editor--optional">
       <div className="action-editor__header">
         <div className="action-editor__icon"><AlertTriangle size={18} /></div>
         <div>
-          <strong>{required ? "Corrective action required" : "Existing action retained"}</strong>
-          <p>{required ? "No and Partial responses require both an action description and an owner." : "This action remains available even though the response is now Yes."}</p>
+          <strong>Corrective action</strong>
+          <p>{requiredByResponse ? "Created automatically from this assessment gap and tracked in Actions summary." : "Optional supporting action for this assessment response."}</p>
         </div>
+        {!requiredByResponse && <Button variant="tertiary" onClick={onRemove}>Remove action</Button>}
       </div>
       <div className="form-grid form-grid--action">
         <label className={cx("field", "field--wide")}>
-          <span>Action description {required && <b>Required</b>}</span>
-          <textarea rows={3} value={action?.description ?? ""} placeholder="Describe the specific action needed to close this gap" onChange={(event) => onChange({ description: event.target.value, owner: action?.owner ?? "" })} />
+          <span>Action description</span>
+          <textarea rows={3} value={action.description} placeholder="Describe the specific action needed to close this gap" onChange={(event) => update({ description: event.target.value })} />
         </label>
         <label className="field">
-          <span>Action owner {required && <b>Required</b>}</span>
+          <span>Action owner</span>
           <span className="field-control-with-icon">
             <UserRound size={17} />
-            <input type="text" value={action?.owner ?? ""} placeholder="Search or enter owner" onChange={(event) => onChange({ description: action?.description ?? "", owner: event.target.value })} />
+            <input type="text" value={action.owner} placeholder="Search or enter owner" onChange={(event) => update({ owner: event.target.value })} />
           </span>
+        </label>
+        <div className="field">
+          <span>Action status</span>
+          <Select label="Action status" value={action.status ?? "Open"} onChange={(value) => update({ status: value as ActionItem["status"] })} options={[{ value: "Open", label: "Open" }, { value: "In progress", label: "In progress" }, { value: "Complete", label: "Complete" }]} />
+        </div>
+        <label className={cx("field", "field--wide")}>
+          <span>Follow-up</span>
+          <textarea rows={2} value={action.followUp ?? ""} placeholder="Add the next step, due-date note, or follow-up update" onChange={(event) => update({ followUp: event.target.value })} />
         </label>
       </div>
     </div>
   );
 }
 
-function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence: EvidenceItem[]; onAdd: () => void; onView: (item: EvidenceItem) => void; onEdit: (item: EvidenceItem) => void; onDelete: (item: EvidenceItem) => void }) {
+// Kept temporarily for backward-compatible component extraction; site-user rendering is now
+// question-scoped and does not invoke this legacy requirement-level panel.
+export function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence: EvidenceItem[]; onAdd: () => void; onView: (item: EvidenceItem) => void; onEdit: (item: EvidenceItem) => void; onDelete: (item: EvidenceItem) => void }) {
   return (
     <section className="evidence-card">
       <div className="section-title-row">
@@ -186,6 +207,37 @@ function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence
         <div className="evidence-empty"><Paperclip size={22} /><strong>No evidence attached yet</strong><span>Add a file or secure link to support this requirement.</span></div>
       )}
     </section>
+  );
+}
+
+function QuestionEvidenceAttachments({
+  evidence,
+  questionNumber,
+  onAdd,
+  onView,
+  onEdit,
+  onDelete,
+}: {
+  evidence: EvidenceItem[];
+  questionNumber: string;
+  onAdd: () => void;
+  onView: (item: EvidenceItem) => void;
+  onEdit: (item: EvidenceItem) => void;
+  onDelete: (item: EvidenceItem) => void;
+}) {
+  return (
+    <div className="question-evidence question-evidence--attachments">
+      <div className="question-evidence__attachments-header">
+        <span className="question-evidence__title"><Paperclip size={14} /> Evidence attached to Question {questionNumber}</span>
+        <Button variant="tertiary" icon={<Plus size={15} />} onClick={onAdd}>Add evidence</Button>
+      </div>
+      {evidence.length ? <div className="question-evidence__attachments-list">{evidence.map((item) => (
+        <div className="question-evidence__attachment" key={item.id}>
+          <button type="button" className="question-evidence__attachment-copy" onClick={() => onView(item)}><strong>{item.title}</strong><small>{item.detail}</small></button>
+          <span className="question-evidence__attachment-actions"><IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={15} /></IconButton><IconButton label={`Delete ${item.title}`} onClick={() => onDelete(item)}><Trash2 size={15} /></IconButton></span>
+        </div>
+      ))}</div> : <p className="question-evidence__attachment-empty">No evidence attached yet. Add a file or secure link for this question.</p>}
+    </div>
   );
 }
 
@@ -284,11 +336,12 @@ export default function RequirementWorkspace() {
   const { sectionId, requirementId } = useParams();
   const navigate = useNavigate();
   const { requirements, updateQuestion, addEvidence, updateEvidence, removeEvidence } = useAssessment();
+  const { user } = useAuth();
   const requirement = requirements.find((item) => item.id === requirementId && item.sectionId === sectionId);
   const [saveState, setSaveState] = useState<"saving" | "saved" | "failed" | "attention">("saved");
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [guidanceOpen, setGuidanceOpen] = useState(false);
-  const [evidenceEditor, setEvidenceEditor] = useState<EvidenceItem | null | "new">(null);
+  const [evidenceEditor, setEvidenceEditor] = useState<{ mode: "new"; questionId: string } | { mode: "edit"; item: EvidenceItem } | null>(null);
   const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
   const [evidenceRemoving, setEvidenceRemoving] = useState<EvidenceItem | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -306,7 +359,7 @@ export default function RequirementWorkspace() {
   }
 
   function changeQuestion(questionId: string, update: Partial<AssessmentQuestion>) {
-    updateQuestion(requirement!.id, questionId, update);
+    updateQuestion(requirement!.id, questionId, update, user?.name);
     queueSavedState();
   }
 
@@ -345,19 +398,21 @@ export default function RequirementWorkspace() {
               {requirement.questions.map((question) => (
                 <article className="question-card" key={question.id} id={`question-${question.id}`}>
                   <div className="question-card__header"><span className="question-number">{question.number}</span><div><p>Question {question.number}</p><h3>{question.text}</h3></div><PerformanceBadge performance={performanceForResponse(question.response)} compact /></div>
-                  {Boolean(question.expectedEvidence?.length) && (
-                    <div className="question-evidence">
-                      <span className="question-evidence__title"><Paperclip size={14} /> Evidence required</span>
-                      <ul>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
-                    </div>
+                  {Boolean(question.evidenceRequired ?? question.expectedEvidence?.length) && (
+                    <>
+                      <div className="question-evidence">
+                        <span className="question-evidence__title"><Paperclip size={14} /> Evidence required <small>Attach evidence even when the response is Yes, if it is available.</small></span>
+                        <ul>{(question.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
+                      </div>
+                      <QuestionEvidenceAttachments evidence={requirement.evidence.filter((item) => item.questionId === question.id)} questionNumber={question.number} onAdd={() => setEvidenceEditor({ mode: "new", questionId: question.id })} onView={setEvidenceViewer} onEdit={(item) => setEvidenceEditor({ mode: "edit", item })} onDelete={setEvidenceRemoving} />
+                    </>
                   )}
                   <ResponseSelector questionId={question.id} value={question.response} onChange={(response) => changeQuestion(question.id, { response })} />
-                  <ActionEditor action={question.action} response={question.response} onChange={(action) => changeQuestion(question.id, { action })} />
+                  <ActionEditor action={question.action} response={question.response} onChange={(action) => changeQuestion(question.id, { action })} onRemove={() => changeQuestion(question.id, { action: undefined })} />
                 </article>
               ))}
             </div>
           </section>
-          <EvidencePanel evidence={requirement.evidence} onAdd={() => setEvidenceEditor("new")} onView={setEvidenceViewer} onEdit={setEvidenceEditor} onDelete={setEvidenceRemoving} />
           <footer className="requirement-footer">
             <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
             <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button></div>
@@ -367,13 +422,13 @@ export default function RequirementWorkspace() {
       </div>
       {navigatorOpen && <div className="sheet-layer"><button className="sheet-backdrop" aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} /><div className="sheet sheet--left"><AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} /></div></div>}
       {guidanceOpen && <div className="sheet-layer"><button className="sheet-backdrop" aria-label="Close guidance" onClick={() => setGuidanceOpen(false)} /><div className="sheet sheet--right"><div className="sheet__close"><IconButton label="Close guidance" onClick={() => setGuidanceOpen(false)}><X size={20} /></IconButton></div><GuidancePanel requirement={requirement} /></div></div>}
-      {evidenceEditor && <EvidenceDialog item={evidenceEditor === "new" ? undefined : evidenceEditor} onClose={() => setEvidenceEditor(null)} onSave={(item) => {
-        if (evidenceEditor === "new") addEvidence(requirement.id, item); else updateEvidence(requirement.id, item);
+      {evidenceEditor && <EvidenceDialog item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item} onClose={() => setEvidenceEditor(null)} onSave={(item) => {
+        if (evidenceEditor.mode === "new") addEvidence(requirement.id, { ...item, questionId: evidenceEditor.questionId }, user?.name); else updateEvidence(requirement.id, item, user?.name);
         setEvidenceEditor(null);
         queueSavedState();
       }} />}
       {evidenceViewer && <EvidenceViewer item={evidenceViewer} onClose={() => setEvidenceViewer(null)} />}
-      {evidenceRemoving && <ConfirmDialog eyebrow="Evidence" title={`Delete ${evidenceRemoving.title}?`} body="This evidence record will be removed from this requirement. This cannot be undone." confirmLabel="Delete evidence" cancelLabel="Keep evidence" onCancel={() => setEvidenceRemoving(null)} onConfirm={() => { removeEvidence(requirement.id, evidenceRemoving.id); queueSavedState(); setEvidenceRemoving(null); }} />}
+      {evidenceRemoving && <ConfirmDialog eyebrow="Evidence" title={`Delete ${evidenceRemoving.title}?`} body="This evidence record will be removed from this requirement. This cannot be undone." confirmLabel="Delete evidence" cancelLabel="Keep evidence" onCancel={() => setEvidenceRemoving(null)} onConfirm={() => { removeEvidence(requirement.id, evidenceRemoving.id, user?.name); queueSavedState(); setEvidenceRemoving(null); }} />}
     </div>
   );
 }

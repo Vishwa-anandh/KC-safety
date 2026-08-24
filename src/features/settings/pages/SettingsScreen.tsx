@@ -323,9 +323,9 @@ export function SupportSettings() {
   const { openHelp } = useGuidedSetup();
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Help and support" description="Find workflow guidance or contact the EHS&S support team." />
+      <PageHeader eyebrow="Personal workspace" title="Help and support" description="Find workflow guidance or contact the Maitsys Assure support team." />
       <section className="settings-card">
-        <div className="support-grid"><button type="button" onClick={openHelp}><span><BookOpen size={21} /></span><div><strong>Learning center</strong><small>Open role guidance and replay a walkthrough.</small></div></button><a href="mailto:ehss-support@example.com?subject=EHS%26S%20application%20support"><span><Mail size={21} /></span><div><strong>Contact support</strong><small>Ask for access, sign-in, or workflow assistance.</small></div></a><article><span><SlidersHorizontal size={21} /></span><div><strong>Application information</strong><small>KC EHS&S Self-Assessment · Phase 1 review build</small></div></article></div>
+        <div className="support-grid"><button type="button" onClick={openHelp}><span><BookOpen size={21} /></span><div><strong>Learning center</strong><small>Open role guidance and replay a walkthrough.</small></div></button><a href="mailto:ehss-support@example.com?subject=Maitsys%20Assure%20application%20support"><span><Mail size={21} /></span><div><strong>Contact support</strong><small>Ask for access, sign-in, or workflow assistance.</small></div></a><article><span><SlidersHorizontal size={21} /></span><div><strong>Application information</strong><small>Maitsys Assure · Phase 1 review build</small></div></article></div>
         <div className="support-note"><ShieldCheck size={19} /><div><strong>Your preferences stay with this browser</strong><span>In this review build, appearance, notifications, guided progress, and demo session details are stored locally. Production policies and access remain organization managed.</span></div></div>
       </section>
     </>

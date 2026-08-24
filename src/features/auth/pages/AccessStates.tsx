@@ -20,5 +20,5 @@ function SignOutLink() {
 }
 
 function StandaloneState({ children }: { children: React.ReactNode }) {
-  return <div className="standalone-state"><div className="standalone-state__brand"><span>KC</span><div><strong>EHS&S</strong><small>Self-Assessment</small></div></div><main>{children}</main><footer>Kimberly-Clark EHS&S Self-Assessment</footer></div>;
+  return <div className="standalone-state"><div className="standalone-state__brand"><span>KC</span><div><strong>Maitsys Assure</strong><small>Self-Assessment</small></div></div><main>{children}</main><footer>Maitsys Assure</footer></div>;
 }

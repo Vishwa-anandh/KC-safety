@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge: randomChallenge(),
-          rp: { name: "KC EHS&S" },
+          rp: { name: "Maitsys Assure" },
           user: { id: encodeText(user.id), name: user.email, displayName: user.name },
           pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
           authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
