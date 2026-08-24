@@ -158,6 +158,7 @@ export const initialRequirement: Requirement = {
       text: "Are site leadership EHS&S responsibilities documented and communicated to the people who hold them?",
       response: "partial",
       period: currentAssessmentPeriod,
+      expectedEvidence: ["Current leadership accountability matrix.", "Communication records to newly appointed leaders."],
       action: {
         description: "Refresh the leadership accountability matrix and brief all newly appointed operations leaders.",
         owner: "Maya Patel",
@@ -169,6 +170,7 @@ export const initialRequirement: Requirement = {
       text: "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?",
       response: "yes",
       period: currentAssessmentPeriod,
+      expectedEvidence: ["Recent business operating review agenda.", "EHS&S objectives tracking sheet."],
     },
     {
       id: "q-3",
@@ -176,6 +178,7 @@ export const initialRequirement: Requirement = {
       text: "Do leadership reviews consistently record decisions, action owners, and follow-up completion?",
       response: "no",
       period: currentAssessmentPeriod,
+      expectedEvidence: ["Leadership review meeting minutes.", "Action log with owners and due dates."],
       action: {
         description: "Introduce a standard action log for monthly leadership reviews and review overdue items at each meeting.",
         owner: "Daniel Brooks",
@@ -219,8 +222,8 @@ export const requirements: Requirement[] = [
     ],
     expectedEvidence: ["Current risk register.", "Approved objectives and action plan.", "Applicable obligations register."],
     questions: [
-      { id: "planning-q-1", number: "1", text: "Is the site risk and opportunity register current and approved?", response: "partial", period: currentAssessmentPeriod, action: { description: "Complete the quarterly risk review and publish the approved register.", owner: "" } },
-      { id: "planning-q-2", number: "2", text: "Are measurable EHS&S objectives connected to the highest-priority risks?", response: "yes", period: currentAssessmentPeriod },
+      { id: "planning-q-1", number: "1", text: "Is the site risk and opportunity register current and approved?", response: "partial", period: currentAssessmentPeriod, expectedEvidence: ["Current risk and opportunity register.", "Approval sign-off record."], action: { description: "Complete the quarterly risk review and publish the approved register.", owner: "" } },
+      { id: "planning-q-2", number: "2", text: "Are measurable EHS&S objectives connected to the highest-priority risks?", response: "yes", period: currentAssessmentPeriod, expectedEvidence: ["Approved EHS&S objectives.", "Risk-to-objective traceability record."] },
     ],
     evidence: [],
   },
@@ -251,8 +254,8 @@ export const requirements: Requirement[] = [
     guidance: ["Define when a change review is required.", "Include affected workers and technical specialists.", "Verify controls before the change is released."],
     expectedEvidence: ["Approved change requests.", "Pre-startup safety review records.", "Worker communication records."],
     questions: [
-      { id: "operation-q-1", number: "1", text: "Are operational changes reviewed for EHS&S risk before implementation?", response: "no", period: currentAssessmentPeriod, action: { description: "", owner: "" } },
-      { id: "operation-q-2", number: "2", text: "Are temporary changes tracked through closure or permanent approval?", response: null, period: currentAssessmentPeriod },
+      { id: "operation-q-1", number: "1", text: "Are operational changes reviewed for EHS&S risk before implementation?", response: "no", period: currentAssessmentPeriod, expectedEvidence: ["Change request form.", "Pre-implementation risk review record."], action: { description: "", owner: "" } },
+      { id: "operation-q-2", number: "2", text: "Are temporary changes tracked through closure or permanent approval?", response: null, period: currentAssessmentPeriod, expectedEvidence: ["Temporary change tracking log.", "Closure or permanent approval record."] },
     ],
     evidence: [],
   },
@@ -299,8 +302,8 @@ export const requirements: Requirement[] = [
     guidance: ["Maintain a machine inventory.", "Document safeguarding assessments.", "Verify safeguards after maintenance or modification."],
     expectedEvidence: ["Machine safeguarding assessment.", "Guard inspection records.", "Corrective action records."],
     questions: [
-      { id: "machine-q-1", number: "1", text: "Are safeguarding assessments current for machines in scope?", response: "no", period: currentAssessmentPeriod, action: { description: "Complete overdue safeguarding assessments for Line 4.", owner: "Elena Garcia" } },
-      { id: "machine-q-2", number: "2", text: "Are safeguard inspections recorded at the required frequency?", response: "yes", period: currentAssessmentPeriod },
+      { id: "machine-q-1", number: "1", text: "Are safeguarding assessments current for machines in scope?", response: "no", period: currentAssessmentPeriod, expectedEvidence: ["Machine safeguarding assessment.", "Machine inventory list."], action: { description: "Complete overdue safeguarding assessments for Line 4.", owner: "Elena Garcia" } },
+      { id: "machine-q-2", number: "2", text: "Are safeguard inspections recorded at the required frequency?", response: "yes", period: currentAssessmentPeriod, expectedEvidence: ["Guard inspection log.", "Inspection frequency schedule."] },
     ],
     evidence: [],
   },
@@ -315,8 +318,8 @@ export const requirements: Requirement[] = [
     guidance: ["Maintain a current exposure inventory.", "Use qualified assessors and validated methods.", "Communicate results and required controls to affected workers."],
     expectedEvidence: ["Exposure inventory.", "Sampling reports.", "Worker communication and control verification."],
     questions: [
-      { id: "occupational-q-1", number: "1", text: "Is the occupational exposure inventory current?", response: "yes", period: currentAssessmentPeriod },
-      { id: "occupational-q-2", number: "2", text: "Are exposure assessments current for all priority similar exposure groups?", response: null, period: currentAssessmentPeriod },
+      { id: "occupational-q-1", number: "1", text: "Is the occupational exposure inventory current?", response: "yes", period: currentAssessmentPeriod, expectedEvidence: ["Current exposure inventory.", "Similar exposure group list."] },
+      { id: "occupational-q-2", number: "2", text: "Are exposure assessments current for all priority similar exposure groups?", response: null, period: currentAssessmentPeriod, expectedEvidence: ["Sampling reports.", "Exposure assessment schedule."] },
     ],
     evidence: [],
   },
@@ -467,11 +470,42 @@ export const dashboardSites: DashboardSite[] = [
 ];
 
 export const masterRequirements: MasterRequirement[] = [
-  { id: "OS 1.2.1", title: "Leadership commitment and accountability", section: "Leadership & Engagement", version: "v4", status: "Published", siteIds: [] },
-  { id: "OS 2.1.3", title: "Risks, opportunities, and planning controls", section: "Planning", version: "v4", status: "Published", siteIds: [] },
-  { id: "OS 4.3.2", title: "Management of operational change", section: "Operation", version: "v3", status: "Published", siteIds: [] },
-  { id: "PS 7.2.1", title: "Machine safeguarding verification", section: "Machine Safety", version: "v2", status: "Draft", siteIds: [] },
-  { id: "OH 3.1.4", title: "Occupational exposure assessment", section: "Occupational Health", version: "v2", status: "Published", siteIds: [] },
+  {
+    id: "OS 1.2.1", title: "Leadership commitment and accountability", section: "Leadership & Engagement", version: "v4", status: "Published", siteIds: [],
+    questions: [
+      { id: "q-1", number: "1", text: "Are site leadership EHS&S responsibilities documented and communicated to the people who hold them?", expectedEvidence: ["Current leadership accountability matrix.", "Communication records to newly appointed leaders."] },
+      { id: "q-2", number: "2", text: "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?", expectedEvidence: ["Recent business operating review agenda.", "EHS&S objectives tracking sheet."] },
+      { id: "q-3", number: "3", text: "Do leadership reviews consistently record decisions, action owners, and follow-up completion?", expectedEvidence: ["Leadership review meeting minutes.", "Action log with owners and due dates."] },
+    ],
+  },
+  {
+    id: "OS 2.1.3", title: "Risks, opportunities, and planning controls", section: "Planning", version: "v4", status: "Published", siteIds: [],
+    questions: [
+      { id: "planning-q-1", number: "1", text: "Is the site risk and opportunity register current and approved?", expectedEvidence: ["Current risk and opportunity register.", "Approval sign-off record."] },
+      { id: "planning-q-2", number: "2", text: "Are measurable EHS&S objectives connected to the highest-priority risks?", expectedEvidence: ["Approved EHS&S objectives.", "Risk-to-objective traceability record."] },
+    ],
+  },
+  {
+    id: "OS 4.3.2", title: "Management of operational change", section: "Operation", version: "v3", status: "Published", siteIds: [],
+    questions: [
+      { id: "operation-q-1", number: "1", text: "Are operational changes reviewed for EHS&S risk before implementation?", expectedEvidence: ["Change request form.", "Pre-implementation risk review record."] },
+      { id: "operation-q-2", number: "2", text: "Are temporary changes tracked through closure or permanent approval?", expectedEvidence: ["Temporary change tracking log.", "Closure or permanent approval record."] },
+    ],
+  },
+  {
+    id: "PS 7.2.1", title: "Machine safeguarding verification", section: "Machine Safety", version: "v2", status: "Draft", siteIds: [],
+    questions: [
+      { id: "machine-q-1", number: "1", text: "Are safeguarding assessments current for machines in scope?", expectedEvidence: ["Machine safeguarding assessment.", "Machine inventory list."] },
+      { id: "machine-q-2", number: "2", text: "Are safeguard inspections recorded at the required frequency?", expectedEvidence: ["Guard inspection log.", "Inspection frequency schedule."] },
+    ],
+  },
+  {
+    id: "OH 3.1.4", title: "Occupational exposure assessment", section: "Occupational Health", version: "v2", status: "Published", siteIds: [],
+    questions: [
+      { id: "occupational-q-1", number: "1", text: "Is the occupational exposure inventory current?", expectedEvidence: ["Current exposure inventory.", "Similar exposure group list."] },
+      { id: "occupational-q-2", number: "2", text: "Are exposure assessments current for all priority similar exposure groups?", expectedEvidence: ["Sampling reports.", "Exposure assessment schedule."] },
+    ],
+  },
 ];
 
 export function performanceForResponse(response: ResponseValue): Performance {

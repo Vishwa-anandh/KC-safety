@@ -221,6 +221,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
       status: "Draft",
       siteIds,
       importBatchId: batchId,
+      questions: [],
     }));
     const updateCandidateIds = state.masterRequirements.slice(0, 2).map((requirement) => requirement.id);
     const record: ImportHistoryRecord = {

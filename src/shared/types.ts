@@ -56,6 +56,7 @@ export interface AssessmentQuestion {
   response: ResponseValue;
   period: AssessmentPeriod;
   action?: ActionItem;
+  expectedEvidence?: string[];
 }
 
 export interface Requirement {
@@ -111,6 +112,13 @@ export interface SiteContacts {
   regionalOccupationalHealthEmail: string;
 }
 
+export interface MasterQuestion {
+  id: string;
+  number: string;
+  text: string;
+  expectedEvidence: string[];
+}
+
 export interface MasterRequirement {
   id: string;
   title: string;
@@ -119,6 +127,7 @@ export interface MasterRequirement {
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;
+  questions: MasterQuestion[];
 }
 
 /** Mirrors UserRole in GuidedSetup.tsx. Declared here rather than imported so this module

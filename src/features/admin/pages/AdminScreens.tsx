@@ -342,7 +342,7 @@ export function AdminImportsScreen() {
 }
 
 function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { item?: MasterRequirement; sections: string[]; siteOptions: ReturnType<typeof buildSiteOptions>; onClose: () => void; onSave: (item: MasterRequirement) => void }) {
-  const [draft, setDraft] = useState<MasterRequirement>(item ?? { id: "", title: "", section: sections[0] ?? "", version: "v1", status: "Draft", siteIds: [] });
+  const [draft, setDraft] = useState<MasterRequirement>(item ?? { id: "", title: "", section: sections[0] ?? "", version: "v1", status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
   const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()));
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
