@@ -210,6 +210,10 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
       masterRequirements: current.masterRequirements.map((record) => record.id === requirement.id ? requirement : record),
       requirements: current.requirements.map((liveRequirement) => {
         if (liveRequirement.number !== requirement.id) return liveRequirement;
+        // A master record with no questions defined means "not yet authored here", not "delete
+        // every question" — skip reconciliation entirely so the live requirement's existing
+        // questions (and any recorded responses) are left untouched.
+        if (requirement.questions.length === 0) return liveRequirement;
         const keptQuestions = liveRequirement.questions
           .filter((question) => requirement.questions.some((masterQuestion) => masterQuestion.id === question.id))
           .map((question) => {
@@ -240,7 +244,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     // derives from `current` inside `touch`, matching this file's usual pattern.
     const sectionPool = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation"];
     const createdRows: MasterRequirement[] = Array.from({ length: 4 }, (_, index) => ({
-      id: `OS ${5 + index}.1.${index + 1}`,
+      id: `OS ${20 + index}.1.${index + 1}`,
       title: `Imported requirement ${index + 1} from ${fileName}`,
       section: sectionPool[index % sectionPool.length],
       version: "v1",

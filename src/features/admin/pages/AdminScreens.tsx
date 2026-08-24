@@ -422,7 +422,7 @@ function RequirementDialog({ item, sections, siteOptions, onClose, onSave }: { i
         title: draft.title.trim(),
         section: draft.section.trim(),
         version: draft.version.trim(),
-        questions: draft.questions.map((question) => ({ ...question, text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
+        questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
       });
     }}>{item ? "Save changes" : "Add requirement"}</Button></div>
   </section></div>;

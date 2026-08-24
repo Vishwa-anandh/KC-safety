@@ -47,7 +47,7 @@ function restoreSnapshot(): AppSnapshot {
         : fallback.requirements,
       ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : fallback.ownerRecords,
       masterRequirements: parsed.masterRequirements?.length
-        ? parsed.masterRequirements.map((requirement) => ({ ...requirement, siteIds: requirement.siteIds ?? [] }))
+        ? parsed.masterRequirements.map((requirement) => ({ ...requirement, siteIds: requirement.siteIds ?? [], questions: requirement.questions ?? [] }))
         : fallback.masterRequirements,
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
       siteUsers: parsed.siteUsers ?? fallback.siteUsers,
