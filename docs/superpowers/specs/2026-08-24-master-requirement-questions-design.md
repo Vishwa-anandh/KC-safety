@@ -90,22 +90,30 @@ export interface AssessmentQuestion {
   response: ResponseValue;
   period: AssessmentPeriod;
   action?: ActionItem;
-  expectedEvidence: string[]; // NEW
+  expectedEvidence?: string[]; // NEW — optional, see rationale below
 }
 ```
 
 `MasterQuestion` and `AssessmentQuestion` share the same shape for
 `id`/`number`/`text`/`expectedEvidence` by design — the sync logic below
-copies these fields directly between them.
+copies these fields directly between them. `MasterQuestion.expectedEvidence`
+is required (it's a brand-new type with no legacy data). On
+`AssessmentQuestion` it must be **optional**: `src/demo/fixtures/performance-standards.ts`
+is included in the TypeScript build (`tsconfig.app.json` includes all of
+`src`) even though nothing in `src` imports it, and it contains 475
+`AssessmentQuestion`-shaped literals. A required field would force editing
+all 475 for no behavioral benefit. Every read site must treat a missing
+value as empty, never assume it's present.
 
 **Fixture updates:** `src/demo/fixtures/assessment.ts` needs every seeded
 `masterRequirements` entry to gain a `questions` array whose `id`s match its
 paired `Requirement.questions[].id` (e.g. `"planning-q-1"`,
-`"planning-q-2"`) 1:1, each carrying a plausible `expectedEvidence` list.
-Every seeded `AssessmentQuestion` needs an `expectedEvidence` array added
-(can be `[]` where a sensible default isn't obvious). This keeps the demo
-data internally consistent from first load, rather than only after an
-admin's first edit.
+`"planning-q-2"`) 1:1, each carrying a plausible `expectedEvidence` list. The
+corresponding seeded `AssessmentQuestion` for each of those needs a matching
+`expectedEvidence` array added, so the demo data is internally consistent
+from first load rather than only after an admin's first edit. Questions with
+no paired `MasterRequirement` in the current seed data are left without the
+field (it's optional — see above).
 
 ## Sync (reconciliation) logic
 
@@ -166,7 +174,8 @@ No changes to the "Add requirement" flow's fields.
 ## Assessment-side display
 
 A new **"Evidence required"** list renders under the question text —
-rendered only when `question.expectedEvidence.length > 0` — in:
+rendered only when `question.expectedEvidence` is non-empty (it's optional,
+so a missing value counts as none) — in:
 
 - `src/features/assessment/pages/RequirementWorkspace.tsx` — the
   contributor's editable question card.
