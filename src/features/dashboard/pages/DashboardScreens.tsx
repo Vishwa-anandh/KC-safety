@@ -10,6 +10,7 @@ import {
   FilterX,
 
   MapPin,
+  Paperclip,
   RefreshCw,
   Search,
   Target,
@@ -185,6 +186,12 @@ export function SiteSectionDetailScreen() {
                   <div><p>Question {question.number}</p><h3>{question.text}</h3></div>
                   <PerformanceBadge performance={performanceForResponse(question.response)} compact />
                 </div>
+                {Boolean(question.expectedEvidence?.length) && (
+                  <div className="question-evidence">
+                    <span className="question-evidence__title"><Paperclip size={14} /> Evidence required</span>
+                    <ul>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
+                  </div>
+                )}
                 <div className="readonly-response">
                   <span>Response</span>
                   <span className={cx("response-chip", `response-chip--${question.response ?? "none"}`)}>{responseLabel(question.response)}</span>
