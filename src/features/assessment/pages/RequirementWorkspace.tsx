@@ -345,6 +345,12 @@ export default function RequirementWorkspace() {
               {requirement.questions.map((question) => (
                 <article className="question-card" key={question.id} id={`question-${question.id}`}>
                   <div className="question-card__header"><span className="question-number">{question.number}</span><div><p>Question {question.number}</p><h3>{question.text}</h3></div><PerformanceBadge performance={performanceForResponse(question.response)} compact /></div>
+                  {Boolean(question.expectedEvidence?.length) && (
+                    <div className="question-evidence">
+                      <span className="question-evidence__title"><Paperclip size={14} /> Evidence required</span>
+                      <ul>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
+                    </div>
+                  )}
                   <ResponseSelector questionId={question.id} value={question.response} onChange={(response) => changeQuestion(question.id, { response })} />
                   <ActionEditor action={question.action} response={question.response} onChange={(action) => changeQuestion(question.id, { action })} />
                 </article>
