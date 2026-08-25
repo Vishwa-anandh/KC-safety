@@ -241,10 +241,10 @@ function QuestionEvidenceAttachments({
   );
 }
 
-function GuidancePanel({ requirement }: { requirement: Requirement }) {
+function GuidancePanel({ requirement, onCollapse }: { requirement: Requirement; onCollapse?: () => void }) {
   return (
     <aside className="guidance-panel">
-      <div className="guidance-panel__top"><div><p className="eyebrow">Read-only master content</p><h2>How to meet</h2></div><BookOpen size={20} /></div>
+      <div className="guidance-panel__top"><div><p className="eyebrow">Read-only master content</p><h2>How to meet</h2></div><div className="guidance-panel__top-actions"><BookOpen size={20} />{onCollapse && <IconButton label="Minimize guidance panel" onClick={onCollapse}><ChevronRight size={18} /></IconButton>}</div></div>
       <ul className="guidance-list">{requirement.guidance.map((item) => <li key={item}>{item}</li>)}</ul>
       <div className="expected-evidence">
         <div className="expected-evidence__title"><Paperclip size={18} /><h3>Expected evidence</h3></div>
@@ -341,6 +341,7 @@ export default function RequirementWorkspace() {
   const [saveState, setSaveState] = useState<"saving" | "saved" | "failed" | "attention">("saved");
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [guidanceOpen, setGuidanceOpen] = useState(false);
+  const [guidanceMinimized, setGuidanceMinimized] = useState(true);
   const [evidenceEditor, setEvidenceEditor] = useState<{ mode: "new"; questionId: string } | { mode: "edit"; item: EvidenceItem } | null>(null);
   const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
   const [evidenceRemoving, setEvidenceRemoving] = useState<EvidenceItem | null>(null);
@@ -382,7 +383,7 @@ export default function RequirementWorkspace() {
         <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
         <Button variant="secondary" icon={<BookOpen size={18} />} onClick={() => setGuidanceOpen(true)}>Guidance</Button>
       </div>
-      <div className="requirement-layout">
+      <div className={cx("requirement-layout", guidanceMinimized && "requirement-layout--guidance-minimized")}>
         <div className="requirement-layout__navigator"><AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} /></div>
         <div className="requirement-main">
           <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/assessment">Self-assessment</Link><ChevronRight size={15} /><span>{requirement.sectionName}</span><ChevronRight size={15} /><span aria-current="page">{requirement.number}</span></nav>
@@ -418,7 +419,11 @@ export default function RequirementWorkspace() {
             <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button></div>
           </footer>
         </div>
-        <div className="requirement-layout__guidance"><GuidancePanel requirement={requirement} /></div>
+        <div className={cx("requirement-layout__guidance", guidanceMinimized && "requirement-layout__guidance--minimized")}>
+          {guidanceMinimized
+            ? <button type="button" className="guidance-panel-restore" onClick={() => setGuidanceMinimized(false)} aria-label="Expand guidance panel"><BookOpen size={19} /><span>Guidance</span><ChevronRight size={17} /></button>
+            : <GuidancePanel requirement={requirement} onCollapse={() => setGuidanceMinimized(true)} />}
+        </div>
       </div>
       {navigatorOpen && <div className="sheet-layer"><button className="sheet-backdrop" aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} /><div className="sheet sheet--left"><AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} /></div></div>}
       {guidanceOpen && <div className="sheet-layer"><button className="sheet-backdrop" aria-label="Close guidance" onClick={() => setGuidanceOpen(false)} /><div className="sheet sheet--right"><div className="sheet__close"><IconButton label="Close guidance" onClick={() => setGuidanceOpen(false)}><X size={20} /></IconButton></div><GuidancePanel requirement={requirement} /></div></div>}

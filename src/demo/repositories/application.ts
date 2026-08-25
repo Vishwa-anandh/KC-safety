@@ -12,9 +12,60 @@ import {
 } from "../fixtures/assessment";
 import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts";
 import { createdRequirementAuditChanges } from "../../shared/domain/requirement-audit";
-import type { MasterRequirement, RequirementAuditEntry } from "../../shared/types";
+import type { ActionItem, AssessmentHistoryEntry, AssessmentQuestion, EvidenceItem, MasterRequirement, RequirementAuditEntry } from "../../shared/types";
 
 const STORAGE_KEY = "ehss-phase-one-state-v1";
+
+function seededQuestionHistory(question: AssessmentQuestion, action: ActionItem | undefined, evidence: EvidenceItem[]): AssessmentHistoryEntry[] {
+  if (!question.response) return [];
+  const responseAt = new Date(question.respondedAt ?? "2026-08-01T09:00:00.000Z").getTime();
+  const timestamp = (daysAfterResponse: number, hoursAfterResponse = 0, minutesAfterResponse = 0) => new Date(responseAt + ((daysAfterResponse * 24 + hoursAfterResponse) * 60 + minutesAfterResponse) * 60 * 1000).toISOString();
+  const responseActor = question.respondedBy ?? "Maya Patel";
+  const initialResponse = !action && !evidence.length && question.response === "yes" ? "partial" : question.response;
+  const entries: AssessmentHistoryEntry[] = [{
+    id: `${question.id}-demo-response-recorded`,
+    event: "Response recorded",
+    recordedAt: timestamp(0),
+    recordedBy: responseActor,
+    response: initialResponse,
+    evidence: [],
+  }];
+
+  if (action) {
+    entries.push({
+      id: `${question.id}-demo-action-added`,
+      event: "Action added",
+      recordedAt: timestamp(2, 3, 30),
+      recordedBy: action.createdBy ?? responseActor,
+      response: question.response,
+      action: { ...action },
+      evidence: [],
+    });
+  }
+
+  if (evidence.length) {
+    entries.push({
+      id: `${question.id}-demo-evidence-added`,
+      event: "Evidence added",
+      recordedAt: action ? timestamp(4, 7, 15) : timestamp(2, 4, 20),
+      recordedBy: evidence.at(-1)?.uploadedBy ?? responseActor,
+      response: question.response,
+      action: action ? { ...action } : undefined,
+      evidence: evidence.map((item) => ({ ...item })),
+    });
+  } else if (!action) {
+    entries.push({
+      id: `${question.id}-demo-response-changed`,
+      event: "Response changed",
+      recordedAt: timestamp(2, 5, 45),
+      recordedBy: responseActor,
+      response: question.response,
+      evidence: [],
+    });
+  }
+
+  return entries;
+}
 
 function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
   return records.map((requirement) => ({
@@ -37,15 +88,13 @@ function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
         updatedBy: action.updatedBy ?? "Maya Patel",
       } : undefined;
       const evidence = requirement.evidence.filter((item) => item.questionId === question.id).map((item) => ({ ...item }));
-      const history = question.history?.length ? question.history : question.response ? [{
-        id: `${question.id}-seed-response`,
-        event: "Response recorded" as const,
-        recordedAt: question.respondedAt ?? "2026-08-01T09:00:00.000Z",
-        recordedBy: question.respondedBy ?? "Maya Patel",
-        response: question.response,
-        action: normalizedAction ? { ...normalizedAction } : undefined,
-        evidence,
-      }] : [];
+      const existingHistory = question.history ?? [];
+      const isGeneratedEntry = (entry: AssessmentHistoryEntry) => entry.id === `${question.id}-seed-response` || entry.id.startsWith(`${question.id}-demo-`);
+      const hasGeneratedHistory = existingHistory.some(isGeneratedEntry);
+      const recordedHistory = existingHistory.filter((entry) => !isGeneratedEntry(entry));
+      const history = question.response && (!existingHistory.length || hasGeneratedHistory)
+        ? [...seededQuestionHistory(question, normalizedAction, evidence), ...recordedHistory]
+        : existingHistory;
       return {
         ...question,
         ...responseHistory,

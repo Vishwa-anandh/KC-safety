@@ -7,13 +7,16 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   ClipboardCheck,
+  Clock3,
   FileWarning,
   Filter,
   Mail,
   MapPin,
+  Paperclip,
   Pencil,
   Save,
   Search,
@@ -24,7 +27,7 @@ import {
 import { Link } from "react-router-dom";
 import { useSites } from "../model/useSites";
 import { useAuth } from "../../auth";
-import { actionComplete, assessmentPeriods } from "../../../shared/domain/assessment";
+import { actionComplete, assessmentPeriods, responseLabel } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
 import type { ActionItem, AssessmentPeriod, AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
 import { Button, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
@@ -307,69 +310,125 @@ function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => vo
   </section></div>;
 }
 
+interface QuestionHistoryRow { requirement: Requirement; question: AssessmentQuestion }
+
+function QuestionHistoryTimeline({ question }: { question: AssessmentQuestion }) {
+  const entries = [...(question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
+  return (
+    <ol className="response-history__timeline actions-response-history__timeline">
+      {entries.map((entry) => (
+        <li key={entry.id} className="response-history__entry">
+          <span className="response-history__marker" />
+          <div className="response-history__entry-card">
+            <div className="response-history__entry-header">
+              <div><strong>{entry.event}</strong><span>{entry.recordedBy} · {new Date(entry.recordedAt).toLocaleString()}</span></div>
+            </div>
+            <div className="response-history__response"><span>Response</span><span className={cx("response-chip", `response-chip--${entry.response ?? "none"}`)}>{responseLabel(entry.response)}</span></div>
+            {entry.action && <div className="response-history__action"><strong>Corrective action</strong><p>{entry.action.description || "No action description added."}</p><div><span>Owner · {entry.action.owner || "Not assigned"}</span><span>Status · {entry.action.status ?? "Open"}</span><span>Follow-up · {entry.action.followUp || "Not added"}</span></div></div>}
+            <div className="response-history__evidence"><Paperclip size={14} /><span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>{entry.evidence.length > 0 && <ul>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}</div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function QuestionHistoryCard({ row }: { row: QuestionHistoryRow }) {
+  const [open, setOpen] = useState(false);
+  const entries = [...(row.question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
+  const detailsId = `site-question-history-${row.question.id}`;
+  return (
+    <article className={cx("actions-response-history", open && "actions-response-history--open")}>
+      <header className="actions-response-history__header">
+        <div className="actions-response-history__identity">
+          <span className="actions-response-history__number">Q{row.question.number}</span>
+          <div>
+            <Link to={requirementRoute(row.requirement)}>{row.requirement.number} · Question {row.question.number}<ArrowRight size={14} /></Link>
+            <h3>{row.question.text}</h3>
+            <span>{row.requirement.sectionName} · {row.question.period}</span>
+          </div>
+        </div>
+        <div className="actions-response-history__current"><span>Current response</span><span className={cx("response-chip", `response-chip--${row.question.response ?? "none"}`)}>{responseLabel(row.question.response)}</span></div>
+        <button
+          type="button"
+          className="actions-response-history__toggle"
+          disabled={!entries.length}
+          aria-expanded={entries.length ? open : false}
+          aria-controls={entries.length ? detailsId : undefined}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span><Clock3 size={15} />{entries.length ? `${entries.length} ${entries.length === 1 ? "event" : "events"}` : "No history"}</span>
+          {entries.length > 0 && <ChevronDown size={16} className={cx(open && "is-open")} />}
+        </button>
+      </header>
+      {entries.length === 0 && <p className="actions-response-history__empty">No response or question activity has been recorded yet.</p>}
+      {open && <div id={detailsId} className="actions-response-history__details"><QuestionHistoryTimeline question={row.question} /></div>}
+    </article>
+  );
+}
+
 export function ActionsScreen() {
   const { requirements, updateQuestion } = useSites();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<"actions" | "history">("actions");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "Open" | "In progress" | "Complete">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
   const [period, setPeriod] = useState<"all" | AssessmentPeriod>("all");
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historyResponse, setHistoryResponse] = useState<"all" | "unanswered" | "no" | "partial" | "yes">("all");
+  const [historyPeriod, setHistoryPeriod] = useState<"all" | AssessmentPeriod>("all");
   const [editing, setEditing] = useState<GapRow | null>(null);
   const [saved, setSaved] = useState(false);
   const actions = useMemo(() => requirements.flatMap((requirement) => requirement.questions.filter((question) => question.response === "no" || question.response === "partial").map((question) => ({ requirement, question }))), [requirements]);
+  const historyRows = useMemo<QuestionHistoryRow[]>(() => requirements.flatMap((requirement) => requirement.questions.map((question) => ({ requirement, question }))), [requirements]);
   const complete = actions.filter(({ question }) => (question.action?.status ?? "Open") === "Complete").length;
   const filtered = actions.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""} ${question.action?.followUp ?? ""}`.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (status === "all" || (question.action?.status ?? "Open") === status) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
   });
+  const filteredHistoryRows = historyRows.filter(({ requirement, question }) => {
+    const matchesQuery = `${requirement.number} ${requirement.title} ${requirement.sectionName} ${question.number} ${question.text} ${(question.history ?? []).map((entry) => `${entry.event} ${entry.recordedBy}`).join(" ")}`.toLowerCase().includes(historyQuery.toLowerCase());
+    const matchesResponse = historyResponse === "all" || (historyResponse === "unanswered" ? !question.response : question.response === historyResponse);
+    return matchesQuery && matchesResponse && (historyPeriod === "all" || question.period === historyPeriod);
+  });
+  const historyEventCount = filteredHistoryRows.reduce((total, row) => total + (row.question.history?.length ?? 0), 0);
   return (
-    <div className="page-container">
-      <PageHeader eyebrow="Site workspace" title="Actions summary" description="Track corrective actions automatically created from No and Partial assessment responses." />
+    <div className="page-container actions-summary-page">
+      <PageHeader eyebrow="Site workspace" title="Actions summary" description="Track corrective actions and review question-level response history for your assigned site." />
       {saved && <InlineMessage tone="success" title="Corrective action saved">The Actions summary and assessment requirement are now synchronized.</InlineMessage>}
-      <div className="metrics-grid metrics-grid--three">
-        <MetricCard label="Total gaps" value={actions.length} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" />
-        <MetricCard label="Completed actions" value={complete} detail="Marked complete by the action owner" icon={<CheckCircle2 size={21} />} tone="success" />
-        <MetricCard label="Open actions" value={actions.length - complete} detail="Open or in progress" icon={<FileWarning size={21} />} tone="warning" />
+      <div className="actions-summary-tabs" role="tablist" aria-label="Actions summary views">
+        <button id="actions-tab" type="button" role="tab" aria-selected={activeTab === "actions"} aria-controls="actions-panel" onClick={() => setActiveTab("actions")}><CircleAlert size={17} /><span>Corrective actions</span><small>{actions.length}</small></button>
+        <button id="response-history-tab" type="button" role="tab" aria-selected={activeTab === "history"} aria-controls="response-history-panel" onClick={() => setActiveTab("history")}><Clock3 size={17} /><span>Response history</span><small>{historyRows.reduce((total, row) => total + (row.question.history?.length ?? 0), 0)}</small></button>
       </div>
-      <section className="table-card">
-        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><span>{filtered.length} of {actions.length} shown</span></div>
-        <div className="filter-row" data-tour="actions-filters">
-          <label className="search-control"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label>
-          <Select
-            label="Filter action status"
-            icon={<Filter size={17} />}
-            value={status}
-            onChange={(value) => setStatus(value as typeof status)}
-            options={[
-              { value: "all", label: "All action states" },
-              { value: "Open", label: "Open" },
-              { value: "In progress", label: "In progress" },
-              { value: "Complete", label: "Complete" },
-            ]}
-          />
-          <Select
-            label="Filter response"
-            value={response}
-            onChange={(value) => setResponse(value as typeof response)}
-            options={[
-              { value: "all", label: "No and Partial" },
-              { value: "no", label: "No only" },
-              { value: "partial", label: "Partial only" },
-            ]}
-          />
-          <Select
-            label="Filter assessment period"
-            icon={<CalendarClock size={17} />}
-            value={period}
-            onChange={(value) => setPeriod(value as typeof period)}
-            options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]}
-          />
+      {activeTab === "actions" ? <div id="actions-panel" role="tabpanel" aria-labelledby="actions-tab">
+        <div className="metrics-grid metrics-grid--three">
+          <MetricCard label="Total gaps" value={actions.length} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" />
+          <MetricCard label="Completed actions" value={complete} detail="Marked complete by the action owner" icon={<CheckCircle2 size={21} />} tone="success" />
+          <MetricCard label="Open actions" value={actions.length - complete} detail="Open or in progress" icon={<FileWarning size={21} />} tone="warning" />
         </div>
-        {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th>Follow-up</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {
-          const actionStatus = question.action?.status ?? "Open";
-          return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description not added</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner not assigned</span>}</td><td data-label="Status"><span className={cx("detail-status", actionStatus === "Complete" ? "detail-status--complete" : "detail-status--missing")}>{actionStatus}</span></td><td data-label="Follow-up">{question.action?.followUp || <span className="missing-value">No follow-up added</span>}</td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;
-        })}</tbody></table></div> : <EmptyState icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
-      </section>
+        <section className="table-card">
+          <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Current site</p><h2>Corrective actions</h2></div><span>{filtered.length} of {actions.length} shown</span></div>
+          <div className="filter-row" data-tour="actions-filters">
+            <label className="search-control"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label>
+            <Select label="Filter action status" icon={<Filter size={17} />} value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "all", label: "All action states" }, { value: "Open", label: "Open" }, { value: "In progress", label: "In progress" }, { value: "Complete", label: "Complete" }]} />
+            <Select label="Filter response" value={response} onChange={(value) => setResponse(value as typeof response)} options={[{ value: "all", label: "No and Partial" }, { value: "no", label: "No only" }, { value: "partial", label: "Partial only" }]} />
+            <Select label="Filter assessment period" icon={<CalendarClock size={17} />} value={period} onChange={(value) => setPeriod(value as typeof period)} options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]} />
+          </div>
+          {filtered.length ? <div className="data-table-wrap" data-tour="actions-table"><table className="data-table"><thead><tr><th>Requirement</th><th>Response</th><th>Action description</th><th>Owner</th><th>Status</th><th>Follow-up</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filtered.map(({ requirement, question }) => {
+            const actionStatus = question.action?.status ?? "Open";
+            return <tr key={question.id}><td data-label="Requirement"><strong>{requirement.number} · Question {question.number}</strong><span>{requirement.title}</span></td><td data-label="Response"><span className={cx("response-chip", `response-chip--${question.response}`)}>{question.response === "no" ? "No" : "Partial"}</span></td><td data-label="Action">{question.action?.description || <span className="missing-value">Description not added</span>}</td><td data-label="Owner">{question.action?.owner ? <span className="person-inline"><span className="avatar avatar--tiny">{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className="missing-value">Owner not assigned</span>}</td><td data-label="Status"><span className={cx("detail-status", actionStatus === "Complete" ? "detail-status--complete" : "detail-status--missing")}>{actionStatus}</span></td><td data-label="Follow-up">{question.action?.followUp || <span className="missing-value">No follow-up added</span>}</td><td data-label="Actions"><div className="table-row-actions"><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className="table-action" to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td></tr>;
+          })}</tbody></table></div> : <EmptyState icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
+        </section>
+      </div> : <section id="response-history-panel" role="tabpanel" aria-labelledby="response-history-tab" className="table-card actions-response-history-panel">
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Current site</p><h2>Question response history</h2></div><span>{filteredHistoryRows.length} of {historyRows.length} questions · {historyEventCount} recorded events</span></div>
+        <div className="filter-row actions-response-history__filters">
+          <label className="search-control"><Search size={17} /><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="Search requirement, question, or contributor" /></label>
+          <Select label="Filter current response" value={historyResponse} onChange={(value) => setHistoryResponse(value as typeof historyResponse)} options={[{ value: "all", label: "All responses" }, { value: "unanswered", label: "Not answered" }, { value: "no", label: "No" }, { value: "partial", label: "Partial" }, { value: "yes", label: "Yes" }]} />
+          <Select label="Filter assessment period" icon={<CalendarClock size={17} />} value={historyPeriod} onChange={(value) => setHistoryPeriod(value as typeof historyPeriod)} options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]} />
+        </div>
+        {filteredHistoryRows.length ? <div className="actions-response-history-list">{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} />)}</div> : <EmptyState icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
+      </section>}
       {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
         updateQuestion(editing.requirement.id, editing.question.id, { action }, user?.name);
         setEditing(null); setSaved(true);
