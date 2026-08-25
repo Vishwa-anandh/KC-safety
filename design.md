@@ -826,8 +826,10 @@ Evidence rules:
 | `CompletionOverview` | Sites complete/in progress/not started |
 | `PerformanceDistribution` | Initial/Emerging/Performing/Not assessed distribution |
 | `SitePerformanceRow` | Site, completion, overall performance, last update, gap count, view action |
-| `SiteDrilldownHeader` | Site identity, read-only/edit mode, return to filtered dashboard |
-| `SectionDrilldownTable` | Section/standard completion and performance |
+| `SiteDrilldownHeader` | Site identity, return to filtered dashboard, assessment export, and admin site-management shortcut |
+| `AssessmentSnapshot` | Completion, response coverage, performance, open gaps, last update, and highest-priority assessment area |
+| `SectionDrilldownTable` | Assessment-first list of OS sections and performance standards with attention/complete filters and question-level navigation |
+| `SiteContextDisclosure` | Collapsed secondary area for assigned users and contacts so it does not displace assessment details |
 | `ExportStatus` | Preparing, ready, failed, retry; audit-friendly timestamp |
 | `ProvisionalDataNotice` | Used when calculations or imported data are draft/provisional |
 
@@ -843,8 +845,9 @@ Evidence rules:
 | `ImportDryRunResult` | Create/update/unchanged/conflict totals before commitment |
 | `ImportConfirmation` | Scope, consequences, actor, timestamp, explicit confirmation |
 | `ImportResult` | Completed/partial/failed, audit ID, retry/remediation links |
-| `MasterRequirementTable` | Search/filter requirements, versions, status, edit action |
-| `MasterRequirementEditor` | Requirement, guidance, expected evidence, hierarchy, version note |
+| `MasterRequirementTable` | Search/filter requirements, status, and edit action |
+| `MasterRequirementEditor` | Requirement, questions, expected evidence, hierarchy, publishing state |
+| `RequirementAuditLog` | Separate Administration tab with a connected chronological timeline covering added, edited, removed, deleted, imported, and published requirement activity; includes requirement/change-area search, export, and links back to current records |
 | `SiteMasterTable` | Governed site identities and hierarchy |
 | `AccessScopeTable` | User/role/scope if authorization is app-managed |
 | `AuditEntry` | Actor, action, entity, before/after summary, time, correlation ID |
@@ -942,9 +945,10 @@ There is no multiple-site selection screen.
 
 - BackButton restoring dashboard filters
 - SiteDrilldownHeader
-- read-only/edit scope banner
-- CompletionPerformancePair
-- SectionDrilldownTable
+- assessment snapshot with completion, performance, gaps, update time, and priority review action
+- assessment-area table shown before site people/contact context
+- All, Needs attention, and Complete filters across OS sections and in-scope performance standards
+- collapsed read-only site people and contacts disclosure
 - drill-down to requirement detail without exposing unauthorized edits
 
 ### 20.10 Admin import
@@ -961,9 +965,10 @@ There is no multiple-site selection screen.
 
 - MasterRequirementTable
 - MasterRequirementEditor
-- hierarchy/version/provisional state
+- separate RequirementAuditLog administration tab covering every master requirement
+- hierarchy and provisional publishing state
 - unsaved-change guard
-- change reason and audit entry
+- detailed audit entry for requirement, question, and expected-evidence additions, updates, and deletions
 
 ---
 
@@ -1347,4 +1352,3 @@ KC internal brand standards, the approved logo package, the final requirements w
 - Major: changed core visual language, naming, accessibility target, or component API.
 - Every design-system change records the decision, owner, affected components/screens, migration impact, and effective version.
 - Deprecated components remain documented with a replacement path until application usage reaches zero.
-

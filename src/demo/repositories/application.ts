@@ -11,6 +11,8 @@ import {
   siteUsers,
 } from "../fixtures/assessment";
 import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts";
+import { createdRequirementAuditChanges } from "../../shared/domain/requirement-audit";
+import type { MasterRequirement, RequirementAuditEntry } from "../../shared/types";
 
 const STORAGE_KEY = "ehss-phase-one-state-v1";
 
@@ -54,13 +56,157 @@ function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
   }));
 }
 
+function requirementAuditBaseline(requirementsToRecord: MasterRequirement[]): RequirementAuditEntry[] {
+  const baselineAt = "2026-08-01T08:00:00.000Z";
+  return requirementsToRecord.map((requirement, index) => ({
+    id: `audit-baseline-${requirement.id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    requirementId: requirement.id,
+    requirementTitle: requirement.title,
+    action: "baseline",
+    summary: "Initial master requirement baseline recorded.",
+    recordedAt: new Date(new Date(baselineAt).getTime() + index * 60_000).toISOString(),
+    recordedBy: { id: "demo-rachel-morgan", name: "Rachel Morgan", email: "rachel.morgan@demo.kc", role: "administrator" },
+    changes: createdRequirementAuditChanges(requirement),
+  }));
+}
+
+function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): RequirementAuditEntry[] {
+  const knownRequirements = new Map([...masterRequirements, ...requirementsToRecord].map((requirement) => [requirement.id, requirement]));
+  const requirement = (id: string) => knownRequirements.get(id);
+  const title = (id: string, fallback: string) => requirement(id)?.title ?? fallback;
+  const question = (id: string, index: number, fallback: string) => requirement(id)?.questions[index]?.text ?? fallback;
+  const evidence = (id: string, index: number, fallback: string) => requirement(id)?.questions[index]?.expectedEvidence.join("; ") || fallback;
+  const rachel = { id: "demo-rachel-morgan", name: "Rachel Morgan", email: "rachel.morgan@demo.kc", role: "administrator" as const };
+  const jordan = { id: "demo-jordan-reed", name: "Jordan Reed", email: "jordan.reed@demo.kc", role: "administrator" as const };
+
+  return [
+    {
+      id: "audit-demo-import-os-1-2-1",
+      requirementId: "OS 1.2.1",
+      requirementTitle: title("OS 1.2.1", "Leadership commitment and accountability"),
+      action: "imported",
+      summary: "Requirement imported with assessment questions and expected evidence.",
+      recordedAt: "2026-08-04T09:15:00.000Z",
+      recordedBy: rachel,
+      batchId: "IMP-2026-450497",
+      changes: [
+        { kind: "added", target: "requirement", label: "Requirement imported", after: title("OS 1.2.1", "Leadership commitment and accountability") },
+        { kind: "added", target: "question", label: "Question 1 added", after: question("OS 1.2.1", 0, "Are site leadership responsibilities documented and communicated?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added to Question 1", after: evidence("OS 1.2.1", 0, "Leadership accountability matrix") },
+      ],
+    },
+    {
+      id: "audit-demo-edit-os-1-2-1",
+      requirementId: "OS 1.2.1",
+      requirementTitle: title("OS 1.2.1", "Leadership commitment and accountability"),
+      action: "updated",
+      summary: "Question wording and expected evidence edited.",
+      recordedAt: "2026-08-07T14:40:00.000Z",
+      recordedBy: jordan,
+      changes: [
+        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are EHS&S objectives reviewed during business meetings?", after: question("OS 1.2.1", 1, "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?") },
+        { kind: "updated", target: "evidence", label: "Expected evidence edited for Question 2", before: "EHS&S scorecard.", after: evidence("OS 1.2.1", 1, "Business review agenda; objectives tracking sheet") },
+      ],
+    },
+    {
+      id: "audit-demo-add-question-os-2-1-3",
+      requirementId: "OS 2.1.3",
+      requirementTitle: title("OS 2.1.3", "Risks, opportunities, and planning controls"),
+      action: "updated",
+      summary: "A new assessment question and its evidence requirements were added.",
+      recordedAt: "2026-08-10T11:20:00.000Z",
+      recordedBy: rachel,
+      changes: [
+        { kind: "added", target: "question", label: "Question 2 added", after: question("OS 2.1.3", 1, "Are measurable EHS&S objectives connected to the highest-priority risks?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added to Question 2", after: evidence("OS 2.1.3", 1, "Approved objectives; risk-to-objective traceability") },
+      ],
+    },
+    {
+      id: "audit-demo-remove-question-os-4-3-2",
+      requirementId: "OS 4.3.2",
+      requirementTitle: title("OS 4.3.2", "Management of operational change"),
+      action: "updated",
+      summary: "An obsolete question and its expected evidence were removed.",
+      recordedAt: "2026-08-12T16:05:00.000Z",
+      recordedBy: jordan,
+      changes: [
+        { kind: "deleted", target: "question", label: "Question 3 removed", before: "Are contractors briefed on every temporary operational change?" },
+        { kind: "deleted", target: "evidence", label: "Expected evidence removed from Question 3", before: "Contractor change briefing acknowledgement." },
+      ],
+    },
+    {
+      id: "audit-demo-publish-os-2-1-3",
+      requirementId: "OS 2.1.3",
+      requirementTitle: title("OS 2.1.3", "Risks, opportunities, and planning controls"),
+      action: "published",
+      summary: "Requirement published for site assessments.",
+      recordedAt: "2026-08-13T10:30:00.000Z",
+      recordedBy: rachel,
+      changes: [{ kind: "updated", target: "status", label: "Publishing state changed", before: "Draft", after: "Published" }],
+    },
+    {
+      id: "audit-demo-remove-evidence-ps-7-2-1",
+      requirementId: "PS 7.2.1",
+      requirementTitle: title("PS 7.2.1", "Machine safeguarding verification"),
+      action: "updated",
+      summary: "Outdated expected evidence was removed from a question.",
+      recordedAt: "2026-08-15T13:10:00.000Z",
+      recordedBy: jordan,
+      changes: [{ kind: "deleted", target: "evidence", label: "Expected evidence removed from Question 1", before: "Legacy guard photo inventory." }],
+    },
+    {
+      id: "audit-demo-delete-ps-8-4-2",
+      requirementId: "PS 8.4.2",
+      requirementTitle: "Legacy contractor induction standard",
+      action: "deleted",
+      summary: "Duplicate master requirement deleted after content review.",
+      recordedAt: "2026-08-16T15:45:00.000Z",
+      recordedBy: rachel,
+      changes: [
+        { kind: "deleted", target: "requirement", label: "Requirement deleted", before: "PS 8.4.2 · Legacy contractor induction standard" },
+        { kind: "deleted", target: "question", label: "Question 1 removed", before: "Have all contractors completed the legacy induction module?" },
+        { kind: "deleted", target: "evidence", label: "Expected evidence removed", before: "Legacy induction completion report." },
+      ],
+    },
+    {
+      id: "audit-demo-create-oh-3-1-4",
+      requirementId: "OH 3.1.4",
+      requirementTitle: title("OH 3.1.4", "Occupational exposure assessment"),
+      action: "created",
+      summary: "New occupational health requirement added.",
+      recordedAt: "2026-08-18T09:25:00.000Z",
+      recordedBy: jordan,
+      changes: [
+        { kind: "added", target: "requirement", label: "Requirement added", after: title("OH 3.1.4", "Occupational exposure assessment") },
+        { kind: "added", target: "question", label: "Question 1 added", after: question("OH 3.1.4", 0, "Is the occupational exposure inventory current?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added", after: evidence("OH 3.1.4", 0, "Current exposure inventory; similar exposure group list") },
+      ],
+    },
+    {
+      id: "audit-demo-edit-ps-7-2-1",
+      requirementId: "PS 7.2.1",
+      requirementTitle: title("PS 7.2.1", "Machine safeguarding verification"),
+      action: "updated",
+      summary: "Requirement title and inspection question edited.",
+      recordedAt: "2026-08-20T12:35:00.000Z",
+      recordedBy: rachel,
+      changes: [
+        { kind: "updated", target: "requirement", label: "Requirement title edited", before: "Machine safeguarding checks", after: title("PS 7.2.1", "Machine safeguarding verification") },
+        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are safeguards inspected regularly?", after: question("PS 7.2.1", 1, "Are safeguard inspections recorded at the required frequency?") },
+      ],
+    },
+  ];
+}
+
 function freshSnapshot(): AppSnapshot {
+  const masterRequirementRecords = structuredClone(masterRequirements);
   return {
     requirements: normalizeActionMetadata(structuredClone(requirements)),
     sections: structuredClone(sections),
     siteContacts: structuredClone(initialSiteContacts),
     ownerRecords: structuredClone(ownerRecords),
-    masterRequirements: structuredClone(masterRequirements),
+    masterRequirements: masterRequirementRecords,
+    requirementAuditLog: [...requirementAuditBaseline(masterRequirementRecords), ...requirementAuditDemoEvents(masterRequirementRecords)],
     importHistory: [],
     siteUsers: structuredClone(siteUsers),
     sites: structuredClone(dashboardSites),
@@ -97,6 +243,7 @@ function restoreSnapshot(): AppSnapshot {
     if (!saved) return freshSnapshot();
     const parsed = JSON.parse(saved) as Partial<AppSnapshot>;
     const fallback = freshSnapshot();
+    const restoredMasterRequirements = restoreMasterRequirements(parsed.masterRequirements, fallback.masterRequirements);
     return {
       ...fallback,
       ...parsed,
@@ -129,7 +276,13 @@ function restoreSnapshot(): AppSnapshot {
         })))
         : fallback.requirements,
       ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : fallback.ownerRecords,
-      masterRequirements: restoreMasterRequirements(parsed.masterRequirements, fallback.masterRequirements),
+      masterRequirements: restoredMasterRequirements,
+      requirementAuditLog: (() => {
+        const restoredEntries = parsed.requirementAuditLog ?? requirementAuditBaseline(restoredMasterRequirements);
+        const existingIds = new Set(restoredEntries.map((entry) => entry.id));
+        const missingDemoEntries = requirementAuditDemoEvents(restoredMasterRequirements).filter((entry) => !existingIds.has(entry.id));
+        return [...restoredEntries, ...missingDemoEntries];
+      })(),
       importHistory: (parsed.importHistory ?? []).map((record) => ({ ...record, siteIds: record.siteIds ?? [], publishStatus: record.publishStatus ?? "Published" })),
       siteUsers: parsed.siteUsers ?? fallback.siteUsers,
       sites: parsed.sites?.length ? parsed.sites : fallback.sites,

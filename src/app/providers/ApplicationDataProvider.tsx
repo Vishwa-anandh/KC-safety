@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { actionComplete, currentAssessmentPeriod, rollupPerformance } from "../../shared/domain/assessment";
+import { createdRequirementAuditChanges, deletedRequirementAuditChanges, updatedRequirementAuditChanges } from "../../shared/domain/requirement-audit";
 import { useDataSource } from "./DataSourceProvider";
-import { applicationRepositoryFor } from "../../data-access/repositories/application";
+import { applicationRepositoryFor, importedQuestionsFor } from "../../data-access/repositories/application";
 import type { AppSnapshot, DataSourceStatus, ImportHistoryRecord } from "../../data-access/contracts";
 import type {
   ActionItem,
@@ -14,6 +15,10 @@ import type {
   EvidenceItem,
   MasterRequirement,
   OwnerRecord,
+  RequirementAuditAction,
+  RequirementAuditActor,
+  RequirementAuditChange,
+  RequirementAuditEntry,
   ResponseValue,
   SectionSummary,
   SiteContacts,
@@ -22,6 +27,22 @@ import type {
 } from "../../shared/types";
 
 type PersistedState = AppSnapshot;
+
+const defaultAuditActor: RequirementAuditActor = { id: "demo-rachel-morgan", name: "Rachel Morgan", email: "rachel.morgan@demo.kc", role: "administrator" };
+
+function requirementAuditEntry(requirement: MasterRequirement, action: RequirementAuditAction, summary: string, changes: RequirementAuditChange[], actor: RequirementAuditActor, recordedAt: string, batchId?: string): RequirementAuditEntry {
+  return {
+    id: `req-audit-${Date.now().toString(36)}-${Math.floor(Math.random() * 1_000_000).toString(36)}`,
+    requirementId: requirement.id,
+    requirementTitle: requirement.title,
+    action,
+    summary,
+    recordedAt,
+    recordedBy: actor,
+    changes,
+    batchId,
+  };
+}
 
 function appendQuestionHistory(question: AssessmentQuestion, event: AssessmentHistoryEvent, actorName: string, recordedAt: string, evidence: EvidenceItem[], coalesce = false): AssessmentQuestion {
   const history = question.history ?? [];
@@ -54,11 +75,11 @@ interface ApplicationDataValue extends PersistedState {
   removeEvidence: (requirementId: string, evidenceId: string, actorName?: string) => void;
   saveSiteContacts: (contacts: SiteContacts) => void;
   updateOwner: (owner: OwnerRecord) => void;
-  addMasterRequirement: (requirement: MasterRequirement) => void;
-  updateMasterRequirement: (requirement: MasterRequirement) => void;
-  removeMasterRequirement: (requirementId: string) => void;
-  submitImportBatch: (fileName: string, siteIds: string[]) => ImportHistoryRecord;
-  publishImportBatch: (batchId: string) => void;
+  addMasterRequirement: (requirement: MasterRequirement, actor?: RequirementAuditActor) => void;
+  updateMasterRequirement: (requirement: MasterRequirement, actor?: RequirementAuditActor) => void;
+  removeMasterRequirement: (requirementId: string, actor?: RequirementAuditActor) => void;
+  submitImportBatch: (fileName: string, siteIds: string[], actor?: RequirementAuditActor) => ImportHistoryRecord;
+  publishImportBatch: (batchId: string, actor?: RequirementAuditActor) => void;
   addSiteUser: (user: SiteUser) => void;
   updateSiteUser: (user: SiteUser) => void;
   removeSiteUser: (userId: string) => void;
@@ -257,18 +278,29 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     }));
   }
 
-  function addMasterRequirement(requirement: MasterRequirement) {
-    touch((current) => ({ ...current, masterRequirements: [requirement, ...current.masterRequirements] }));
-  }
-
-  function removeMasterRequirement(requirementId: string) {
+  function addMasterRequirement(requirement: MasterRequirement, actor = defaultAuditActor) {
+    const recordedAt = new Date().toISOString();
     touch((current) => ({
       ...current,
-      masterRequirements: current.masterRequirements.filter((requirement) => requirement.id !== requirementId),
-      // Master requirements govern the site assessment. Removing one therefore removes its
-      // matching live requirement and its question-scoped evidence from the demo assessment.
-      requirements: current.requirements.filter((requirement) => requirement.number !== requirementId),
+      masterRequirements: [requirement, ...current.masterRequirements],
+      requirementAuditLog: [requirementAuditEntry(requirement, "created", "Master requirement created.", createdRequirementAuditChanges(requirement), actor, recordedAt), ...current.requirementAuditLog],
     }));
+  }
+
+  function removeMasterRequirement(requirementId: string, actor = defaultAuditActor) {
+    const recordedAt = new Date().toISOString();
+    touch((current) => {
+      const removed = current.masterRequirements.find((requirement) => requirement.id === requirementId);
+      if (!removed) return current;
+      return {
+        ...current,
+        masterRequirements: current.masterRequirements.filter((requirement) => requirement.id !== requirementId),
+        // Master requirements govern the site assessment. Removing one therefore removes its
+        // matching live requirement and its question-scoped evidence from the demo assessment.
+        requirements: current.requirements.filter((requirement) => requirement.number !== requirementId),
+        requirementAuditLog: [requirementAuditEntry(removed, "deleted", "Master requirement and its governed question definitions were deleted.", deletedRequirementAuditChanges(removed), actor, recordedAt), ...current.requirementAuditLog],
+      };
+    });
   }
 
   // Master Requirements is the source of truth for question definitions: saving a requirement
@@ -276,11 +308,21 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
   // `requirement.number === masterRequirement.id`) — updating kept questions' text/evidence in
   // place (response/action/period are the contributor's own data and are never touched), adding
   // new ones as unanswered, and hard-deleting ones removed from the master list.
-  function updateMasterRequirement(requirement: MasterRequirement) {
-    touch((current) => ({
-      ...current,
-      masterRequirements: current.masterRequirements.map((record) => record.id === requirement.id ? requirement : record),
-      requirements: current.requirements.map((liveRequirement) => {
+  function updateMasterRequirement(requirement: MasterRequirement, actor = defaultAuditActor) {
+    const recordedAt = new Date().toISOString();
+    touch((current) => {
+      const previous = current.masterRequirements.find((record) => record.id === requirement.id);
+      if (!previous) return current;
+      const auditChanges = updatedRequirementAuditChanges(previous, requirement);
+      const publishingOnly = auditChanges.length > 0 && auditChanges.every((change) => change.target === "status");
+      const auditAction: RequirementAuditAction = publishingOnly && requirement.status === "Published" ? "published" : "updated";
+      const auditSummary = publishingOnly
+        ? `Publishing state changed from ${previous.status} to ${requirement.status}.`
+        : `${auditChanges.length} master-content change${auditChanges.length === 1 ? "" : "s"} saved.`;
+      return {
+        ...current,
+        masterRequirements: current.masterRequirements.map((record) => record.id === requirement.id ? requirement : record),
+        requirements: current.requirements.map((liveRequirement) => {
         if (liveRequirement.number !== requirement.id) return liveRequirement;
         // A master record with no questions defined means "not yet authored here", not "delete
         // every question" — skip reconciliation entirely so the live requirement's existing
@@ -303,35 +345,42 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
             response: null,
             period: currentAssessmentPeriod,
           }));
-        return { ...liveRequirement, questions: [...keptQuestions, ...addedQuestions] };
-      }),
-    }));
+          return { ...liveRequirement, questions: [...keptQuestions, ...addedQuestions] };
+        }),
+        requirementAuditLog: auditChanges.length
+          ? [requirementAuditEntry(requirement, auditAction, auditSummary, auditChanges, actor, recordedAt), ...current.requirementAuditLog]
+          : current.requirementAuditLog,
+      };
+    });
   }
 
-  function submitImportBatch(fileName: string, siteIds: string[]) {
+  function submitImportBatch(fileName: string, siteIds: string[], actor = defaultAuditActor) {
     const batchId = `IMP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    const recordedAt = new Date().toISOString();
     // Illustrative mock batch: a small, real set of rows is actually written to state (so the
     // numbers shown match what happened), rather than fabricating the full workbook scale.
     // Selection/counts are decided from the current render's `state` (safe here — this function
     // makes exactly one `touch` call, so `state` is still fresh); the write itself below still
     // derives from `current` inside `touch`, matching this file's usual pattern.
     const sectionPool = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation"];
-    const createdRows: MasterRequirement[] = Array.from({ length: 4 }, (_, index) => ({
-      id: `OS ${20 + index}.1.${index + 1}`,
-      title: `Imported requirement ${index + 1} from ${fileName}`,
-      section: sectionPool[index % sectionPool.length],
-      version: "v1",
-      status: "Draft",
-      siteIds,
-      importBatchId: batchId,
-      questions: [],
-    }));
+    const createdRows: MasterRequirement[] = Array.from({ length: 4 }, (_, index) => {
+      const requirementId = `OS ${20 + index}.1.${index + 1}`;
+      return {
+        id: requirementId,
+        title: `Imported requirement ${index + 1} from ${fileName}`,
+        section: sectionPool[index % sectionPool.length],
+        status: "Draft",
+        siteIds,
+        importBatchId: batchId,
+        questions: importedQuestionsFor(source, requirementId, index),
+      };
+    });
     const updateCandidateIds = state.masterRequirements.slice(0, 2).map((requirement) => requirement.id);
     const record: ImportHistoryRecord = {
       id: batchId,
       fileName,
-      importedAt: new Date().toISOString(),
-      importedBy: "Rachel Morgan",
+      importedAt: recordedAt,
+      importedBy: actor.name,
       siteIds,
       created: createdRows.length,
       updated: updateCandidateIds.length,
@@ -339,22 +388,36 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
       status: "Completed",
       publishStatus: "Draft",
     };
-    touch((current) => ({
-      ...current,
-      masterRequirements: [
+    touch((current) => {
+      const updatedRows = current.masterRequirements.map((requirement) => updateCandidateIds.includes(requirement.id)
+        ? {
+          ...requirement,
+          status: "Draft" as const,
+          importBatchId: batchId,
+          siteIds: [...new Set([...requirement.siteIds, ...siteIds])],
+        }
+        : requirement);
+      const createdAuditEntries = createdRows.map((requirement) => requirementAuditEntry(requirement, "imported", `Requirement imported from ${fileName}.`, createdRequirementAuditChanges(requirement), actor, recordedAt, batchId));
+      const updatedAuditEntries = current.masterRequirements
+        .filter((requirement) => updateCandidateIds.includes(requirement.id))
+        .map((requirement) => {
+          const updated = updatedRows.find((item) => item.id === requirement.id)!;
+          const changes = [
+            ...updatedRequirementAuditChanges(requirement, updated),
+            { kind: "updated" as const, target: "requirement" as const, label: "Import batch", before: requirement.importBatchId ?? "None", after: batchId },
+          ];
+          return requirementAuditEntry(updated, "imported", `Requirement updated from ${fileName}.`, changes, actor, recordedAt, batchId);
+        });
+      return {
+        ...current,
+        masterRequirements: [
         ...createdRows,
-        ...current.masterRequirements.map((requirement) => updateCandidateIds.includes(requirement.id)
-          ? {
-            ...requirement,
-            status: "Draft" as const,
-            importBatchId: batchId,
-            siteIds: [...new Set([...requirement.siteIds, ...siteIds])],
-            version: `v${Number(requirement.version.replace(/^v/, "")) + 1}`,
-          }
-          : requirement),
-      ],
-      importHistory: [record, ...current.importHistory],
-    }));
+          ...updatedRows,
+        ],
+        requirementAuditLog: [...createdAuditEntries, ...updatedAuditEntries, ...current.requirementAuditLog],
+        importHistory: [record, ...current.importHistory],
+      };
+    });
     return record;
   }
 
@@ -430,14 +493,25 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     touch((current) => ({ ...current, siteUsers: current.siteUsers.filter((record) => record.id !== userId) }));
   }
 
-  function publishImportBatch(batchId: string) {
-    touch((current) => ({
-      ...current,
-      masterRequirements: current.masterRequirements.map((requirement) =>
-        requirement.importBatchId === batchId ? { ...requirement, status: "Published" as const } : requirement),
-      importHistory: current.importHistory.map((record) =>
-        record.id === batchId ? { ...record, publishStatus: "Published" as const } : record),
-    }));
+  function publishImportBatch(batchId: string, actor = defaultAuditActor) {
+    const recordedAt = new Date().toISOString();
+    touch((current) => {
+      const publishedRequirements = current.masterRequirements.map((requirement) =>
+        requirement.importBatchId === batchId ? { ...requirement, status: "Published" as const } : requirement);
+      const auditEntries = current.masterRequirements
+        .filter((requirement) => requirement.importBatchId === batchId && requirement.status !== "Published")
+        .map((requirement) => {
+          const published = publishedRequirements.find((item) => item.id === requirement.id)!;
+          return requirementAuditEntry(published, "published", `Requirement published from import batch ${batchId}.`, updatedRequirementAuditChanges(requirement, published), actor, recordedAt, batchId);
+        });
+      return {
+        ...current,
+        masterRequirements: publishedRequirements,
+        requirementAuditLog: [...auditEntries, ...current.requirementAuditLog],
+        importHistory: current.importHistory.map((record) =>
+          record.id === batchId ? { ...record, publishStatus: "Published" as const } : record),
+      };
+    });
   }
 
   const value: ApplicationDataValue = {

@@ -34,7 +34,7 @@ import {
 import { useAdministration } from "../model/useAdministration";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
-import type { DashboardSite, MasterQuestion, MasterRequirement, SiteUser, SiteUserRole } from "../../../shared/types";
+import type { DashboardSite, MasterQuestion, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
 import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
@@ -44,11 +44,13 @@ const importSteps = ["Select sites", "Upload", "Inspect", "Map", "Validate", "Co
 const TARGET_FIELDS = [
   { value: "requirement_id", label: "requirement_id" },
   { value: "requirement_text", label: "requirement_text" },
+  { value: "question_number", label: "question_number" },
+  { value: "question_text", label: "question_text" },
   { value: "guidance", label: "guidance" },
   { value: "expected_evidence", label: "expected_evidence" },
+  { value: "evidence_required", label: "evidence_required" },
   { value: "subsection", label: "subsection" },
   { value: "section", label: "section" },
-  { value: "version", label: "version" },
 ];
 
 interface ColumnMapping {
@@ -61,9 +63,11 @@ interface ColumnMapping {
 const INITIAL_MAPPINGS: ColumnMapping[] = [
   { source: "Requirement ID", target: "requirement_id", sample: "OS 1.2.1", needsReview: false },
   { source: "Requirement text", target: "requirement_text", sample: "Site leadership establishes...", needsReview: false },
+  { source: "Question number", target: "question_number", sample: "1", needsReview: false },
+  { source: "Assessment question", target: "question_text", sample: "Are leadership responsibilities documented?", needsReview: false },
   { source: "How to meet", target: "guidance", sample: "Assign clear accountabilities...", needsReview: false },
-  { source: "Evidence requirements", target: "guidance", sample: "Leadership matrix...", needsReview: true },
-  { source: "Sub-section", target: "version", sample: "1.2 Leadership commitment", needsReview: true },
+  { source: "Evidence requirements", target: "expected_evidence", sample: "Leadership matrix...", needsReview: false },
+  { source: "Sub-section", target: "subsection", sample: "1.2 Leadership commitment", needsReview: false },
 ];
 
 // Sorted and grouped by region so a list that can run into the hundreds is still scannable.
@@ -117,6 +121,52 @@ function StepIndicator({ current }: { current: number }) {
 function downloadTextFile(name: string, content: string, type = "text/csv;charset=utf-8") {
   const url = URL.createObjectURL(new Blob(["﻿", content], { type }));
   const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+}
+
+const requirementAuditActionLabels: Record<RequirementAuditAction, string> = {
+  baseline: "Baseline recorded",
+  created: "Requirement added",
+  updated: "Requirement edited",
+  deleted: "Requirement deleted",
+  imported: "Requirement imported",
+  published: "Requirement published",
+};
+
+const requirementAuditTargetLabels: Record<RequirementAuditTarget, string> = {
+  requirement: "Requirement",
+  status: "Publishing state",
+  scope: "Site scope",
+  question: "Questions",
+  evidence: "Expected evidence",
+};
+
+function auditCsvCell(value: unknown) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function requirementAuditChangeKindLabel(change: RequirementAuditChange) {
+  if (change.kind === "updated") return "edited";
+  if (change.kind === "deleted" && change.target !== "requirement") return "removed";
+  return change.kind;
+}
+
+function requirementAuditCsv(entries: ReturnType<typeof useAdministration>["requirementAuditLog"]) {
+  const header = ["Timestamp", "Actor", "Actor email", "Action", "Requirement ID", "Requirement", "Change type", "Area", "Change", "Before", "After", "Import batch"];
+  const rows = entries.flatMap((entry) => entry.changes.map((change) => [
+    entry.recordedAt,
+    entry.recordedBy.name,
+    entry.recordedBy.email,
+    requirementAuditActionLabels[entry.action],
+    entry.requirementId,
+    entry.requirementTitle,
+    requirementAuditChangeKindLabel(change),
+    requirementAuditTargetLabels[change.target],
+    change.label,
+    change.before ?? "",
+    change.after ?? "",
+    entry.batchId ?? "",
+  ]));
+  return [header, ...rows].map((row) => row.map(auditCsvCell).join(",")).join("\r\n");
 }
 
 export function AdminImportHistoryScreen() {
@@ -245,10 +295,46 @@ export function AdminImportBatchPreviewScreen() {
         <section className="table-card" key={section}>
           <div className="table-card__header"><div><p className="eyebrow">Category</p><h2>{section}</h2></div><span>{grouped[section].length} requirement{grouped[section].length === 1 ? "" : "s"}</span></div>
           <div className="history-list">{grouped[section].map((item) => (
-            <article key={item.id}>
-              <span className="history-list__icon"><FileText size={20} /></span>
-              <div><strong>{item.id}</strong><span>{item.title}</span></div>
-              <span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span>
+            <article className="import-preview-requirement" key={item.id}>
+              <div className="import-preview-requirement__summary">
+                <span className="history-list__icon"><FileText size={20} /></span>
+                <div className="import-preview-requirement__identity"><strong>{item.id}</strong><span>{item.title}</span></div>
+                <span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span>
+              </div>
+              <div className="import-preview-questions">
+                <div className="import-preview-questions__header">
+                  <div><p className="eyebrow">Review questions</p><h3>Questions included with this requirement</h3></div>
+                  <span className="question-count">{item.questions.length} question{item.questions.length === 1 ? "" : "s"}</span>
+                </div>
+                {item.questions.length ? (
+                  <ol className="import-preview-question-list">
+                    {item.questions.map((question, index) => {
+                      const questionNumber = question.number || index + 1;
+                      const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
+                      return (
+                        <li key={question.id}>
+                          <span className="question-number">{questionNumber}</span>
+                          <div className="import-preview-question__content">
+                            <div className="import-preview-question__heading">
+                              <strong>Question {questionNumber}</strong>
+                              <span className="import-preview-question__evidence-status">{evidenceRequired ? `${question.expectedEvidence.length} evidence item${question.expectedEvidence.length === 1 ? "" : "s"}` : "Evidence not required"}</span>
+                            </div>
+                            <p className="import-preview-question__text">{question.text}</p>
+                            {evidenceRequired && (
+                              <div className="import-preview-evidence">
+                                <p className="import-preview-evidence__title"><Paperclip size={14} />Expected evidence</p>
+                                {question.expectedEvidence.length ? (
+                                  <ul>{question.expectedEvidence.map((evidence, evidenceIndex) => <li key={`${question.id}-evidence-${evidenceIndex}`}>{evidence}</li>)}</ul>
+                                ) : <p className="import-preview-evidence__empty">Evidence is required, but no evidence description was included in the import.</p>}
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : <p className="import-preview-questions__empty">No review questions or expected evidence were included for this requirement.</p>}
+              </div>
             </article>
           ))}</div>
         </section>
@@ -459,6 +545,104 @@ function AdminRequirementNavigator({
   );
 }
 
+function RequirementAuditChangeDetail({ change }: { change: RequirementAuditChange }) {
+  if (change.before !== undefined && change.after !== undefined) {
+    return (
+      <div className="requirement-audit-change__diff">
+        <div><span>Before</span><p>{change.before}</p></div>
+        <ArrowRight size={16} />
+        <div><span>After</span><p>{change.after}</p></div>
+      </div>
+    );
+  }
+  return (
+    <div className="requirement-audit-change__single">
+      <span>{change.kind === "deleted" ? "Removed value" : "Recorded value"}</span>
+      <p>{change.before ?? change.after ?? "No value"}</p>
+    </div>
+  );
+}
+
+export function AdminRequirementAuditScreen() {
+  const { masterRequirements, requirementAuditLog } = useAdministration();
+  const [query, setQuery] = useState("");
+  const [requirementFilter, setRequirementFilter] = useState("all");
+  const [target, setTarget] = useState<"all" | RequirementAuditTarget>("all");
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(() => new Set());
+  const allEntries = [...requirementAuditLog].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
+  const requirementOptions = [...new Map(allEntries.map((entry) => [entry.requirementId, entry.requirementTitle])).entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([value, title]) => ({ value, label: `${value} · ${title}` }));
+  const filteredEntries = allEntries
+    .filter((entry) => requirementFilter === "all" || entry.requirementId === requirementFilter)
+    .map((entry) => ({ ...entry, changes: target === "all" ? entry.changes : entry.changes.filter((change) => change.target === target) }))
+    .filter((entry) => entry.changes.length > 0)
+    .filter((entry) => `${entry.requirementId} ${entry.requirementTitle} ${entry.summary} ${entry.recordedBy.name} ${entry.recordedBy.email} ${entry.action} ${entry.batchId ?? ""} ${entry.changes.map((change) => `${change.label} ${change.before ?? ""} ${change.after ?? ""}`).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <div className="page-container requirement-audit-page">
+      <PageHeader
+        eyebrow="Administration"
+        title="Requirement audit log"
+        description="Review detailed changes across every master requirement, including questions, expected evidence, publishing state, and site scope."
+        actions={<Button variant="primary" icon={<Download size={17} />} disabled={!filteredEntries.length} onClick={() => downloadTextFile("Maitsys_Assure_requirement_audit_log.csv", requirementAuditCsv(filteredEntries))}>Export audit log</Button>}
+      />
+      <section className="table-card">
+        <div className="dashboard-filter-bar">
+          <label className="search-control"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search requirement, actor, action, or value" /></label>
+          <Select label="Filter requirement" icon={<FileText size={18} />} searchable value={requirementFilter} onChange={setRequirementFilter} options={[{ value: "all", label: "All requirements" }, ...requirementOptions]} />
+          <Select label="Filter change area" icon={<Filter size={18} />} value={target} onChange={(value) => setTarget(value as typeof target)} options={[{ value: "all", label: "All changes" }, ...Object.entries(requirementAuditTargetLabels).map(([value, label]) => ({ value, label }))]} />
+        </div>
+        <div className="table-card__header table-card__header--results"><div><p className="eyebrow">Recorded timeline</p><h2>Requirement change history</h2></div><span>{filteredEntries.length} of {allEntries.length} events shown</span></div>
+        {filteredEntries.length ? (
+          <div className="requirement-audit-timeline">
+            {filteredEntries.map((entry) => {
+              const expanded = expandedEntries.has(entry.id);
+              const detailsId = `audit-entry-details-${entry.id}`;
+              return (
+              <article className={cx("requirement-audit-entry", expanded && "requirement-audit-entry--expanded")} key={entry.id}>
+                <header className="requirement-audit-entry__header">
+                  <span className="requirement-audit-entry__icon"><History size={19} /></span>
+                  <div>
+                    <div className="requirement-audit-entry__meta"><span className="publish-badge">{requirementAuditActionLabels[entry.action]}</span><time dateTime={entry.recordedAt}>{new Date(entry.recordedAt).toLocaleString()}</time></div>
+                    {masterRequirements.some((requirement) => requirement.id === entry.requirementId) ? <Link className="requirement-audit-entry__entity" to={`/admin/requirements/${entry.requirementId}`}>{entry.requirementId} · {entry.requirementTitle}<ArrowRight size={14} /></Link> : <span className="requirement-audit-entry__entity requirement-audit-entry__entity--deleted">{entry.requirementId} · {entry.requirementTitle} · Deleted requirement</span>}
+                    <h3>{entry.summary}</h3>
+                    <p>{entry.recordedBy.name} · {entry.recordedBy.email}{entry.batchId ? ` · Import ${entry.batchId}` : ""}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={cx("requirement-audit-entry__toggle", expanded && "requirement-audit-entry__toggle--expanded")}
+                    aria-expanded={expanded}
+                    aria-controls={detailsId}
+                    aria-label={`${expanded ? "Hide" : "Show"} ${entry.changes.length} change${entry.changes.length === 1 ? "" : "s"} for ${entry.requirementId}`}
+                    onClick={() => setExpandedEntries((current) => {
+                      const next = new Set(current);
+                      if (next.has(entry.id)) next.delete(entry.id);
+                      else next.add(entry.id);
+                      return next;
+                    })}
+                  >
+                    <span>{entry.changes.length} change{entry.changes.length === 1 ? "" : "s"}</span>
+                    <ChevronDown size={15} aria-hidden="true" />
+                  </button>
+                </header>
+                {expanded && <ol className="requirement-audit-changes" id={detailsId}>
+                  {entry.changes.map((change, index) => (
+                    <li key={`${entry.id}-${index}`}>
+                      <div className="requirement-audit-change__header"><span className={cx("requirement-audit-change__kind", `requirement-audit-change__kind--${change.kind}`)}>{requirementAuditChangeKindLabel(change)}</span><div><strong>{change.label}</strong><span>{requirementAuditTargetLabels[change.target]}</span></div></div>
+                      <RequirementAuditChangeDetail change={change} />
+                    </li>
+                  ))}
+                </ol>}
+              </article>
+              );
+            })}
+          </div>
+        ) : <EmptyState icon={<Search size={28} />} title={allEntries.length ? "No audit entries match" : "No requirement changes recorded"} description={allEntries.length ? "Try another search or change-area filter." : "Future requirement, question, and expected-evidence changes will appear here."} />}
+      </section>
+    </div>
+  );
+}
+
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
@@ -469,7 +653,7 @@ export function AdminRequirementDetailScreen() {
   const defaultSection = sections[0] ?? "";
   const siteOptions = buildSiteOptions(sites);
   const sectionOptions = sections.map((value) => ({ value, label: value }));
-  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, version: "v1", status: "Draft", siteIds: [], questions: [] });
+  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
@@ -479,7 +663,7 @@ export function AdminRequirementDetailScreen() {
   // from the route record keeps the header, fields, and left navigator in lockstep after a
   // requirement is selected from the navigator.
   useEffect(() => {
-    setDraft(existing ?? { id: "", title: "", section: defaultSection, version: "v1", status: "Draft", siteIds: [], questions: [] });
+    setDraft(existing ?? { id: "", title: "", section: defaultSection, status: "Draft", siteIds: [], questions: [] });
     setSubmitted(false);
     setPendingNavigation(null);
   }, [defaultSection, existing, requirementId]);
@@ -494,7 +678,7 @@ export function AdminRequirementDetailScreen() {
   }
 
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && /^v\d+$/i.test(draft.version.trim()) && draft.questions.every((question) => question.text.trim()));
+  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.questions.every((question) => question.text.trim()));
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
   const navigatorCurrent = masterRequirements.find((item) => item.id === requirementId) ?? draft;
 
@@ -527,7 +711,6 @@ export function AdminRequirementDetailScreen() {
       id: trimmedId,
       title: draft.title.trim(),
       section: draft.section.trim(),
-      version: draft.version.trim(),
       questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
     };
     if (isNew) addMasterRequirement(cleaned); else updateMasterRequirement(cleaned);
@@ -555,7 +738,6 @@ export function AdminRequirementDetailScreen() {
               <textarea className={cx("requirement-title-input", submitted && !draft.title.trim() && "field-invalid-input")} rows={2} value={draft.title} onChange={(event) => update("title", event.target.value)} placeholder="Requirement title" aria-label="Requirement title" />
             </div>
             <div className="requirement-header__controls">
-              <label className="requirement-version-field"><span>Version</span><input className={cx(submitted && !/^v\d+$/i.test(draft.version.trim()) && "field-invalid-input")} value={draft.version} onChange={(event) => update("version", event.target.value)} placeholder="v1" aria-label="Version" /></label>
               <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
             </div>
           </div>
@@ -570,7 +752,7 @@ export function AdminRequirementDetailScreen() {
               {draft.siteIds.length ? <span className="requirement-selected-sites__list">{siteOptions.filter((site) => draft.siteIds.includes(site.value)).map((site) => <span key={site.value}>{site.label}</span>)}</span> : <span>All sites</span>}
             </div>
           </div>
-          {submitted && !valid && <InlineMessage tone="danger" title="Complete required fields">Requirement ID, title, section, a valid version (for example v1), and text for every question are required before saving.</InlineMessage>}
+          {submitted && !valid && <InlineMessage tone="danger" title="Complete required fields">Requirement ID, title, section, and text for every question are required before saving.</InlineMessage>}
         </header>
         <section className="questions-section" aria-labelledby="admin-questions-title">
           <div className="section-title-row"><div><p className="eyebrow">Assessment questions</p><h2 id="admin-questions-title">Add, edit, or remove questions</h2></div><span className="question-count">{draft.questions.length} questions</span></div>
@@ -625,7 +807,7 @@ export function AdminRequirementsScreen() {
     (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
   return (
     <div className="page-container">
-      <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirement, guidance, evidence, hierarchy, and version content." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate("/admin/requirements/new")} data-tour="add-requirement">Add requirement</Button>} />
+      <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirements, questions, expected evidence, hierarchy, and publishing state." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate("/admin/requirements/new")} data-tour="add-requirement">Add requirement</Button>} />
       {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
       <section className="table-card">
         <div className="dashboard-filter-bar" data-tour="requirement-filters">
@@ -638,14 +820,13 @@ export function AdminRequirementsScreen() {
         {rows.length ? (
           <div className="data-table-wrap">
             <table className="data-table data-table--requirements">
-              <thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>{rows.map((item) => (
                 <tr key={item.id} className="data-table__row--link" onClick={() => navigate(`/admin/requirements/${item.id}`)}>
                   <td data-label="ID"><strong>{item.id}</strong></td>
                   <td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td>
                   <td data-label="Section">{item.section}</td>
                   <td data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}>{siteCodesSummary(sites, item.siteIds).text}</td>
-                  <td data-label="Version">{item.version}</td>
                   <td data-label="Status"><span className={cx("publish-badge", item.status === "Draft" && "publish-badge--draft")}>{item.status}</span></td>
                   <td data-label="Actions"><span className="row-actions row-actions--menu">
                     <IconButton label={`Edit ${item.id}`} onClick={(event) => { event.stopPropagation(); navigate(`/admin/requirements/${item.id}`); }}><Pencil size={17} /></IconButton>
@@ -747,14 +928,14 @@ export function AdminSiteDetailScreen() {
   return (
     <div className="page-container">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
-      <PageHeader eyebrow="Administration" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Assign user</Button>} />
+      <PageHeader eyebrow="Administration" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<><Button variant="secondary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Assign user</Button><Link className="button button--primary button--default" to={`/sites/${site.id}`}><ListChecks size={18} /><span>View assessment</span></Link></>} />
       {feedback && <InlineMessage tone={feedback.includes("already assigned") ? "warning" : "success"} title={feedback.includes("already assigned") ? "User not assigned" : "Site access updated"}>{feedback}</InlineMessage>}
 
       <div className="metrics-grid">
-        <MetricCard label="Assigned users" value={users.length} detail={`${users.filter((user) => user.status === "Active").length} active`} icon={<UsersRound size={21} />} tone="brand" />
-        <MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} />
+        <MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" />
         <MetricCard label="Open gaps" value={site.gaps} detail="No and Partial responses" icon={<AlertCircle size={21} />} tone={site.gaps > 20 ? "danger" : "neutral"} />
         <MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<History size={21} />} />
+        <MetricCard label="Assigned users" value={users.length} detail={`${users.filter((user) => user.status === "Active").length} active`} icon={<UsersRound size={21} />} />
       </div>
 
       <section className="table-card">

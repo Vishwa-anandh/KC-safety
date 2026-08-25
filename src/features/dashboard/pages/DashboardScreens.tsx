@@ -12,9 +12,9 @@ import {
 
   MapPin,
   Paperclip,
-  RefreshCw,
   Search,
   Target,
+  UsersRound,
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDashboard } from "../model/useDashboard";
@@ -22,7 +22,7 @@ import { useAuth } from "../../auth";
 import { useGuidedSetup } from "../../onboarding";
 import { performanceForResponse, performanceLabel, responseLabel } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
-import type { AssessmentQuestion, DashboardSite, Performance, Requirement } from "../../../shared/types";
+import type { AssessmentQuestion, DashboardSite, Performance, Requirement, SectionSummary } from "../../../shared/types";
 import type { AssignedSite } from "../../../data-access/contracts";
 import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, SiteUsersPanel } from "../../sites/components/SitePanels";
@@ -244,9 +244,28 @@ export function SiteDrilldownScreen() {
   const { siteId } = useParams();
   const { dashboardSiteRows, sectionSummaries, requirementsForSite, siteContacts, siteUsers, sections } = useDashboard();
   const { role } = useGuidedSetup();
+  const [sectionFilter, setSectionFilter] = useState<"all" | "attention" | "complete">("all");
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const siteSections = site.id === "northstar" ? sectionSummaries : sections;
   const canEditAssignedSite = role === "site-contributor" && site.id === "northstar";
+  const siteRequirements = requirementsForSite(site.id);
+  const assessmentSections = siteSections.filter((section) => section.kind === "operating-system" || section.kind === "performance-standard");
+  const assignedUsers = siteUsers.filter((user) => user.siteId === site.id);
+  const totalQuestions = siteRequirements.reduce((total, requirement) => total + requirement.questions.length, 0);
+  const responsesRecorded = siteRequirements.reduce((total, requirement) => total + requirement.questions.filter((question) => question.response !== null).length, 0);
+  const needsAttention = assessmentSections.filter((section) => section.gaps > 0 || section.completion < 100);
+  const completeSections = assessmentSections.filter((section) => section.gaps === 0 && section.completion === 100);
+  const prioritySection = [...needsAttention].sort((left, right) => right.gaps - left.gaps || left.completion - right.completion)[0];
+  const visibleSections = assessmentSections.filter((section) => sectionFilter === "all" || (sectionFilter === "attention" ? section.gaps > 0 || section.completion < 100 : section.gaps === 0 && section.completion === 100));
+  const sectionRoute = (section: SectionSummary) => {
+    const requirement = siteRequirements.find((item) => item.sectionId === section.id);
+    return canEditAssignedSite && requirement ? requirementRoute(requirement) : `/sites/${site.id}/sections/${section.id}`;
+  };
+  const assessmentState = site.completion === 0
+    ? "Assessment not started"
+    : needsAttention.length > 0
+      ? `${needsAttention.length} ${needsAttention.length === 1 ? "area needs" : "areas need"} attention`
+      : "Assessment complete";
   // Only "northstar" has real seeded contact data (siteContacts is a single global record, not
   // yet keyed by site) — every other mock dashboard site shows the empty state rather than
   // fabricated placeholder contacts, which would misleadingly imply fictitious people are real
@@ -255,14 +274,65 @@ export function SiteDrilldownScreen() {
   return (
     <div className="page-container">
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
-      <PageHeader eyebrow="Site drill-down" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `Maitsys_Assure_${site.code}_assessment.csv`)}>Export site view</Button>} />
-      <div className="metrics-grid"><MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" /><MetricCard label="Self-assessed performance" value={performanceLabel(site.performance)} detail="Current lowest roll-up" icon={<BarChart3 size={21} />} tone={site.performance === "performing" ? "success" : site.performance === "emerging" ? "warning" : "danger"} /><MetricCard label="Gaps" value={site.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" /><MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<RefreshCw size={21} />} /></div>
-      <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site users</h2></div><span>{siteUsers.filter((user) => user.siteId === site.id).length} assigned</span></div><SiteUsersPanel users={siteUsers.filter((user) => user.siteId === site.id)} /></section>
-      <section className="page-section"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2>Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
-      <section className="table-card"><div className="table-card__header"><div><p className="eyebrow">Assessment detail</p><h2>Operating System sections</h2></div><PerformanceBadge performance={site.performance} /></div><div className="section-drilldown-list" data-tour="drilldown-sections">{siteSections.filter((section) => section.kind === "operating-system").map((section, index) => {
-        const requirement = requirementsForSite(site.id).find((item) => item.sectionId === section.id);
-        return <article key={section.id} className="section-drilldown-row"><div className="section-drilldown-row__name"><span className="section-index">{index + 1}</span><div><strong>{section.name}</strong><span>{section.questions} questions · {section.gaps} gaps</span></div></div><div><span className="mobile-label">Completion</span><ProgressBar value={section.completion} /></div><div><span className="mobile-label">Self-assessed performance</span><PerformanceBadge performance={section.performance} compact /></div>{canEditAssignedSite && requirement ? <Link className="button button--tertiary button--compact" to={requirementRoute(requirement)}><span>Open</span><ArrowRight size={16} /></Link> : <Link className="button button--tertiary button--compact" to={`/sites/${site.id}/sections/${section.id}`}><span>View</span><ArrowRight size={16} /></Link>}</article>;
-      })}</div></section>
+      <PageHeader
+        eyebrow="Site assessment"
+        title={site.name}
+        description={`${site.code} · ${site.region} · ${site.segment}`}
+        actions={<>{role === "administrator" && <Link className="button button--tertiary button--default" to={`/admin/sites/${site.id}`}><UsersRound size={18} /><span>Manage site</span></Link>}<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `Maitsys_Assure_${site.code}_assessment.csv`)}>Export assessment</Button></>}
+      />
+
+      <section className="site-assessment-hero" aria-labelledby="assessment-snapshot-title">
+        <div className="site-assessment-hero__overview">
+          <div className="site-assessment-hero__score" aria-label={`${site.completion}% assessment completion`}><strong>{site.completion}</strong><span>%</span></div>
+          <div className="site-assessment-hero__copy">
+            <p className="eyebrow">Assessment snapshot</p>
+            <h2 id="assessment-snapshot-title">{assessmentState}</h2>
+            <p>{responsesRecorded} of {totalQuestions} assessment questions have a recorded response.</p>
+            <ProgressBar value={site.completion} />
+          </div>
+        </div>
+        <div className="site-assessment-hero__facts" aria-label="Assessment summary">
+          <div><span>Self-assessed performance</span><PerformanceBadge performance={site.performance} /></div>
+          <div><span>Open gaps</span><strong className={cx(site.gaps > 0 && "text-danger")}>{site.gaps}</strong><small>No and Partial responses</small></div>
+          <div><span>Last updated</span><strong>{site.updated}</strong><small>Current assessment record</small></div>
+        </div>
+        {prioritySection && <div className="site-assessment-priority">
+          <div><span className="site-assessment-priority__icon"><CircleAlert size={19} /></span><div><p className="eyebrow">Priority review</p><strong>{prioritySection.name}</strong><span>{prioritySection.gaps} {prioritySection.gaps === 1 ? "gap" : "gaps"} · {prioritySection.completion}% complete</span></div></div>
+          <Link className="button button--primary button--compact" to={sectionRoute(prioritySection)}><span>Review details</span><ArrowRight size={16} /></Link>
+        </div>}
+      </section>
+
+      <section className="table-card site-assessment-sections" aria-labelledby="assessment-sections-title">
+        <div className="table-card__header site-assessment-sections__header">
+          <div><p className="eyebrow">Assessment details</p><h2 id="assessment-sections-title">Assessment areas</h2><span>Review completion, performance, and gaps before opening question-level details.</span></div>
+          <div className="site-section-filters" role="group" aria-label="Filter assessment areas">
+            <button type="button" className={cx(sectionFilter === "all" && "is-active")} aria-pressed={sectionFilter === "all"} onClick={() => setSectionFilter("all")}>All <span>{assessmentSections.length}</span></button>
+            <button type="button" className={cx(sectionFilter === "attention" && "is-active")} aria-pressed={sectionFilter === "attention"} onClick={() => setSectionFilter("attention")}>Needs attention <span>{needsAttention.length}</span></button>
+            <button type="button" className={cx(sectionFilter === "complete" && "is-active")} aria-pressed={sectionFilter === "complete"} onClick={() => setSectionFilter("complete")}>Complete <span>{completeSections.length}</span></button>
+          </div>
+        </div>
+        {visibleSections.length ? <><div className="site-assessment-area-columns" aria-hidden="true"><span>Assessment area</span><span>Completion</span><span>Performance</span><span>Open gaps</span><span>Action</span></div><div className="site-assessment-area-list" data-tour="drilldown-sections">{visibleSections.map((section) => {
+          const sectionNumber = assessmentSections.findIndex((item) => item.id === section.id) + 1;
+          return <article key={section.id} className="site-assessment-area-row">
+            <div className="site-assessment-area-row__identity"><span className="section-index" aria-hidden="true">{String(sectionNumber).padStart(2, "0")}</span><div><span className="site-assessment-area-row__kind">{section.kind === "operating-system" ? "Operating System" : "Performance Standard"}</span><strong>{section.name}</strong><span>{section.questions} assessment questions</span></div></div>
+            <div className="site-assessment-area-row__completion">
+              <span className="site-assessment-area-row__label">Completion</span>
+              <div className="site-assessment-area-row__meter"><span className="site-assessment-area-row__track" role="progressbar" aria-label={`${section.name} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={section.completion}><span style={{ width: `${section.completion}%` }} /></span><strong>{section.completion}%</strong></div>
+            </div>
+            <div className="site-assessment-area-row__result"><span className="site-assessment-area-row__label">Performance</span><PerformanceBadge performance={section.performance} compact /></div>
+            <div className="site-assessment-area-row__result site-assessment-area-row__gaps"><span className="site-assessment-area-row__label">Open gaps</span><strong className={cx(section.gaps > 0 && "text-danger")}>{section.gaps}</strong><small>{section.gaps > 0 ? "Needs attention" : section.completion === 100 ? "Complete" : "No gaps recorded"}</small></div>
+            <Link className="button button--tertiary button--compact" to={sectionRoute(section)}><span>{canEditAssignedSite ? "Open assessment" : "Review details"}</span><ArrowRight size={16} /></Link>
+          </article>;
+        })}</div></> : <EmptyState icon={<CheckCircle2 size={27} />} title="No assessment areas in this view" description="Choose another filter to review the site's assessment areas." />}
+      </section>
+
+      <details className="site-support-details">
+        <summary><span><UsersRound size={20} /><span><strong>Site people and contacts</strong><small>Secondary site context · {assignedUsers.length} assigned {assignedUsers.length === 1 ? "user" : "users"}</small></span></span><ChevronDown size={19} /></summary>
+        <div className="site-support-details__content">
+          <section aria-labelledby="site-users-title"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2 id="site-users-title">Assigned users</h2></div><span>{assignedUsers.length} assigned</span></div><SiteUsersPanel users={assignedUsers} /></section>
+          <section aria-labelledby="site-contacts-title"><div className="section-title-row"><div><p className="eyebrow">Read-only</p><h2 id="site-contacts-title">Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
+        </div>
+      </details>
     </div>
   );
 }

@@ -75,6 +75,7 @@ These cases validate the complete Phase 1 experience for an assigned single-site
 | DB-05 | Export dashboard | Filter sites, then export | A CSV containing only the filtered site view downloads and opens in Excel. |
 | DB-06 | Assigned-site drill-down | Open Northstar, then open a section | Live section results appear and the exact editable requirement opens. |
 | DB-07 | Other-site drill-down | Open another site and select View | A read-only section preview appears; no edit control is exposed. |
+| DB-08 | Assessment-first drill-down | Open any site as an administrator and use All, Needs attention, and Complete | Assessment health and priority review appear first; section filters update the assessment-area list; users and contacts remain available in the collapsed secondary section. |
 
 ## Administration
 
@@ -88,11 +89,13 @@ These cases validate the complete Phase 1 experience for an assigned single-site
 | IM-06 | Complete import | Select acknowledgement and confirm | Result counts and a unique audit reference appear; the record persists in Import history. |
 | IM-07 | Import history | Open Import history before and after an import | Empty state appears initially; completed records show filename, user, time, counts, and ID. |
 | MR-01 | Search and filter master records | Search by ID/title; filter section and state | Only matching records remain. |
-| MR-02 | Add master requirement | Add a unique ID, title, section, version, and state | The record appears and persists. |
+| MR-02 | Add master requirement | Add a unique ID, title, section, state, questions, and expected evidence | The record appears and persists. |
 | MR-03 | Prevent duplicate ID | Add a record using an existing ID | Addition is blocked and a warning appears. |
-| MR-04 | Edit master requirement | Change title, section, version, or state | Updated values persist. |
+| MR-04 | Edit master requirement | Change title, section, state, question text, or expected evidence | Updated values persist. |
 | MR-05 | Publish or move to draft | Open More actions and change state | The publishing badge updates. |
 | MR-06 | Duplicate requirement | Choose Duplicate | A uniquely identified draft copy appears. |
+| MR-07 | Requirement audit details | Open Administration > Audit log, then add, edit, and remove questions or expected-evidence items | A connected timeline includes representative added, edited, removed, deleted, imported, and published demo events plus every newly saved operation, with requirement ID, actor, time, and before/after values. |
+| MR-08 | Requirement audit export | Filter the audit log by requirement/change area and choose Export audit log | A CSV containing the visible detailed changes downloads. |
 
 ## Cross-cutting quality checks
 

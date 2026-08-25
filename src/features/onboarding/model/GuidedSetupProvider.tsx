@@ -73,7 +73,7 @@ export const roleProfiles: Record<UserRole, RoleProfile> = {
     label: "Enterprise administrator",
     shortLabel: "Administrator",
     scope: "Global EHS&S administration",
-    description: "Validates governed workbooks, reviews audit history, and creates, edits, versions, and publishes master requirements.",
+    description: "Validates governed workbooks, reviews detailed audit history, and creates, edits, and publishes master requirements.",
     home: "/dashboard",
     icon: ShieldCheck,
   },
@@ -109,7 +109,7 @@ const tours: Record<UserRole, TourStep[]> = {
     { path: "/admin/imports", targets: ["import-steps"], eyebrow: "Protected workflow", title: "Inspect, map, validate, and confirm", description: "The six-step process exposes warnings, blocks invalid records, and requires explicit confirmation before changes are applied.", action: "Next: review audit history" },
     { path: "/admin/imports", targets: ["import-history"], eyebrow: "Auditability", title: "Trace every completed import", description: "Import history records the filename, administrator, time, result counts, and unique audit reference.", action: "Next: manage requirements" },
     { path: "/admin/requirements", targets: ["requirement-filters"], eyebrow: "Governed content", title: "Find master requirements", description: "Search and filter by ID, title, section, and publishing state before editing protected content.", action: "Next: add or publish content" },
-    { path: "/admin/requirements", targets: ["add-requirement"], eyebrow: "Master authoring", title: "Create and version requirements", description: "Add unique requirement IDs, maintain versions and sections, then publish or return records to draft through governed actions." },
+    { path: "/admin/requirements", targets: ["add-requirement"], eyebrow: "Master authoring", title: "Create governed requirements", description: "Add unique requirement IDs, maintain questions and expected evidence, then publish or return records to draft with every change recorded." },
   ],
 };
 

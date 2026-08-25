@@ -4,6 +4,7 @@ import type {
   EvidenceItem,
   MasterRequirement,
   OwnerRecord,
+  RequirementAuditEntry,
   Requirement,
   SectionSummary,
   SiteContacts,
@@ -38,6 +39,7 @@ export interface AppSnapshot {
   siteContacts: SiteContacts;
   ownerRecords: OwnerRecord[];
   masterRequirements: MasterRequirement[];
+  requirementAuditLog: RequirementAuditEntry[];
   importHistory: ImportHistoryRecord[];
   siteUsers: SiteUser[];
   sites: DashboardSite[];

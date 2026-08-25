@@ -151,11 +151,42 @@ export interface MasterRequirement {
   id: string;
   title: string;
   section: string;
-  version: string;
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;
   questions: MasterQuestion[];
+}
+
+export type RequirementAuditAction = "baseline" | "created" | "updated" | "deleted" | "imported" | "published";
+export type RequirementAuditChangeKind = "added" | "updated" | "deleted";
+export type RequirementAuditTarget = "requirement" | "status" | "scope" | "question" | "evidence";
+
+export interface RequirementAuditChange {
+  kind: RequirementAuditChangeKind;
+  target: RequirementAuditTarget;
+  label: string;
+  before?: string;
+  after?: string;
+  questionId?: string;
+}
+
+export interface RequirementAuditActor {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface RequirementAuditEntry {
+  id: string;
+  requirementId: string;
+  requirementTitle: string;
+  action: RequirementAuditAction;
+  summary: string;
+  recordedAt: string;
+  recordedBy: RequirementAuditActor;
+  changes: RequirementAuditChange[];
+  batchId?: string;
 }
 
 /** Mirrors UserRole in GuidedSetup.tsx. Declared here rather than imported so this module

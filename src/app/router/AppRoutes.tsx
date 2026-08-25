@@ -3,7 +3,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth, NoAssignmentScreen, SessionExpiredScreen, LoginScreen } from "../../features/auth";
 import AppShell from "../layouts/AppShell";
 import { roleProfiles } from "../../features/onboarding";
-import { AdminImportBatchPreviewScreen, AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementDetailScreen, AdminRequirementsScreen, AdminSiteDetailScreen, AdminSitesScreen } from "../../features/admin";
+import { AdminImportBatchPreviewScreen, AdminImportHistoryScreen, AdminImportsScreen, AdminRequirementAuditScreen, AdminRequirementDetailScreen, AdminRequirementsScreen, AdminSiteDetailScreen, AdminSitesScreen } from "../../features/admin";
 import { DashboardScreen, SiteDrilldownScreen, SiteSectionDetailScreen } from "../../features/dashboard";
 import { RequirementWorkspace } from "../../features/assessment";
 import {
@@ -87,6 +87,7 @@ export default function App() {
               <Route path={appPaths.adminRequirements} element={<AdminRequirementsScreen />} />
               <Route path={appPaths.adminRequirementNew} element={<AdminRequirementDetailScreen />} />
               <Route path={appPaths.adminRequirementDetail} element={<AdminRequirementDetailScreen />} />
+              <Route path={appPaths.adminRequirementAudit} element={<AdminRequirementAuditScreen />} />
             </Route>
             <Route path={appPaths.settings} element={<SettingsLayout />}>
               <Route index element={<Navigate to={settingsSegments.account} replace />} />

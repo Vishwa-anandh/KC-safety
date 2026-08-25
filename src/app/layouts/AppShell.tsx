@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   FileInput,
   FileText,
+  History,
   LogOut,
   LayoutDashboard,
   MoreHorizontal,
@@ -56,6 +57,7 @@ const navigation = [
       { to: appPaths.adminSites, label: "Sites", icon: Building2 },
       { to: appPaths.adminImports, label: "Imports", icon: FileInput },
       { to: appPaths.adminRequirements, label: "Master requirements", icon: FileText },
+      { to: appPaths.adminRequirementAudit, label: "Audit log", icon: History },
     ],
   },
 ];

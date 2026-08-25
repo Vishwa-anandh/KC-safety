@@ -66,7 +66,7 @@ const sections: Array<{ id: SettingsSectionId; label: string; description: strin
 const roleCapabilities: Record<UserRole, string[]> = {
   "site-contributor": ["Edit the assigned site assessment", "Maintain site contacts and program owners", "Complete corrective-action information and evidence"],
   "enterprise-viewer": ["Review authorized enterprise sites", "Open read-only site drill-downs", "Export the current filtered dashboard view"],
-  administrator: ["Review enterprise performance", "Run governed workbook imports", "Create, version, and publish master requirements"],
+  administrator: ["Review enterprise performance", "Run governed workbook imports", "Create, audit, and publish master requirements"],
 };
 
 function readNotificationPreferences(): NotificationPreferences {
