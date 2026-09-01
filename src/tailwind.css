@@ -1,7 +1,9 @@
-/* Tailwind recommends the important import while migrating an existing high-specificity codebase.
-   It lets intentional utility classes override legacy selectors without processing the entire
-   compatibility stylesheet through Tailwind on every build. */
-@import "tailwindcss" important;
+@import "tailwindcss/theme.css" layer(theme);
+@import "./tailwind.base.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Preflight is intentionally excluded. Maitsys Assure owns its reset and typography baseline so
+   Tailwind utilities cannot silently change established headings, controls, tables, or spacing. */
 
 /* Maitsys Assure keeps its runtime theme variables as the source of truth. Tailwind utilities
    reference those variables so light/dark mode and the selectable accent palette continue to

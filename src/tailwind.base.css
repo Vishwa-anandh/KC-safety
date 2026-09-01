@@ -1,0 +1,674 @@
+/* Global-only font, tokens, reset, element defaults, and keyframes. */
+@font-face {
+  font-family: "Google Sans Flex";
+  font-style: normal;
+  font-weight: 1 1000;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/fonts/google-sans-flex-latin.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light;
+  --font-sans: "Google Sans Flex", "Google Sans", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  font-variation-settings: "slnt" 0, "wdth" 100, "GRAD" 0, "ROND" 0;
+  text-rendering: optimizeLegibility;
+
+  /* Channel triplets for the accent ramp. Needed because many surfaces use the accent at low
+     alpha (rgb(... / 0.14)), which cannot be expressed from a hex token alone. Overridden by
+     [data-accent] so nav, hero, and glow tints track the selected palette. */
+  --accent-rgb: 23 104 159;
+  --accent-soft-rgb: 60 147 203;
+  --accent-hero-from: #062a43;
+  --accent-hero-mid: #084f75;
+  --accent-hero-to: #07637b;
+  --accent-hero-glow-a: 94 188 230;
+  --accent-hero-glow-b: 104 211 192;
+  --accent-dark-glow-rgb: 104 181 219;
+  --accent-dark-scroll-rgb: 152 208 232;
+  --accent-nav-dark-mid: #0b314a;
+  --accent-nav-dark-to: #09283d;
+  --accent-nav-from: #f9fcfe;
+  --accent-nav-mid: #eff8fc;
+  --accent-nav-to: #e6f2f8;
+
+  --kc-50: #f2f9fd;
+  --kc-100: #e4f3fa;
+  --kc-200: #c5e5f4;
+  --kc-300: #98d0e8;
+  --kc-400: #68b5db;
+  --kc-500: #3c93cb;
+  --kc-600: #2178b2;
+  --kc-700: #17689f;
+  --kc-800: #165e8e;
+  --kc-900: #164e73;
+  --kc-950: #0c2a3e;
+
+  --brand-solid: #2178b2;
+  --brand-solid-hover: #17689f;
+  --brand-solid-active: #165e8e;
+  --brand-deep: #164e73;
+  --brand-deepest: #0c2a3e;
+
+  --neutral-0: #fff;
+  --neutral-25: #fcfcfd;
+  --neutral-50: #f8fafc;
+  --neutral-100: #f1f5f9;
+  --neutral-200: #e2e8f0;
+  --neutral-300: #cbd5e1;
+  --neutral-400: #94a3b8;
+  --neutral-500: #64748b;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1e293b;
+  --neutral-900: #0f172a;
+  --neutral-950: #07111f;
+
+  --success: #067647;
+  --success-surface: #ecfdf3;
+  --success-border: #abefc6;
+  --warning: #b54708;
+  --warning-surface: #fffaeb;
+  --warning-border: #fedf89;
+  --danger: #b42318;
+  --danger-surface: #fef3f2;
+  --danger-border: #fecdca;
+  --provisional: #6941c6;
+  --provisional-surface: #f9f5ff;
+
+  --success-solid: #067647;
+  --warning-solid: #b54708;
+  --danger-solid: #b42318;
+
+  --surface-panel: #fff;
+  --surface-elevated: #fff;
+  --surface-input: #fff;
+  --surface-translucent: rgb(255 255 255 / 0.9);
+  --surface-topbar: rgb(255 255 255 / 0.88);
+  --surface-mobile-bar: rgb(248 250 252 / 0.9);
+  --border-translucent: rgb(203 213 225 / 0.8);
+  --border-glass: rgb(255 255 255 / 0.5);
+
+  --nav-background:
+    radial-gradient(circle at 20% 0%, rgb(var(--accent-soft-rgb) / 0.11), transparent 18rem),
+    linear-gradient(180deg, var(--accent-nav-from), var(--accent-nav-mid) 68%, var(--accent-nav-to));
+  --nav-border: rgb(var(--accent-rgb) / 0.14);
+  --nav-divider: rgb(var(--accent-rgb) / 0.11);
+  --nav-text-strong: #0f172a;
+  --nav-text: #475569;
+  --nav-text-muted: #64748b;
+  --nav-group-text: #617d8f;
+  --nav-mark-border: var(--kc-200);
+  --nav-mark-background: var(--kc-100);
+  --nav-accent: var(--kc-700);
+  --nav-hover: rgb(var(--accent-rgb) / 0.07);
+  --nav-icon-hover: rgb(var(--accent-rgb) / 0.09);
+  --nav-active-background: linear-gradient(100deg, rgb(var(--accent-rgb) / 0.13), rgb(var(--accent-soft-rgb) / 0.055));
+  --nav-active-collapsed: rgb(var(--accent-rgb) / 0.095);
+  --nav-active-shadow: 0 9px 24px rgb(var(--accent-rgb) / 0.11);
+  --nav-active-icon-background: #fff;
+  --nav-scrollbar-thumb: rgb(var(--accent-rgb) / 0.24);
+  --nav-scrollbar-thumb-hover: rgb(var(--accent-rgb) / 0.46);
+  --nav-scrollbar-thumb-active: rgb(var(--accent-rgb) / 0.7);
+
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgb(100 116 139 / 0.42);
+  --scrollbar-thumb-hover: rgb(71 85 105 / 0.66);
+  --scrollbar-thumb-active: var(--brand-solid);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --shadow-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 4px rgb(15 23 42 / 0.05);
+  --shadow-2: 0 10px 30px rgb(15 23 42 / 0.12);
+  --shadow-3: 0 22px 60px rgb(15 23 42 / 0.2);
+  --motion-sidebar: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar: 268px;
+  /* Fluid horizontal gutter shared by every page. */
+  --page-gutter: clamp(1rem, 1.4vw, 1.75rem);
+  /* --topbar sizes the sidebar's own brand row and the floating collapse toggle on desktop,
+     and doubles as the mobile shell strip's height on <=1100px — not the header (removed). */
+  --topbar: 72px;
+  /* Space main-content must reserve above its sticky panels for a bar sitting there: 0 on
+     desktop (no bar), equal to --topbar on <=1100px (the mobile shell strip). */
+  --content-offset: 0px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --kc-50: #0e2a3d;
+  --kc-100: #13374d;
+  --kc-200: #21506a;
+  --kc-300: #72c0df;
+  --kc-400: #78c8e6;
+  --kc-500: #58b3dc;
+  --kc-600: #68bce0;
+  --kc-700: #7bc8e6;
+  --kc-800: #9bd7ed;
+  --kc-900: #c1e8f5;
+
+  --neutral-0: #091521;
+  --neutral-25: #0b1825;
+  --neutral-50: #08131f;
+  --neutral-100: #132434;
+  --neutral-200: #23384b;
+  --neutral-300: #365168;
+  --neutral-400: #768b9d;
+  --neutral-500: #9bacbb;
+  --neutral-600: #bac7d2;
+  --neutral-700: #d5dee6;
+  --neutral-800: #e8eef3;
+  --neutral-900: #f7f9fb;
+  --neutral-950: #ffffff;
+
+  --success: #6fe0ad;
+  --success-surface: #0f2d24;
+  --success-border: #286a54;
+  --warning: #ffc170;
+  --warning-surface: #332614;
+  --warning-border: #765321;
+  --danger: #ff948d;
+  --danger-surface: #351a1b;
+  --danger-border: #7c3a3a;
+  --provisional: #c9b0ff;
+  --provisional-surface: #291f3d;
+
+  --surface-panel: #101e2c;
+  --surface-elevated: #142536;
+  --surface-input: #0d1a27;
+  --surface-translucent: rgb(16 30 44 / 0.92);
+  --surface-topbar: rgb(9 21 33 / 0.9);
+  --surface-mobile-bar: rgb(11 24 37 / 0.94);
+  --border-translucent: rgb(54 81 104 / 0.82);
+  --border-glass: rgb(114 192 223 / 0.22);
+
+  --nav-background:
+    radial-gradient(circle at 20% 0%, rgb(var(--accent-dark-glow-rgb) / 0.19), transparent 18rem),
+    linear-gradient(180deg, var(--kc-950), var(--accent-nav-dark-mid) 68%, var(--accent-nav-dark-to));
+  --nav-border: rgb(255 255 255 / 0.1);
+  --nav-divider: rgb(255 255 255 / 0.08);
+  --nav-text-strong: #fff;
+  --nav-text: rgb(255 255 255 / 0.72);
+  --nav-text-muted: rgb(255 255 255 / 0.65);
+  --nav-group-text: rgb(255 255 255 / 0.45);
+  --nav-mark-border: rgb(255 255 255 / 0.16);
+  --nav-mark-background: rgb(255 255 255 / 0.1);
+  --nav-accent: var(--kc-300);
+  --nav-hover: rgb(255 255 255 / 0.065);
+  --nav-icon-hover: rgb(255 255 255 / 0.08);
+  --nav-active-background: linear-gradient(100deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.055));
+  --nav-active-collapsed: rgb(255 255 255 / 0.085);
+  --nav-active-shadow: 0 9px 24px rgb(2 19 31 / 0.2);
+  --nav-active-icon-background: #fff;
+  --nav-scrollbar-thumb: rgb(var(--accent-dark-scroll-rgb) / 0.26);
+  --nav-scrollbar-thumb-hover: rgb(var(--accent-dark-scroll-rgb) / 0.52);
+  --nav-scrollbar-thumb-active: rgb(var(--accent-dark-scroll-rgb) / 0.78);
+
+  --scrollbar-thumb: rgb(118 139 157 / 0.48);
+  --scrollbar-thumb-hover: rgb(123 200 230 / 0.68);
+  --scrollbar-thumb-active: var(--kc-600);
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.24), 0 2px 8px rgb(0 0 0 / 0.16);
+  --shadow-2: 0 12px 34px rgb(0 0 0 / 0.34);
+  --shadow-3: 0 24px 64px rgb(0 0 0 / 0.48);
+}
+
+* {
+  box-sizing: border-box;
+  font-family: inherit;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-width: 44px;
+  min-height: 44px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html {
+  min-width: 0;
+  overflow-x: clip;
+  background: var(--neutral-50);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 72% -10%, rgb(var(--accent-soft-rgb) / 0.08), transparent 32rem),
+    var(--neutral-50);
+  color: var(--neutral-900);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  font-variation-settings: "slnt" 0, "wdth" 100, "GRAD" 0, "ROND" 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+button,
+input,
+textarea,
+select,
+option,
+table,
+dialog {
+  font-family: var(--font-sans);
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 2.7vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.022em;
+}
+
+h3 {
+  font-size: 1.03rem;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.012em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--kc-500);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--kc-200);
+  color: var(--kc-950);
+}
+
+:root[data-theme="dark"] ::selection {
+  color: var(--neutral-900);
+}
+
+/* Actions */
+
+/* Shell */
+
+/* :not(.nav-item__tooltip) excludes the collapsed-state tooltip span — without it this
+   descendant selector would repaint the tooltip's own white text to the muted nav color,
+   the same cascade trap already fixed for .session-panel span and .selected-file span. */
+
+@keyframes profile-menu-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+/* :not(.nav-item__tooltip) — same exclusion as the compound .sidebar-context rule above;
+   this base rule has higher specificity than .nav-item__tooltip's own color and would
+   otherwise win even with that rule's exclusion in place. */
+
+@keyframes profile-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+/* Shared page structure */
+
+/*
+ * Every page uses .page-container, so padding and alignment match across the whole app.
+ * Content spans the full width of the content column — no centred max-width — with a fluid
+ * gutter that scales from 1rem on phones to 1.75rem on desktop.
+ */
+
+/* Status */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Messages */
+
+@keyframes feedback-in {
+  from { opacity: 0; transform: translateY(-8px); }
+}
+
+/* Metrics and overview */
+
+/* Inputs and forms */
+
+/* The popover renders in a portal on document.body so it can never be clipped by, or add
+   scroll height to, an ancestor scroll container (dialogs, table wraps). The wrapper below
+   is fixed-positioned from the trigger's rect in JS; the popover itself is static within it. */
+
+/* max-height is set inline from the space actually available, so the list inherits it and
+   scrolls internally rather than overflowing the viewport. */
+
+@keyframes select-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* Used in RequirementDialog and ActionEditor to span the full form grid, but had no CSS at
+   all — the field silently stayed at its normal half-width column instead. */
+
+/* Generic "this value failed validation" treatment for a bare input/textarea outside a
+   labeled .field (the requirement editor's header controls) — mirrors .field--invalid input. */
+
+/* Admin requirement editor: the identity and title controls sit directly in the
+   requirement-header card (no wrapping .field), styled to read like the header they replace. */
+
+/* Editable variant of question-card__header's read-only <h3> question text. */
+
+/* Administrator evidence is authored per question. Individual rows make that ownership clear
+ * and let an editor add, amend, or remove one evidence expectation without changing siblings. */
+
+/* Tables */
+
+/* No horizontal scrolling: the wrap must not clip either, since row menus are absolutely
+   positioned inside it and any non-visible overflow axis forces the other axis to clip too. */
+
+/* Fixed layout means cells can no longer push the table wider than its container, so long
+   values must wrap (or ellipsis) rather than overflow. */
+
+/*
+ * This targets the "secondary text under strong" pattern (e.g. site name + code), but a plain
+ * tag-based selector also matches any inline badge/chip component that happens to be a table
+ * cell's direct child <span> — status-badge, completion-badge, publish-badge, response-chip,
+ * gap-count, detail-status all render that way. Forcing display:block on those breaks their own
+ * icon+label layout (the icon, a block-level element per the global svg reset, drops to its own
+ * line) or stretches them to the cell's full width. Same root cause fixed elsewhere this session
+ * (.session-panel span, .selected-file span, .site-context span) — an ancestor selector reaching
+ * further than intended; the fix is the same, exclude the components that need their own layout.
+ */
+
+/* Master requirement titles are the primary scan target. Reserve a larger, stable column so
+ * meaningful titles do not wrap prematurely while IDs, status, and actions stay compact. */
+
+/* Requirement workspace */
+
+/* The "how this result is calculated" banner sits at the bottom of the guidance panel, after
+   this note — neither had its own top/bottom margin, so they sat flush against each other. */
+
+/* Used only by the admin requirement editor, which renders requirement-main standalone
+   (no navigator/guidance columns flanking it) — without a cap it stretches to the full
+   viewport width and every row (ID/section, title/status, the sites picker) ends up with
+   large dead gaps. The real assessment page doesn't need this: its 3-column layout already
+   bounds the middle column's width. */
+
+/* The administrator editor uses the same responsive workspace model as self-assessment: a
+ * navigable master-requirement rail on desktop and the editing canvas beside it. The explicit
+ * two-column grid also avoids reserving the self-assessment guidance column. */
+
+/* Lets the title (h1, or the editable textarea in the admin editor) actually claim the row's
+   available width — without this, a flex child with no flex-grow sizes to its own content
+   (a bare <textarea>'s browser-default width), leaving the status control stranded far to the
+   right of a much narrower title box. */
+
+/* Dialogs and sheets */
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+}
+
+/* Dashboard */
+
+/* Every filter-bar search box is a fixed 420px rather than flex-growing: each screen's filter
+   row holds a different number of selects, so a growing search box ends up a different width on
+   every page. No grow keeps them visually identical across screens; shrink is still allowed so
+   narrow viewports collapse gracefully (and the mobile rule below overrides to full width). */
+
+/* Assessment-first site drill-down */
+
+/* Imports and admin */
+
+/* Scoped to the info column, not the whole card — see the .session-panel comment above for why
+   a bare descendant selector here would repaint the sibling Button's own text color. */
+
+/* .mapping-table no longer clips overflow (its Select popovers need to escape it), so a
+   flagged row's colored background needs its own corner-rounding to match the container
+   whenever it lands on the first/last row — overflow:hidden used to do this for free. */
+
+/* The requirement editor is deliberately narrower than the full application canvas. Its site
+ * search should therefore take the available toolbar space instead of remaining at the generic
+ * 420px width and leaving an awkward gap beside the bulk actions. */
+
+/* The search input is nested inside the shared bordered control. Reset any browser or more
+ * specific form styling on that inner element so focus produces one clear outline around the
+ * complete search field rather than a second, inset blue border. */
+
+/* Keep the reusable checkbox list's standard width everywhere else. */
+
+/* Responsive */
+
+@media (max-width: 1100px) {
+  :root {
+    --topbar: 66px;
+    --content-offset: var(--topbar);
+  }
+
+  /* The bell sits near the right edge, so a right-anchored panel this wide would hang off
+     the left of the screen. Span the viewport with a margin instead. */
+
+  @keyframes nav-in {
+    from { transform: translateX(-100%); }
+  }
+}
+
+@media (max-width: 740px) {
+  body {
+    background: var(--neutral-50);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion-preference="full"]) *,
+:root:not([data-motion-preference="full"]) *::before,
+:root:not([data-motion-preference="full"]) *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (forced-colors: active) {
+  * {
+    scrollbar-color: auto;
+  }
+}
+
+/* Connected Phase 1 flows */
+
+/* Table action buttons sit in the last column, so a centre-anchored tooltip hangs past the
+   right edge of the page and widens the document. Anchor those to the button's right edge
+   instead — this is what was causing a few px of horizontal page scroll on table screens. */
+
+/* While a row menu is open its trigger still holds hover/focus, so the icon-button tooltip
+   would sit on top of the menu and read as a second stacked popup. Suppress it for that row. */
+
+/* Role-aware guided setup */
+
+@keyframes setup-fade-in {
+  from { opacity: 0; }
+}
+
+/* Authentication, appearance, and account settings */
+
+/* Column minimums are deliberately small: at ~1100px the app sidebar (268px) plus the settings
+   index (260px) leaves little room, and larger minimums here used to push the whole settings
+   page wider than the viewport. */
+
+@keyframes passkey-attention {
+  0% { box-shadow: 0 0 0 0 rgb(var(--accent-soft-rgb) / 0.4), var(--shadow-2); }
+  55% { box-shadow: 0 0 0 8px rgb(var(--accent-soft-rgb) / 0.14), var(--shadow-2); }
+}
+
+/* Expanded settings workspace */
+
+/* Grid items default to min-width:auto, so this column refused to shrink below its content's
+   min-content width and pushed the whole page wider than the viewport — the track being
+   minmax(0,1fr) is not enough on its own. */
+
+/* Explicit minmax(0,1fr) track: a bare grid track defaults to min-content, so a wide card
+   inside made this column wider than the space it was given and overflowed the page. */
+/* Scoped to the info column, not `.session-panel` as a whole — a plain descendant selector here
+   used to reach into the Sign out button and repaint its own <span> text slate-gray instead of
+   the danger variant's white, leaving the icon white but the label low-contrast. */
+
+@media (max-width: 900px) {
+  /* Wraps onto multiple rows rather than scrolling sideways — the tab strip used to be a
+     horizontally scrolling row, which hid its later items behind an invisible scrollbar. */
+}
+
+/* First-login passkey enrollment */
+
+/* Whole-row navigation on the admin Sites table. The trailing arrow stays a real link so
+   keyboard and screen-reader users keep a focusable target — the row click is a mouse
+   affordance layered on top, not a replacement for it. */
+
+/* Text entry for a region/segment that does not exist yet, with a link back to the picker. */
+
+/* Notification centre — popover chrome mirrors .profile-menu so the two shell menus match. */
+
+/* ---- KC brand blue accent -------------------------------------------------
+   Opt-in palette selected in Appearance settings. Only the accent tokens are
+   overridden; neutrals, status colours, and layout are untouched, so every
+   component picks the new colour up without any per-component change. */
+
+:root[data-accent="kc-brand"] {
+  --accent-rgb: 0 71 187;
+  --accent-soft-rgb: 59 116 246;
+  --accent-hero-from: #001c45;
+  --accent-hero-mid: #00306f;
+  --accent-hero-to: #0047bb;
+  --accent-hero-glow-a: 96 150 250;
+  --accent-hero-glow-b: 147 187 253;
+  --accent-dark-glow-rgb: 96 150 250;
+  --accent-dark-scroll-rgb: 147 187 253;
+  --accent-nav-dark-mid: #052a63;
+  --accent-nav-dark-to: #04204e;
+  --accent-nav-from: #fafbff;
+  --accent-nav-mid: #f2f6ff;
+  --accent-nav-to: #e8effd;
+
+  --kc-50: #eff5ff;
+  --kc-100: #dbe8fe;
+  --kc-200: #bfd7fe;
+  --kc-300: #93bbfd;
+  --kc-400: #6096fa;
+  --kc-500: #3b74f6;
+  --kc-600: #0047bb;
+  --kc-700: #003da5;
+  --kc-800: #003488;
+  --kc-900: #002d6f;
+  --kc-950: #001c45;
+
+  --brand-solid: #0047bb;
+  --brand-solid-hover: #003da5;
+  --brand-solid-active: #003488;
+  --brand-deep: #002d6f;
+  --brand-deepest: #001c45;
+}
+
+/* Dark mode needs the ramp inverted for contrast, mirroring how the default
+   palette lightens 300-900 under [data-theme="dark"]. */
+:root[data-theme="dark"][data-accent="kc-brand"] {
+  --kc-950: #041534;
+  --kc-50: #0f1f3d;
+  --kc-100: #14284d;
+  --kc-200: #1f3a6b;
+  --kc-300: #7ea6f8;
+  --kc-400: #8fb3f9;
+  --kc-500: #7aa4f7;
+  --kc-600: #8ab0f9;
+  --kc-700: #a3c2fb;
+  --kc-800: #c0d7fc;
+  --kc-900: #dbe8fe;
+}

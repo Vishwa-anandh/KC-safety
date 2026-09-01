@@ -16,13 +16,40 @@ function walk(directory, output = []) {
 
 const sourceFiles = walk(sourceRoot);
 const codeFiles = sourceFiles.filter((file) => /\.(?:ts|tsx)$/.test(file));
+const cssFiles = sourceFiles.filter((file) => file.endsWith(".css"));
 const relative = (file) => path.relative(repositoryRoot, file).replaceAll("\\", "/");
+
+const allowedCssFiles = new Set(["src/tailwind.css", "src/tailwind.base.css"]);
+for (const file of cssFiles) {
+  const name = relative(file);
+  if (!allowedCssFiles.has(name)) violations.push(`${name}: component styling must use Tailwind utilities; only the Tailwind entry and global design-system base are allowed`);
+}
+
+const tailwindEntry = fs.readFileSync(path.join(sourceRoot, "tailwind.css"), "utf8");
+if (/tailwindcss\/preflight|@import\s+["']tailwindcss["']/.test(tailwindEntry)) {
+  violations.push("src/tailwind.css: Tailwind Preflight must stay disabled because the application owns its typography and control baseline");
+}
+
+const globalBase = fs.readFileSync(path.join(sourceRoot, "tailwind.base.css"), "utf8");
+if (/(?:^|\n)\s*\.[A-Za-z_-][^{]*\{/m.test(globalBase)) {
+  violations.push("src/tailwind.base.css: component class selectors are not allowed; move component styling into Tailwind utilities");
+}
+if (!/@font-face[\s\S]*google-sans-flex-latin\.woff2/.test(globalBase)) {
+  violations.push("src/tailwind.base.css: the locally bundled Google Sans Flex face is missing");
+}
+if (!/:focus-visible\s*\{[\s\S]*?outline:/.test(globalBase)) {
+  violations.push("src/tailwind.base.css: the global keyboard focus outline is missing");
+}
+if (!/@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(globalBase)) {
+  violations.push("src/tailwind.base.css: reduced-motion handling is missing");
+}
 
 const allowedRootFiles = new Set(["src/main.tsx", "src/vite-env.d.ts"]);
 for (const file of codeFiles) {
   const name = relative(file);
   const content = fs.readFileSync(file, "utf8");
   const atSourceRoot = path.dirname(name) === "src";
+  if (/className\s*=\s*["'`]/.test(content)) violations.push(`${name}: static component classes must be expressed through the shared Tailwind cx boundary`);
   if (atSourceRoot && !allowedRootFiles.has(name)) violations.push(`${name}: application code must belong to app, features, shared, data-access, or demo`);
   if (/\bfetch\s*\(/.test(content) && !name.startsWith("src/data-access/rest/")) violations.push(`${name}: direct fetch is only allowed in src/data-access/rest`);
   if (/import\.meta\.env\b/.test(content) && name !== "src/app/config/environment.ts") violations.push(`${name}: runtime environment access must go through app/config/environment`);
