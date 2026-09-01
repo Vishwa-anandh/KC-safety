@@ -17,6 +17,7 @@ import {
 import { performanceLabel } from "../domain/assessment";
 import type { Performance } from "../types";
 import { cx } from "../utils";
+import { buttonStyles, iconButtonStyles } from "./tailwind";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "tertiary" | "danger";
@@ -38,7 +39,18 @@ export function Button({
   ...props
 }: ButtonProps) {
   return (
-    <button className={cx("button", `button--${variant}`, `button--${size}`, className)} {...props}>
+    <button
+      className={cx(
+        "button",
+        `button--${variant}`,
+        `button--${size}`,
+        buttonStyles.base,
+        buttonStyles.variant[variant],
+        buttonStyles.size[size],
+        className,
+      )}
+      {...props}
+    >
       {iconPosition === "start" && icon}
       <span>{children}</span>
       {iconPosition === "end" && icon}
@@ -58,7 +70,7 @@ export function IconButton({
 }) {
   const tooltipId = useId();
   return (
-    <button {...props} className={cx("icon-button", className)} aria-label={label} aria-describedby={tooltipId}>
+    <button {...props} className={cx("icon-button", iconButtonStyles, className)} aria-label={label} aria-describedby={tooltipId}>
       {children}
       <span id={tooltipId} className={cx("app-tooltip", `app-tooltip--${tooltipPlacement}`)} role="tooltip">
         {label}

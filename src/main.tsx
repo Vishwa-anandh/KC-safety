@@ -4,6 +4,7 @@ import AppRoutes from "./app/router/AppRoutes";
 import { AppProviders } from "./app/providers/AppProviders";
 import { AppErrorBoundary } from "./app/errors/AppErrorBoundary";
 import "./styles.css";
+import "./tailwind.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

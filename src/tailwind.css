@@ -1,0 +1,73 @@
+/* Tailwind recommends the important import while migrating an existing high-specificity codebase.
+   It lets intentional utility classes override legacy selectors without processing the entire
+   compatibility stylesheet through Tailwind on every build. */
+@import "tailwindcss" important;
+
+/* Maitsys Assure keeps its runtime theme variables as the source of truth. Tailwind utilities
+   reference those variables so light/dark mode and the selectable accent palette continue to
+   work without duplicating color values in components. */
+@theme inline {
+  --font-sans: "Google Sans Flex", "Google Sans", system-ui, sans-serif;
+
+  --color-brand: var(--brand-solid);
+  --color-brand-hover: var(--brand-solid-hover);
+  --color-brand-active: var(--brand-solid-active);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-deepest: var(--brand-deepest);
+
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-input: var(--surface-input);
+  --color-surface-translucent: var(--surface-translucent);
+
+  --color-app-success: var(--success);
+  --color-app-success-surface: var(--success-surface);
+  --color-app-success-border: var(--success-border);
+  --color-app-warning: var(--warning);
+  --color-app-warning-surface: var(--warning-surface);
+  --color-app-warning-border: var(--warning-border);
+  --color-app-danger: var(--danger);
+  --color-app-danger-surface: var(--danger-surface);
+  --color-app-danger-border: var(--danger-border);
+
+  --color-kc-50: var(--kc-50);
+  --color-kc-100: var(--kc-100);
+  --color-kc-200: var(--kc-200);
+  --color-kc-300: var(--kc-300);
+  --color-kc-400: var(--kc-400);
+  --color-kc-500: var(--kc-500);
+  --color-kc-600: var(--kc-600);
+  --color-kc-700: var(--kc-700);
+  --color-kc-800: var(--kc-800);
+  --color-kc-900: var(--kc-900);
+  --color-kc-950: var(--kc-950);
+
+  --color-app-neutral-0: var(--neutral-0);
+  --color-app-neutral-25: var(--neutral-25);
+  --color-app-neutral-50: var(--neutral-50);
+  --color-app-neutral-100: var(--neutral-100);
+  --color-app-neutral-200: var(--neutral-200);
+  --color-app-neutral-300: var(--neutral-300);
+  --color-app-neutral-400: var(--neutral-400);
+  --color-app-neutral-500: var(--neutral-500);
+  --color-app-neutral-600: var(--neutral-600);
+  --color-app-neutral-700: var(--neutral-700);
+  --color-app-neutral-800: var(--neutral-800);
+  --color-app-neutral-900: var(--neutral-900);
+  --color-app-neutral-950: var(--neutral-950);
+
+  --radius-app-sm: var(--radius-sm);
+  --radius-app-md: var(--radius-md);
+  --radius-app-lg: var(--radius-lg);
+  --radius-app-xl: var(--radius-xl);
+
+  --shadow-app-1: var(--shadow-1);
+  --shadow-app-2: var(--shadow-2);
+  --shadow-app-3: var(--shadow-3);
+
+  --breakpoint-phone: 40rem;
+  --breakpoint-tablet: 48.75rem;
+  --breakpoint-shell: 68.75rem;
+}
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

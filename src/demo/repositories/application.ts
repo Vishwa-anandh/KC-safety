@@ -297,32 +297,42 @@ function restoreSnapshot(): AppSnapshot {
       ...fallback,
       ...parsed,
       requirements: parsed.requirements?.length
-        ? normalizeActionMetadata(parsed.requirements.map((requirement) => ({
-          ...requirement,
-          questions: requirement.questions.map((question) => ({
-            ...question,
-            period: question.period ?? currentAssessmentPeriod,
-            respondedAt: question.response ? question.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
-            respondedBy: question.response ? question.respondedBy ?? "Maya Patel" : undefined,
-            action: question.action ? {
-              ...question.action,
-              status: question.action.status ?? "Open",
-              followUp: question.action.followUp ?? "",
-              createdAt: question.action.createdAt ?? "2026-08-01T09:00:00.000Z",
-              createdBy: question.action.createdBy ?? "Maya Patel",
-              updatedAt: question.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
-              updatedBy: question.action.updatedBy ?? "Maya Patel",
-            } : question.response === "no" || question.response === "partial"
-              ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
-              : undefined,
-          })),
-          // Requirement-level evidence was the original demo shape. Preserve it by associating
-          // old records with the first question that requests evidence.
-          evidence: (requirement.evidence ?? []).map((evidence) => evidence.questionId ? evidence : {
-            ...evidence,
-            questionId: requirement.questions.find((question) => question.evidenceRequired ?? question.expectedEvidence?.length)?.id ?? requirement.questions[0]?.id,
-          }),
-        })))
+        ? normalizeActionMetadata(parsed.requirements.map((requirement) => {
+          const fallbackRequirement = fallback.requirements.find((item) => item.id === requirement.id);
+          const questions: AssessmentQuestion[] = requirement.questions.map((question) => {
+            const fallbackQuestion = fallbackRequirement?.questions.find((item) => item.id === question.id);
+            const expectedEvidence = question.expectedEvidence ?? fallbackQuestion?.expectedEvidence ?? [];
+            return {
+              ...question,
+              expectedEvidence,
+              evidenceRequired: question.evidenceRequired ?? fallbackQuestion?.evidenceRequired ?? expectedEvidence.length > 0,
+              period: question.period ?? currentAssessmentPeriod,
+              respondedAt: question.response ? question.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
+              respondedBy: question.response ? question.respondedBy ?? "Maya Patel" : undefined,
+              action: question.action ? {
+                ...question.action,
+                status: question.action.status ?? "Open",
+                followUp: question.action.followUp ?? "",
+                createdAt: question.action.createdAt ?? "2026-08-01T09:00:00.000Z",
+                createdBy: question.action.createdBy ?? "Maya Patel",
+                updatedAt: question.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+                updatedBy: question.action.updatedBy ?? "Maya Patel",
+              } : question.response === "no" || question.response === "partial"
+                ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
+                : undefined,
+            };
+          });
+          return {
+            ...requirement,
+            questions,
+            // Requirement-level evidence was the original demo shape. Preserve it by associating
+            // old records with the first question that requests evidence.
+            evidence: (requirement.evidence ?? []).map((evidence) => evidence.questionId ? evidence : {
+              ...evidence,
+              questionId: questions.find((question) => question.evidenceRequired ?? question.expectedEvidence?.length)?.id ?? questions[0]?.id,
+            }),
+          };
+        }))
         : fallback.requirements,
       ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : fallback.ownerRecords,
       masterRequirements: restoredMasterRequirements,
