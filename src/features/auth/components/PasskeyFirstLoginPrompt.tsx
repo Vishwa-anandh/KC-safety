@@ -4,6 +4,14 @@ import { useAuth } from "../model/AuthProvider";
 import { Button, IconButton } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
+/*
+ * The two entry animations reference keyframes declared globally in tailwind.base.css. Tailwind
+ * only ships utilities for its own four keyframe sets, so these stay inline rather than becoming
+ * bracket utilities; the reduced-motion overrides in tailwind.base.css still neutralise them.
+ */
+const backdropAnimation = "setup-fade-in 180ms ease-out";
+const dialogAnimation = "dialog-in 220ms ease-out";
+
 export default function PasskeyFirstLoginPrompt() {
   const { user, passkeyPromptOpen, registerPasskey, dismissPasskeyPrompt, finishPasskeyPrompt } = useAuth();
   const [pending, setPending] = useState(false);
@@ -50,15 +58,58 @@ export default function PasskeyFirstLoginPrompt() {
   }
 
   return (
-    <div className={cx("setup-layer [position:fixed] [z-index:180] [inset:0] [display:grid] [place-items:center] [padding:1rem] max-[620px]:[align-items:end] max-[620px]:[padding:0] passkey-first-login-layer [z-index:230] max-[620px]:[align-items:end] max-[620px]:[padding:0]")}>
-      <div className={cx("setup-backdrop [position:absolute] [inset:0] [background:rgb(2_13_25_/_0.64)] [backdrop-filter:blur(8px)] [animation:setup-fade-in_180ms_ease-out]")} />
-      <section ref={dialogRef} className={cx("first-login-passkey [position:relative] [display:grid] [width:min(590px,_calc(100vw_-_2rem))] [max-height:calc(100vh_-_2rem)] [gap:1rem] [overflow:hidden_auto] [border:1px_solid_var(--border-glass)] [border-radius:24px] [background:var(--surface-elevated)] [box-shadow:0_28px_90px_rgb(2_13_25_/_0.38)] [padding:1.3rem] [animation:dialog-in_220ms_ease-out] focus:[outline:0] max-[620px]:[width:100%] max-[620px]:[max-height:calc(100vh_-_0.5rem)] max-[620px]:[border-right:0] max-[620px]:[border-bottom:0] max-[620px]:[border-left:0] max-[620px]:[border-radius:24px_24px_0_0] max-[620px]:[padding:1rem_0.9rem_calc(1rem_+_env(safe-area-inset-bottom))]")} role="dialog" aria-modal="true" aria-labelledby="first-login-passkey-title" tabIndex={-1}>
-        {complete ? <div className={cx("first-login-passkey__complete [display:grid] [justify-items:center] [gap:0.6rem] [padding:1.25rem_0.75rem] [text-align:center] [&_>_span]:[display:grid] [&_>_span]:[width:68px] [&_>_span]:[height:68px] [&_>_span]:[place-items:center] [&_>_span]:[border-radius:50%] [&_>_span]:[background:var(--success-surface)] [&_>_span]:[color:var(--success)] [&_h2]:[color:var(--neutral-950)] [&_h2]:[font-size:1.3rem] [&_>_p:not(.eyebrow)]:[max-width:48ch] [&_>_p:not(.eyebrow)]:[color:var(--neutral-600)] [&_>_p:not(.eyebrow)]:[font-size:0.78rem] [&_>_p:not(.eyebrow)]:[line-height:1.5]")}><span><CheckCircle2 size={31} /></span><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Passkey added</p><h2 id="first-login-passkey-title">Your next sign-in can be faster</h2><p>This device is now registered for {user.name}. You can rename or remove it later in Settings.</p><Button variant="primary" onClick={finishPasskeyPrompt}>Continue to workspace</Button></div> : <>
-          <div className={cx("first-login-passkey__header [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:start] [gap:0.75rem] [&_>_span:first-child]:[display:grid] [&_>_span:first-child]:[width:50px] [&_>_span:first-child]:[height:50px] [&_>_span:first-child]:[place-items:center] [&_>_span:first-child]:[border-radius:15px] [&_>_span:first-child]:[background:var(--kc-50)] [&_>_span:first-child]:[color:var(--kc-700)] [&_>_div]:[display:grid] [&_>_div]:[gap:0.18rem] [&_h2]:[color:var(--neutral-950)] [&_h2]:[font-size:1.3rem] max-[620px]:[&_>_span:first-child]:[width:44px] max-[620px]:[&_>_span:first-child]:[height:44px] max-[620px]:[&_h2]:[font-size:1.12rem]")}><span><KeyRound size={25} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>First sign-in on this browser</p><h2 id="first-login-passkey-title">Would you like to add a passkey?</h2></div><IconButton label="Not now" onClick={dismissPasskeyPrompt} disabled={pending}><X size={19} /></IconButton></div>
-          <p className={cx("first-login-passkey__intro [color:var(--neutral-600)] [font-size:0.82rem] [line-height:1.55]")}>Use your device unlock, fingerprint, face, phone, or security key for a simpler sign-in next time.</p>
-          {error && <div className={cx("auth-error [border:1px_solid_var(--danger-border)] [border-radius:10px] [background:var(--danger-surface)] [color:var(--danger)] [padding:0.65rem_0.75rem] [font-size:0.74rem] [line-height:1.4]")} role="alert">{error}</div>}
-          <div className={cx("first-login-passkey__actions [display:flex] [justify-content:flex-end] [gap:0.55rem] [border-top:1px_solid_var(--neutral-200)] [padding-top:0.9rem] max-[620px]:[align-items:stretch] max-[620px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={dismissPasskeyPrompt} disabled={pending}>Not now</Button><Button variant="primary" icon={<KeyRound size={18} />} onClick={addPasskey} disabled={pending}>{pending ? "Follow your device prompt…" : "Add a passkey"}</Button></div>
-        </>}
+    <div className={cx("setup-layer passkey-first-login-layer fixed inset-0 z-230 grid items-end justify-items-center p-0 sm:items-center sm:p-4")}>
+      <div
+        className={cx("setup-backdrop absolute inset-0 bg-slate-950/65 backdrop-blur-md dark:bg-slate-950/65")}
+        style={{ animation: backdropAnimation }}
+      />
+      <section
+        ref={dialogRef}
+        className={cx("first-login-passkey relative grid max-h-full w-full max-w-147 gap-4 overflow-x-hidden overflow-y-auto rounded-t-3xl border-t border-slate-200 bg-white px-3.5 pt-4 pb-8 shadow-2xl focus:outline-none sm:rounded-3xl sm:border-x sm:border-b sm:p-5 dark:border-slate-700 dark:bg-slate-900")}
+        style={{ animation: dialogAnimation }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="first-login-passkey-title"
+        tabIndex={-1}
+      >
+        {complete ? (
+          <div className={cx("first-login-passkey__complete grid justify-items-center gap-2.5 px-3 py-5 text-center")}>
+            <span className={cx("grid size-17 place-items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300")}>
+              <CheckCircle2 size={31} />
+            </span>
+            <p className={cx("eyebrow text-sm font-semibold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}>Passkey added</p>
+            <h2 id="first-login-passkey-title" className={cx("text-xl font-bold text-slate-900 dark:text-slate-100")}>Your next sign-in can be faster</h2>
+            <p className={cx("max-w-sm text-sm leading-normal text-slate-600 dark:text-slate-400")}>
+              This device is now registered for {user.name}. You can rename or remove it later in Settings.
+            </p>
+            <Button variant="primary" onClick={finishPasskeyPrompt}>Continue to workspace</Button>
+          </div>
+        ) : (
+          <>
+            <div className={cx("first-login-passkey__header flex items-start gap-3")}>
+              <span className={cx("grid size-11 shrink-0 place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 sm:size-12 dark:bg-kc-blue-950 dark:text-kc-blue-300")}>
+                <KeyRound size={25} />
+              </span>
+              <div className={cx("grid min-w-0 flex-1 gap-0.5")}>
+                <p className={cx("eyebrow text-sm font-semibold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}>First sign-in on this browser</p>
+                <h2 id="first-login-passkey-title" className={cx("text-lg font-bold text-slate-900 sm:text-xl dark:text-slate-100")}>Would you like to add a passkey?</h2>
+              </div>
+              <IconButton label="Not now" onClick={dismissPasskeyPrompt} disabled={pending}><X size={19} /></IconButton>
+            </div>
+            <p className={cx("first-login-passkey__intro text-sm leading-relaxed text-slate-600 dark:text-slate-400")}>
+              Use your device unlock, fingerprint, face, phone, or security key for a simpler sign-in next time.
+            </p>
+            {error && (
+              <div className={cx("auth-error rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-snug text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300")} role="alert">
+                {error}
+              </div>
+            )}
+            <div className={cx("first-login-passkey__actions flex flex-col-reverse items-stretch gap-2 border-t border-slate-200 pt-3.5 sm:flex-row sm:justify-end dark:border-slate-700")}>
+              <Button variant="tertiary" onClick={dismissPasskeyPrompt} disabled={pending}>Not now</Button>
+              <Button variant="primary" icon={<KeyRound size={18} />} onClick={addPasskey} disabled={pending}>{pending ? "Follow your device prompt…" : "Add a passkey"}</Button>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

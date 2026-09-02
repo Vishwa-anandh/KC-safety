@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -31,19 +31,102 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { useAdministration } from "../model/useAdministration";
+import { importTemplateColumns, planRequirementImport, planRequirementRows, type ImportTemplateRow, type RequirementImportMode, type RequirementImportPlan } from "../model/importWorkbook";
+import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
 import type { DashboardSite, MasterQuestion, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, IconButton, InlineMessage, MetricCard, PageHeader, ProgressBar, Select } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
-const importSteps = ["Select sites", "Upload", "Inspect", "Map", "Validate", "Confirm", "Result"];
+const importSteps = ["Choose flow", "Upload", "Review changes", "Publish"];
+
+// ---------------------------------------------------------------------------------------------
+// Canonical class recipes shared across this file's screens. Each mirrors a pattern duplicated
+// verbatim across admin screens (and, for data tables and pills, the same recipe used in
+// src/features/sites/components/SitePanels.tsx and src/shared/ui/UI.tsx) — every occurrence uses
+// the same constant so the screens don't drift apart.
+// ---------------------------------------------------------------------------------------------
+
+const breadcrumbsClass = "breadcrumbs mb-4 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400";
+const breadcrumbsLinkClass = "font-semibold text-kc-blue-700 dark:text-kc-blue-300";
+
+const tableCardClass = "table-card mt-5 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";
+/** "Results" header: title + count, vertically centered once the row goes horizontal. */
+const tableCardHeaderClass = "table-card__header flex flex-col items-start justify-between gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center dark:border-slate-700";
+/** Plain header (e.g. a per-section heading with no trailing count): top-aligned instead. */
+const tableCardHeaderStartClass = "table-card__header flex flex-col items-start justify-between gap-4 border-b border-slate-200 p-4 md:flex-row md:items-start dark:border-slate-700";
+const tableCardHeaderTitleClass = "mt-0.5 text-lg font-bold text-slate-900 dark:text-slate-100";
+const tableCardHeaderCountClass = "text-sm text-slate-500 dark:text-slate-400";
+
+const dashboardFilterBarClass = "dashboard-filter-bar m-0 flex flex-col flex-wrap items-stretch gap-3 border-b border-slate-200 p-3.5 md:flex-row shell:items-center dark:border-slate-700";
+const searchControlClass = "search-control flex min-h-10 w-full min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 md:w-auto md:min-w-64 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:focus-within:ring-kc-blue-900";
+const searchControlInputClass = "min-h-0 min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-sm text-slate-900 shadow-none outline-none dark:text-slate-100";
+
+const metricsGridClass = "metrics-grid mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 wide:grid-cols-4";
+
+/** Canonical tinted pill recipe (see shared/ui/UI.tsx pillBase/pillTone). Duplicated here because
+ * these badges carry admin-specific labels rather than the shared PerformanceBadge/CompletionBadge. */
+const pillBaseClass = "inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold whitespace-nowrap";
+const pillTone = {
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300",
+  neutral: "border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  brand: "border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+  provisional: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300",
+};
+const publishBadgeClass = cx("publish-badge", pillBaseClass);
+const warningLabelClass = cx("warning-label", pillBaseClass, pillTone.warning);
+
+/**
+ * Canonical data-table recipe (see SitePanels.tsx): a real table from `shell` (1100px) up, a
+ * stacked label/value card layout below it. `data-label` stays on every cell for the tests and
+ * screenshot harness that query it; the visible label span repeats it, hidden again at `shell:`.
+ */
+const dataTableWrapClass = "data-table-wrap w-full max-w-full";
+const dataTableClass = "data-table block w-full min-w-0 table-fixed border-collapse text-sm text-slate-900 dark:text-slate-100 shell:table";
+const dataTableHeadClass = "block sr-only shell:not-sr-only shell:table-header-group";
+const dataTableHeaderCellClass = "border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400";
+const dataTableBodyClass = "grid w-full min-w-0 grid-cols-1 gap-3 p-3.5 md:grid-cols-2 shell:table-row-group shell:p-0";
+const dataTableRowClass = "block w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-900 shell:table-row shell:rounded-none shell:border-0 shell:bg-transparent shell:shadow-none";
+/** Whole-row link (e.g. a site or requirement row that navigates on click). */
+const dataTableRowLinkClass = "data-table__row--link cursor-pointer hover:bg-kc-blue-50 dark:hover:bg-kc-blue-950 shell:hover:bg-kc-blue-50 dark:shell:hover:bg-kc-blue-950";
+const dataTableCellClass = "flex min-h-12 w-full min-w-0 items-center gap-3 border-b border-slate-200 px-3.5 py-3 text-left align-middle wrap-anywhere dark:border-slate-700 shell:table-cell shell:min-h-0 shell:px-4";
+/** Last cell of each stacked card: right-aligned actions, its own footer tint. */
+const dataTableLastCellClass = "flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere border-slate-200 dark:border-slate-700 dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-start shell:bg-transparent shell:px-4";
+const dataTableCellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
+const rowActionsClass = "row-actions flex items-center gap-0.5 justify-end shell:justify-start";
+const rowMenuClass = "row-menu absolute top-full right-0 z-20 mt-1 grid w-40 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900";
+const rowMenuButtonClass = "flex items-center gap-2 border-0 border-b border-slate-100 bg-transparent px-3 py-2.5 text-left text-xs text-slate-800 last:border-b-0 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200";
+const rowMenuDeleteButtonClass = "flex items-center gap-2 border-0 border-b border-slate-100 bg-transparent px-3 py-2.5 text-left text-xs text-red-700 last:border-b-0 hover:bg-red-50 hover:text-red-700 dark:border-slate-800 dark:text-red-300 dark:hover:bg-red-950 dark:hover:text-red-300";
+
+/** Canonical form-field wrapper: label row, optional "Required" mark, an input/textarea styled
+ * directly (Select renders its own trigger so it never needs this), and an inline error. */
+const fieldClass = "field grid min-w-0 gap-1.5";
+const fieldLabelRowClass = "flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-slate-300";
+const fieldRequiredMarkClass = "text-xs font-bold tracking-wide text-red-700 dark:text-red-300";
+const fieldInputClass = "w-full min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900";
+const fieldInvalidClass = "border-red-600! ring-3 ring-red-100 dark:border-red-400! dark:ring-red-950";
+const fieldErrorClass = "field-error mt-1.5 block text-xs font-semibold text-red-700 dark:text-red-300";
+
+const dialogLayerClass = "dialog-layer fixed inset-0 z-100 grid place-items-center p-4";
+const dialogBackdropClass = "dialog-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm";
+const dialogClass = "dialog relative max-h-full w-full max-w-xl overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900";
+const dialogHeaderClass = "dialog__header flex items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-slate-700";
+const dialogHeaderTitleClass = "mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100";
+const dialogFormClass = "dialog-form grid grid-cols-1 gap-4 p-5 md:grid-cols-2";
+const dialogFooterClass = "dialog__footer flex flex-col-reverse items-stretch gap-4 border-t border-slate-200 p-4 md:flex-row md:items-center md:justify-end dark:border-slate-700";
+
+const linkButtonBaseClass = "inline-flex min-w-0 items-center justify-center gap-2 rounded-lg border border-transparent text-sm font-semibold whitespace-nowrap transition-colors";
 
 const TARGET_FIELDS = [
   { value: "requirement_id", label: "requirement_id" },
   { value: "requirement_text", label: "requirement_text" },
+  { value: "question_id", label: "question_id" },
   { value: "question_number", label: "question_number" },
   { value: "question_text", label: "question_text" },
   { value: "guidance", label: "guidance" },
@@ -51,6 +134,9 @@ const TARGET_FIELDS = [
   { value: "evidence_required", label: "evidence_required" },
   { value: "subsection", label: "subsection" },
   { value: "section", label: "section" },
+  { value: "applicable_sites", label: "applicable_sites" },
+  { value: "overall_priority", label: "overall_priority" },
+  { value: "section_priority", label: "section_priority" },
 ];
 
 interface ColumnMapping {
@@ -61,13 +147,16 @@ interface ColumnMapping {
 }
 
 const INITIAL_MAPPINGS: ColumnMapping[] = [
+  { source: "Section", target: "section", sample: "Leadership & Engagement", needsReview: false },
+  { source: "Sub-Section", target: "subsection", sample: "Leadership & Commitment", needsReview: false },
   { source: "Requirement ID", target: "requirement_id", sample: "OS 1.2.1", needsReview: false },
-  { source: "Requirement text", target: "requirement_text", sample: "Site leadership establishes...", needsReview: false },
-  { source: "Question number", target: "question_number", sample: "1", needsReview: false },
-  { source: "Assessment question", target: "question_text", sample: "Are leadership responsibilities documented?", needsReview: false },
-  { source: "How to meet", target: "guidance", sample: "Assign clear accountabilities...", needsReview: false },
-  { source: "Evidence requirements", target: "expected_evidence", sample: "Leadership matrix...", needsReview: false },
-  { source: "Sub-section", target: "subsection", sample: "1.2 Leadership commitment", needsReview: false },
+  { source: "Requirement Text", target: "requirement_text", sample: "Take accountability for the effectiveness...", needsReview: false },
+  { source: "Question ID", target: "question_id", sample: "OS-01-Q1", needsReview: false },
+  { source: "Question / How to Meet Requirement", target: "question_text", sample: "Establish tiered accountability meetings...", needsReview: false },
+  { source: "Evidence Requirement", target: "expected_evidence", sample: "Tiered accountability KPIs are aligned...", needsReview: false },
+  { source: "Applicable Sites", target: "applicable_sites", sample: "Leave blank for all sites", needsReview: false },
+  { source: "Overall Priority", target: "overall_priority", sample: "Optional", needsReview: false },
+  { source: "Section Priority", target: "section_priority", sample: "Optional", needsReview: false },
 ];
 
 // Sorted and grouped by region so a list that can run into the hundreds is still scannable.
@@ -111,16 +200,34 @@ function notifyBatchPublished(
   notify({ title, body, category: "master-data", audience: ["site-contributor"], link: "/assessment" });
 }
 
+const stepItemCircleClass = "relative z-10 grid size-7 place-items-center rounded-full border-2 border-slate-300 bg-white font-extrabold text-slate-700 md:size-8 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+
 function StepIndicator({ current }: { current: number }) {
-  return <ol className={cx("step-indicator [display:grid] [grid-template-columns:repeat(7,_1fr)] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem] [list-style:none] max-[740px]:[display:grid] max-[740px]:[overflow:visible] max-[740px]:[grid-template-columns:repeat(7,_minmax(0,_1fr))] max-[740px]:[padding:0.85rem_0.45rem]")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
+  return <div className={cx("border-b border-slate-200 dark:border-slate-700")}><ol className={cx("step-indicator mx-auto my-0 grid w-full max-w-4xl grid-cols-4 list-none px-2 py-3.5 md:p-4")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
     const state = index < current ? "complete" : index === current ? "current" : "upcoming";
-    return <li className={cx("step-item [position:relative] [display:grid] [justify-items:center] [gap:0.35rem] [color:var(--neutral-400)] [font-size:0.68rem] after:[position:absolute] after:[z-index:0] after:[top:16px] after:[right:-50%] after:[width:100%] after:[height:2px] after:[background:var(--neutral-200)] after:[content:''] [&:last-child::after]:[display:none] [&_>_span]:[position:relative] [&_>_span]:[z-index:1] [&_>_span]:[display:grid] [&_>_span]:[width:32px] [&_>_span]:[height:32px] [&_>_span]:[place-items:center] [&_>_span]:[border:2px_solid_var(--neutral-300)] [&_>_span]:[border-radius:50%] [&_>_span]:[background:var(--surface-elevated)] [&_>_span]:[font-weight:750] max-[740px]:[min-width:0] max-[740px]:[gap:0.25rem] max-[740px]:[font-size:0.56rem] max-[740px]:[&_>_span]:[width:28px] max-[740px]:[&_>_span]:[height:28px] max-[740px]:[&_>_span]:[font-size:0.65rem] max-[740px]:[&_strong]:[max-width:100%] max-[740px]:[&_strong]:[overflow:hidden] max-[740px]:[&_strong]:[text-overflow:ellipsis] max-[740px]:[&_strong]:[white-space:nowrap] max-[740px]:after:[top:14px] max-[740px]:after:[right:-50%] max-[740px]:after:[width:100%]", `step-item--${state}`)} key={step} aria-current={state === "current" ? "step" : undefined}><span>{state === "complete" ? <Check size={15} /> : index + 1}</span><strong>{step}</strong></li>;
-  })}</ol>;
+    return (
+      <li
+        className={cx(
+          "step-item relative grid min-w-0 justify-items-center gap-1 text-xs text-slate-400 md:gap-1.5 after:absolute after:top-4 after:-right-1/2 after:z-0 after:h-0.5 after:w-full after:bg-slate-200 last:after:hidden dark:text-slate-500 dark:after:bg-slate-700",
+          `step-item--${state}`,
+        )}
+        key={step}
+        aria-current={state === "current" ? "step" : undefined}
+      >
+        <span className={cx(stepItemCircleClass)}>{state === "complete" ? <Check size={15} /> : index + 1}</span>
+        <strong className={cx("block max-w-full truncate")}>{step}</strong>
+      </li>
+    );
+  })}</ol></div>;
 }
 
 function downloadTextFile(name: string, content: string, type = "text/csv;charset=utf-8") {
   const url = URL.createObjectURL(new Blob(["﻿", content], { type }));
   const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+}
+
+function downloadStaticFile(path: string, name: string) {
+  const link = document.createElement("a"); link.href = path; link.download = name; document.body.appendChild(link); link.click(); link.remove();
 }
 
 const requirementAuditActionLabels: Record<RequirementAuditAction, string> = {
@@ -169,6 +276,55 @@ function requirementAuditCsv(entries: ReturnType<typeof useAdministration>["requ
   return [header, ...rows].map((row) => row.map(auditCsvCell).join(",")).join("\r\n");
 }
 
+const historyListClass = "history-list grid gap-2.5 p-4";
+const historyItemClass = "flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900";
+const historyItemIconClass = "history-list__icon grid size-10 flex-none place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300";
+const historyItemBodyClass = "grid min-w-0 flex-1 gap-0.5";
+const historyItemMetaClass = "block truncate text-xs text-slate-500 dark:text-slate-400";
+const historyItemActionsClass = "history-list__actions flex flex-wrap items-center gap-2";
+const questionCountClass = "question-count flex-none rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300";
+const questionNumberClass = "question-number grid size-8 flex-none place-items-center rounded-lg bg-kc-blue-50 text-sm font-extrabold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200";
+
+/** Import-wizard chrome, used once per step across AdminImportsScreen. */
+const importCardClass = "import-card mt-5 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";
+const importStageClass = "import-stage min-h-0 p-4 md:p-6";
+const importStageHeadingClass = "import-stage__heading mb-5 flex max-w-3xl gap-3.5";
+const stageIconClass = "stage-icon grid size-12 flex-none place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300";
+const dropzoneClass = "dropzone grid min-h-65 place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
+const selectedFileClass = "selected-file flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950";
+const inspectionGridClass = "inspection-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
+const inspectionTileClass = "grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900";
+const inspectionListClass = "inspection-list grid overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700";
+const inspectionRowClass = "flex items-center gap-3 border-b border-slate-200 px-3.5 py-3 last:border-b-0 dark:border-slate-700";
+const mappingTableClass = "mapping-table grid overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700";
+const mappingRowClass = "flex flex-wrap items-center gap-3 border-b border-slate-200 p-3 last:border-b-0 dark:border-slate-700";
+const validationSummaryClass = "validation-summary mb-4 grid grid-cols-1 gap-3 md:grid-cols-3";
+const validationTileClass = "flex items-center gap-2.5 rounded-xl border border-slate-200 p-3.5 text-slate-700 dark:border-slate-700 dark:text-slate-300";
+const dryRunGridClass = "dry-run-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
+const dryRunTileClass = "relative grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-3.5 pr-3.5 pl-8 dark:border-slate-700 dark:bg-slate-900";
+const dryRunDotClass = "dry-run-dot absolute top-4 left-3.5 size-2 rounded-full";
+const resultStateClass = "result-state mx-auto grid max-w-160 justify-items-center py-12 text-center";
+const importCardFooterClass = "import-card__footer flex flex-col items-stretch justify-between gap-3 border-t border-slate-200 p-3.5 md:flex-row md:items-center dark:border-slate-700";
+
+/** Off-canvas "sheet" overlay (mobile requirement navigator). Mirrors the ConfirmDialog layer
+ * recipe: a fixed backdrop plus a panel, here anchored to the left edge instead of centered. */
+const sheetLayerClass = "sheet-layer fixed inset-0 z-100 grid place-items-center shell:hidden";
+const sheetBackdropClass = "sheet-backdrop absolute inset-0 border-0 bg-slate-950/50 backdrop-blur-sm";
+const sheetClass = "sheet absolute inset-y-0 left-0 right-4 max-w-97.5 w-full overflow-x-hidden overflow-y-auto bg-white shadow-2xl dark:bg-slate-900";
+
+const requirementMobileToolbarClass = "requirement-mobile-toolbar admin-requirement-mobile-toolbar flex sticky z-8 justify-between gap-2.5 border-b border-slate-200 p-2.5 backdrop-blur-md shell:hidden dark:border-slate-700";
+// The navigator and editor deliberately use a 30/70 desktop grid. This gives long requirement
+// names enough room in the navigator without making the edit canvas feel detached or oversized.
+const requirementLayoutClass = "requirement-layout requirement-layout--admin-editor grid w-full min-w-0 shell:grid-cols-[minmax(18rem,3fr)_minmax(0,7fr)]";
+// Hidden below `shell` (the mobile toolbar + off-canvas sheet take over there). Above that
+// breakpoint the navigator starts at the top of its column; it never reserves mobile-toolbar space.
+const requirementNavigatorWrapClass = "requirement-layout__navigator hidden shell:sticky shell:block shell:min-w-0 shell:w-full shell:self-start";
+// Horizontal padding comes from an inline style (var(--page-gutter), a fluid clamp already
+// responsive on its own — see the page-container divs elsewhere in this file for the same pattern).
+const requirementMainClass = "requirement-main min-w-0 pt-4 pb-12 md:pt-6 md:pb-16";
+const fieldWideWrapClass = "field field--wide grid min-w-0 gap-1.5 md:col-span-2";
+const sectionTitleRowClass = "section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between";
+
 export function AdminImportHistoryScreen() {
   const { importHistory } = useAdministration();
   const [query, setQuery] = useState("");
@@ -176,15 +332,29 @@ export function AdminImportHistoryScreen() {
     .map((record, index) => ({ record, isActive: index === 0 }))
     .filter(({ record }) => `${record.fileName} ${record.id} ${record.importedBy}`.toLowerCase().includes(query.toLowerCase()));
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/imports">Master data import</Link><ChevronRight size={15} /><span aria-current="page">Import history</span></nav>
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/imports">Master data import</Link><ChevronRight size={15} /><span aria-current="page">Import history</span></nav>
       <PageHeader eyebrow="Administration audit" title="Import history" description="Every completed master data import, with its audit reference, result counts, and administrator." />
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("dashboard-filter-bar [display:flex] [align-items:center] [gap:0.7rem] [margin-top:1.25rem] [flex-wrap:wrap] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] max-[1100px]:[align-items:stretch] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")}>
-          <label className={cx("search-control [display:flex] [min-width:250px] [min-height:42px] [flex:1] [align-items:center] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [background:var(--surface-input)] [padding:0_0.75rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.85rem] [.dashboard-filter-bar_&]:[flex:0_1_420px] [.dashboard-filter-bar_&]:[min-width:0] [.dashboard-filter-bar--expanded_&]:[flex:0_1_420px] [.dashboard-filter-bar--expanded_&]:[min-width:0] [.filter-row_&]:[flex:0_1_420px] [.filter-row_&]:[min-width:0] [.content-toolbar_&]:[flex:0_1_420px] [.content-toolbar_&]:[min-width:0] [.requirement-main--editor_.checkbox-list__toolbar_&]:[flex:1_1_320px] [.requirement-main--editor_.checkbox-list__toolbar_&]:[min-width:0] [.checkbox-list__toolbar_&_>_input]:[min-height:0] [.checkbox-list__toolbar_&_>_input]:[border:0]! [.checkbox-list__toolbar_&_>_input]:[border-radius:0] [.checkbox-list__toolbar_&_>_input]:[box-shadow:none]! [.checkbox-list__toolbar_&_>_input]:[outline:0]! [.checkbox-list__toolbar_&_>_input]:[padding:0] [.checkbox-list__toolbar_&]:[flex:0_1_420px] [.checkbox-list__toolbar_&]:[min-width:0] max-[1100px]:[.dashboard-filter-bar_&]:[width:100%] max-[1100px]:[.dashboard-filter-bar_&]:[flex-basis:100%] max-[1100px]:[.dashboard-filter-bar_&]:[min-width:0] max-[740px]:[width:100%] max-[740px]:[max-width:none] max-[740px]:[min-width:0] max-[740px]:[flex-basis:auto]!")}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search imports" /></label>
+      <section className={cx(tableCardClass)}>
+        <div className={cx(dashboardFilterBarClass)}>
+          <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search imports" /></label>
         </div>
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Audit trail</p><h2>Completed imports</h2></div><span>{rows.length} of {importHistory.length} shown</span></div>
-        {rows.length ? <div className={cx("history-list [display:grid] [gap:0.65rem] [padding:1.1rem] [&_article]:[display:grid] [&_article]:[grid-template-columns:auto_minmax(0,_1fr)_auto] [&_article]:[align-items:center] [&_article]:[gap:0.75rem] [&_article]:[border:1px_solid_var(--neutral-200)] [&_article]:[border-radius:12px] [&_article]:[background:var(--neutral-25)] [&_article]:[padding:0.8rem] [&_article_>_div]:[display:grid] [&_article_>_div]:[min-width:0] [&_article_span]:[overflow:hidden] [&_article_span]:[color:var(--neutral-500)] [&_article_span]:[font-size:0.72rem] [&_article_span]:[text-overflow:ellipsis] [&_article_span]:[white-space:nowrap] [&_article_small]:[overflow:hidden] [&_article_small]:[color:var(--neutral-500)] [&_article_small]:[font-size:0.72rem] [&_article_small]:[text-overflow:ellipsis] [&_article_small]:[white-space:nowrap] max-[720px]:[&_article]:[grid-template-columns:auto_minmax(0,_1fr)]")}>{rows.map(({ record, isActive }) => <article key={record.id}><span className={cx("history-list__icon [display:grid] [width:42px] [height:42px] [place-items:center] [border-radius:11px] [background:var(--kc-50)] [color:var(--kc-700)]")}><FileSpreadsheet size={20} /></span><div><strong>{record.fileName}</strong><span>{record.id} · {new Date(record.importedAt).toLocaleString()}</span><small>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small></div><span className={cx("history-list__actions [display:flex] [align-items:center] [gap:0.5rem] max-[720px]:[.history-list_article_>_&]:[grid-column:2] max-[720px]:[.history-list_article_>_&]:[justify-self:start] max-[720px]:[.history-list_article_>_&]:[flex-wrap:wrap]")}>{isActive && <span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]")}>Active</span>}<span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]", record.publishStatus === "Draft" && "publish-badge--draft [border-color:#d6bbfb]! [background:var(--provisional-surface)] [color:var(--provisional)]!")}>{record.publishStatus}</span><Link className={cx("button [display:inline-flex] [min-width:0] [align-items:center] [justify-content:center] [gap:0.5rem] [border:1px_solid_transparent] [border-radius:var(--radius-md)] [font-size:0.9rem] [font-weight:650] [line-height:1] [white-space:nowrap] [transition:background_120ms_ease,_border-color_120ms_ease,_box-shadow_120ms_ease,_color_120ms_ease,_transform_80ms_ease] disabled:[background:var(--neutral-100)] disabled:[border-color:var(--neutral-200)] disabled:[color:var(--neutral-400)] disabled:[box-shadow:none] [.question-evidence__editor_>_&]:[justify-self:start] [.question-evidence__attachments-header_>_&]:[flex:0_0_auto] [.site-assessment-area-row_>_&]:[justify-self:end] max-[900px]:[.site-assessment-area-row_>_&]:[grid-column:1_/_-1] max-[900px]:[.site-assessment-area-row_>_&]:[justify-self:stretch] max-[900px]:[.site-assessment-area-row_>_&]:[width:100%] max-[760px]:[.site-assessment-priority_&]:[width:100%] [.action-editor__header_>_&]:[margin-left:auto] max-[1500px]:[.requirement-mobile-toolbar_&:first-child]:[display:none] max-[1100px]:[.requirement-mobile-toolbar_&:first-child]:[display:inline-flex] max-[740px]:[.page-header__actions_&]:[width:100%] max-[740px]:[.overview-callout_&]:[grid-column:1_/_-1] max-[740px]:[.overview-callout_&]:[width:100%] max-[740px]:[.requirement-footer_>_&]:[width:100%] max-[740px]:[.requirement-footer_>_div_&]:[width:100%] max-[740px]:[.dialog__footer_&]:[width:100%] max-[740px]:[.section-drilldown-row_>_&]:[grid-column:1_/_-1] max-[740px]:[.section-drilldown-row_>_&]:[width:100%] max-[740px]:[.import-card__footer_&]:[width:100%] max-[740px]:[.result-state_&]:[width:100%] [.help-role-grid_&]:[width:100%] [.help-role-grid_&]:[margin-top:auto] max-[900px]:[.help-role-grid_&]:[width:auto] max-[620px]:[.setup-welcome__actions_&]:[width:100%] max-[620px]:[.tour-card__footer_&:last-child]:[flex:1] max-[620px]:[.setup-reminder_>_&]:[grid-column:2_/_-1] max-[620px]:[.setup-reminder_>_&]:[grid-row:2] max-[620px]:[.setup-reminder_>_&]:[width:100%] max-[620px]:[.help-role-grid_&]:[grid-column:1_/_-1] max-[620px]:[.help-role-grid_&]:[width:100%] max-[620px]:[.setup-complete_&]:[width:100%] [.passkey-add_&]:[width:100%] [.passkey-setup-message_&]:[flex:0_0_auto] max-[620px]:[.passkey-enrollment-choice_&]:[grid-column:2] max-[620px]:[.passkey-enrollment-choice_&]:[justify-self:start] max-[620px]:[.settings-card--split_>_&]:[width:100%] [.settings-index-empty_&]:[margin-top:0.3rem] max-[620px]:[.session-panel_&]:[grid-column:1_/_-1] max-[620px]:[.session-panel_&]:[width:100%] [.first-login-passkey__complete_&]:[margin-top:0.35rem] max-[620px]:[.first-login-passkey__actions_&]:[width:100%] button--tertiary [background:transparent] [color:var(--kc-700)] [&:hover:not(:disabled)]:[background:var(--kc-50)] [&:hover:not(:disabled)]:[color:var(--kc-900)] button--compact [min-height:34px] [padding:0.45rem_0.7rem] [font-size:0.82rem]")} to={`/admin/imports/${record.id}/preview`}>Preview</Link></span></article>)}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
+        <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Audit trail</p><h2 className={cx(tableCardHeaderTitleClass)}>Completed imports</h2></div><span className={cx(tableCardHeaderCountClass)}>{rows.length} of {importHistory.length} shown</span></div>
+        {rows.length ? <div className={cx(historyListClass)}>{rows.map(({ record, isActive }) => (
+          <article className={cx(historyItemClass)} key={record.id}>
+            <span className={cx(historyItemIconClass)}><FileSpreadsheet size={20} /></span>
+            <div className={cx(historyItemBodyClass)}>
+              <strong className={cx("text-slate-900 dark:text-slate-100")}>{record.fileName}</strong>
+              <span className={cx(historyItemMetaClass)}>{record.id} · {new Date(record.importedAt).toLocaleString()}</span>
+              <small className={cx(historyItemMetaClass)}>{record.created} created · {record.updated} updated · {record.unchanged} unchanged · by {record.importedBy}</small>
+            </div>
+            <span className={cx(historyItemActionsClass)}>
+              {isActive && <span className={cx(publishBadgeClass, pillTone.success)}>Active</span>}
+              <span className={cx(publishBadgeClass, record.publishStatus === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{record.publishStatus}</span>
+              <Link className={cx(linkButtonBaseClass, "min-h-8.5 px-2.5 py-1.5 text-sm bg-transparent text-kc-blue-700 hover:bg-kc-blue-50 hover:text-kc-blue-900 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={`/admin/imports/${record.id}/preview`}>Preview</Link>
+            </span>
+          </article>
+        ))}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
       </section>
     </div>
   );
@@ -192,7 +362,7 @@ export function AdminImportHistoryScreen() {
 
 export function AdminSitesScreen() {
   const navigate = useNavigate();
-  const { masterRequirements, siteUsers, sites, addSite, updateSite, importSites } = useAdministration();
+  const { masterRequirements, siteUsers, sites, regions: configRegions, segments: configSegments, addSite, updateSite, importSites } = useAdministration();
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("all");
   const [editing, setEditing] = useState<DashboardSite | "new" | null>(null);
@@ -208,13 +378,38 @@ export function AdminSitesScreen() {
   const usersFor = (siteId: string) => siteUsers.filter((user) => user.siteId === siteId);
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <PageHeader eyebrow="Administration" title="Sites" description="Every site in the KC network, its assessment status, and the governed requirements scoped to it." actions={<><Button variant="secondary" icon={<Upload size={18} />} onClick={() => csvRef.current?.click()}>Import sites</Button><Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Create site</Button></>} />
-      <input ref={csvRef} className={cx("visually-hidden [position:absolute]! [width:1px]! [height:1px]! [padding:0]! [margin:-1px]! [overflow:hidden]! [clip:rect(0,_0,_0,_0)]! [white-space:nowrap]! [border:0]!")} type="file" accept=".csv,text/csv" onChange={(event) => {
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <PageHeader
+        eyebrow="Administration"
+        title="Sites"
+        description="Every site in the KC network, its assessment status, and the governed requirements scoped to it."
+        actions={
+          <>
+            <IconButton
+              label="Download site import template"
+              className={cx("border border-slate-300 dark:border-slate-600")}
+              onClick={() => downloadStaticFile(`${assetBaseUrl}templates/Site-Import-Template.xlsx`, "EHS360 Site Import Template.xlsx")}
+            >
+              <Download size={18} />
+            </IconButton>
+            <Button variant="secondary" icon={<Upload size={18} />} onClick={() => csvRef.current?.click()}>Import</Button>
+            <Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Create site</Button>
+          </>
+        }
+      />
+      <input ref={csvRef} className={cx("sr-only")} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => {
         const file = event.target.files?.[0];
         event.target.value = "";
         if (!file) return;
-        file.text().then((text) => {
+        const isWorkbook = file.name.toLowerCase().endsWith(".xlsx");
+        const textPromise = isWorkbook
+          ? file.arrayBuffer().then((buffer) => {
+            const workbook = XLSX.read(buffer, { type: "array" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            return sheet ? XLSX.utils.sheet_to_csv(sheet) : "";
+          })
+          : file.text();
+        textPromise.then((text) => {
           const { parsed, invalid } = parseSitesCsv(text);
           if (!parsed.length) {
             setFeedback({ tone: "warning", title: "Nothing imported", body: invalid.length ? invalid.join(" ") : `No rows found. Expected columns: ${SITE_CSV_COLUMNS}.` });
@@ -230,40 +425,144 @@ export function AdminSitesScreen() {
         });
       }} />
       {feedback && <InlineMessage tone={feedback.tone} title={feedback.title}>{feedback.body}</InlineMessage>}
-      <div className={cx("metrics-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:1rem] [margin-top:1.25rem] max-[1500px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[740px]:[grid-template-columns:1fr]")}>
+      <div className={cx(metricsGridClass)}>
         <MetricCard label="Total sites" value={sites.length} detail={`Across ${regions.length} regions`} icon={<Building2 size={21} />} tone="brand" />
         <MetricCard label="Assessment complete" value={sites.filter((site) => site.completion === 100).length} detail="Reached 100% completion" icon={<CheckCircle2 size={21} />} tone="success" />
         <MetricCard label="Not started" value={sites.filter((site) => site.completion === 0).length} detail="No assessment recorded" icon={<Circle size={21} />} tone="warning" />
         <MetricCard label="Global requirements" value={globalCount} detail="Apply to every site" icon={<FileText size={21} />} />
       </div>
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("dashboard-filter-bar [display:flex] [align-items:center] [gap:0.7rem] [margin-top:1.25rem] [flex-wrap:wrap] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] max-[1100px]:[align-items:stretch] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")}>
-          <label className={cx("search-control [display:flex] [min-width:250px] [min-height:42px] [flex:1] [align-items:center] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [background:var(--surface-input)] [padding:0_0.75rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.85rem] [.dashboard-filter-bar_&]:[flex:0_1_420px] [.dashboard-filter-bar_&]:[min-width:0] [.dashboard-filter-bar--expanded_&]:[flex:0_1_420px] [.dashboard-filter-bar--expanded_&]:[min-width:0] [.filter-row_&]:[flex:0_1_420px] [.filter-row_&]:[min-width:0] [.content-toolbar_&]:[flex:0_1_420px] [.content-toolbar_&]:[min-width:0] [.requirement-main--editor_.checkbox-list__toolbar_&]:[flex:1_1_320px] [.requirement-main--editor_.checkbox-list__toolbar_&]:[min-width:0] [.checkbox-list__toolbar_&_>_input]:[min-height:0] [.checkbox-list__toolbar_&_>_input]:[border:0]! [.checkbox-list__toolbar_&_>_input]:[border-radius:0] [.checkbox-list__toolbar_&_>_input]:[box-shadow:none]! [.checkbox-list__toolbar_&_>_input]:[outline:0]! [.checkbox-list__toolbar_&_>_input]:[padding:0] [.checkbox-list__toolbar_&]:[flex:0_1_420px] [.checkbox-list__toolbar_&]:[min-width:0] max-[1100px]:[.dashboard-filter-bar_&]:[width:100%] max-[1100px]:[.dashboard-filter-bar_&]:[flex-basis:100%] max-[1100px]:[.dashboard-filter-bar_&]:[min-width:0] max-[740px]:[width:100%] max-[740px]:[max-width:none] max-[740px]:[min-width:0] max-[740px]:[flex-basis:auto]!")}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sites" /></label>
+      <section className={cx(tableCardClass)}>
+        <div className={cx(dashboardFilterBarClass)}>
+          <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search sites" /></label>
           <Select label="Filter region" icon={<Filter size={18} />} value={region} onChange={setRegion} options={[{ value: "all", label: "All regions" }, ...regions.map((value) => ({ value, label: value }))]} />
         </div>
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Site network</p><h2>All sites</h2></div><span>{rows.length} of {sites.length} shown</span></div>
-        {rows.length ? <div className={cx("data-table-wrap [max-width:100%] max-[1100px]:[width:100%] max-[1100px]:[max-width:none] max-[1100px]:[overflow:visible]")}><table className={cx("data-table [width:100%] [table-layout:fixed] [border-collapse:collapse] [font-size:0.79rem] [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:[padding:0.8rem_1rem] [&_th]:[border-bottom:1px_solid_var(--neutral-200)] [&_th]:[text-align:left] [&_th]:[vertical-align:middle] [&_td]:[padding:0.8rem_1rem] [&_td]:[border-bottom:1px_solid_var(--neutral-200)] [&_td]:[text-align:left] [&_td]:[vertical-align:middle] [&_th]:[background:var(--neutral-50)] [&_th]:[color:var(--neutral-600)] [&_th]:[font-size:0.69rem] [&_th]:[font-weight:750] [&_th]:[letter-spacing:0.01em] [&_tr:last-child_td]:[border-bottom:0] [&_tbody_tr:hover]:[background:var(--neutral-25)] [&_td_>_strong]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[margin-top:0.18rem] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[color:var(--neutral-500)] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[font-size:0.7rem] [&_td:nth-child(3)]:[max-width:390px] max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0] max-[1100px]:[&_tbody]:[display:grid] max-[1100px]:[&_tbody]:[width:100%] max-[1100px]:[&_tbody]:[min-width:0] max-[1100px]:[&_tr]:[display:block] max-[1100px]:[&_tr]:[width:100%] max-[1100px]:[&_tr]:[min-width:0] max-[1100px]:[&_td]:[display:grid] max-[1100px]:[&_td]:[width:100%] max-[1100px]:[&_td]:[min-width:0] max-[1100px]:[&_thead]:[position:absolute] max-[1100px]:[&_thead]:[display:block] max-[1100px]:[&_thead]:[width:1px] max-[1100px]:[&_thead]:[height:1px] max-[1100px]:[&_thead]:[padding:0] max-[1100px]:[&_thead]:[margin:-1px] max-[1100px]:[&_thead]:[overflow:hidden] max-[1100px]:[&_thead]:[clip:rect(0,_0,_0,_0)] max-[1100px]:[&_thead]:[white-space:nowrap] max-[1100px]:[&_thead]:[border:0] max-[1100px]:[&_thead_tr]:[position:absolute] max-[1100px]:[&_thead_tr]:[display:block] max-[1100px]:[&_thead_tr]:[width:1px] max-[1100px]:[&_thead_tr]:[min-width:0] max-[1100px]:[&_thead_tr]:[height:1px] max-[1100px]:[&_thead_tr]:[overflow:hidden] max-[1100px]:[&_thead_tr]:[padding:0] max-[1100px]:[&_thead_tr]:[border:0] max-[1100px]:[&_thead_tr]:[clip-path:inset(50%)] max-[1100px]:[&_thead_th]:[position:absolute] max-[1100px]:[&_thead_th]:[display:block] max-[1100px]:[&_thead_th]:[width:1px] max-[1100px]:[&_thead_th]:[min-width:0] max-[1100px]:[&_thead_th]:[height:1px] max-[1100px]:[&_thead_th]:[overflow:hidden] max-[1100px]:[&_thead_th]:[padding:0] max-[1100px]:[&_thead_th]:[border:0] max-[1100px]:[&_thead_th]:[clip-path:inset(50%)] max-[1100px]:[&_tbody]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[1100px]:[&_tbody]:[gap:0.75rem] max-[1100px]:[&_tbody]:[padding:0.85rem] max-[1100px]:[&_tbody_tr]:[overflow:hidden] max-[1100px]:[&_tbody_tr]:[border:1px_solid_var(--neutral-200)] max-[1100px]:[&_tbody_tr]:[border-radius:var(--radius-lg)] max-[1100px]:[&_tbody_tr]:[background:var(--neutral-25)] max-[1100px]:[&_tbody_tr]:[box-shadow:var(--shadow-1)] max-[1100px]:[&_td]:[grid-template-columns:minmax(116px,_0.45fr)_minmax(0,_1fr)] max-[1100px]:[&_td]:[align-items:center] max-[1100px]:[&_td]:[gap:0.75rem] max-[1100px]:[&_td]:[min-height:48px] max-[1100px]:[&_td]:[padding:0.7rem_0.85rem] max-[1100px]:[&_td]:[border-bottom:1px_solid_var(--neutral-200)] max-[1100px]:[&_td::before]:[color:var(--neutral-500)] max-[1100px]:[&_td::before]:[content:attr(data-label)] max-[1100px]:[&_td::before]:[font-size:0.67rem] max-[1100px]:[&_td::before]:[font-weight:750] max-[1100px]:[&_td::before]:[letter-spacing:0.01em] max-[1100px]:[&_td:last-child]:[min-height:44px] max-[1100px]:[&_td:last-child]:[grid-template-columns:1fr] max-[1100px]:[&_td:last-child]:[justify-items:end] max-[1100px]:[&_td:last-child]:[border-bottom:0] max-[1100px]:[&_td:last-child]:[background:var(--neutral-50)] max-[1100px]:[&_td:last-child::before]:[display:none] max-[1100px]:[&_td[data-label='']::before]:[display:none] max-[1100px]:[&_td_>_strong]:[min-width:0] max-[1100px]:[&_td_>_strong]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_span]:[min-width:0] max-[1100px]:[&_td_>_span]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_div]:[min-width:0] max-[1100px]:[&_td_>_div]:[overflow-wrap:anywhere] max-[820px]:[&_tbody]:[grid-template-columns:1fr]")}><thead><tr><th>Site</th><th>Region</th><th>Segment</th><th>Users</th><th>Completion</th><th>Requirements</th><th>Last updated</th><th><span className={cx("sr-only [position:absolute]! [width:1px]! [height:1px]! [padding:0]! [margin:-1px]! [overflow:hidden]! [clip:rect(0,_0,_0,_0)]! [white-space:nowrap]! [border:0]!")}>Open</span></th></tr></thead><tbody>{rows.map((site) => {
-          const scoped = scopedCountFor(site.id);
-          const users = usersFor(site.id);
-          return (
-            <tr key={site.id} className={cx("data-table__row--link [cursor:pointer] hover:[background:var(--kc-50)]")} onClick={() => navigate(`/admin/sites/${site.id}`)}>
-              <td data-label="Site"><strong>{site.name}</strong><span>{site.code}</span></td>
-              <td data-label="Region">{site.region}</td>
-              <td data-label="Segment">{site.segment}</td>
-              <td data-label="Users">{users.length ? <>{users.length}<span>{users.filter((user) => user.status === "Active").length} active</span></> : "None assigned"}</td>
-              <td data-label="Completion"><span className={cx("completion-badge [display:inline-flex] [min-height:29px] [align-items:center] [gap:0.35rem] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.58rem] [font-size:0.77rem] [font-weight:700] [line-height:1] [white-space:nowrap] max-[1100px]:[.data-table_&]:[justify-self:start] [@media_(forced-colors:_active)]:[border:2px_solid_currentColor]", site.completion === 100 ? "completion-badge--complete [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]" : site.completion === 0 ? "completion-badge--not-started [border-color:var(--neutral-300)] [background:var(--neutral-50)] [color:var(--neutral-600)]" : "completion-badge--in-progress [border-color:var(--kc-200)] [background:var(--kc-50)] [color:var(--kc-800)]")}>{site.completion}%</span></td>
-              <td data-label="Requirements">{scoped ? `${scoped} scoped` : "Global only"}<span>{globalCount} global</span></td>
-              <td data-label="Last updated">{site.updated}</td>
-              <td data-label=""><span className={cx("row-actions [display:flex]! [gap:0.1rem] max-[1100px]:[.data-table_&]:[justify-content:flex-end]")}><IconButton label={`Edit ${site.name}`} onClick={(event) => { event.stopPropagation(); setEditing(site); }}><Pencil size={17} /></IconButton><Link className={cx("table-action [display:inline-grid] [width:36px] [height:36px] [place-items:center] [border-radius:9px] [color:var(--kc-700)] hover:[background:var(--kc-50)]")} to={`/admin/sites/${site.id}`} aria-label={`Open ${site.name}`}><ChevronRight size={18} /></Link></span></td>
-            </tr>
-          );
-        })}</tbody></table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
+        <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Site network</p><h2 className={cx(tableCardHeaderTitleClass)}>All sites</h2></div><span className={cx(tableCardHeaderCountClass)}>{rows.length} of {sites.length} shown</span></div>
+        {rows.length ? <div className={cx(dataTableWrapClass)}><table className={cx(dataTableClass)}>
+          <thead className={cx(dataTableHeadClass)}><tr>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Site</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Region</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Segment</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Users</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Completion</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Reqs</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Updated</th>
+            <th className={cx(dataTableHeaderCellClass, "shell:w-30")}><span className={cx("sr-only")}>Open</span></th>
+          </tr></thead>
+          <tbody className={cx(dataTableBodyClass)}>{rows.map((site) => {
+            const scoped = scopedCountFor(site.id);
+            const users = usersFor(site.id);
+            return (
+              <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={site.id} onClick={() => navigate(`/admin/sites/${site.id}`)}>
+                <td className={cx(dataTableCellClass)} data-label="Site"><span className={cx(dataTableCellLabelClass)}>Site</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{site.name}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{site.code}</span></span></td>
+                <td className={cx(dataTableCellClass)} data-label="Region"><span className={cx(dataTableCellLabelClass)}>Region</span>{site.region}</td>
+                <td className={cx(dataTableCellClass)} data-label="Segment"><span className={cx(dataTableCellLabelClass)}>Segment</span>{site.segment}</td>
+                <td className={cx(dataTableCellClass)} data-label="Users"><span className={cx(dataTableCellLabelClass)}>Users</span>{users.length ? <span className={cx("grid min-w-0 gap-0.5")}>{users.length}<span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{users.filter((user) => user.status === "Active").length} active</span></span> : "None assigned"}</td>
+                <td className={cx(dataTableCellClass)} data-label="Completion"><span className={cx(dataTableCellLabelClass)}>Completion</span><span className={cx(pillBaseClass, "min-h-7", site.completion === 100 ? pillTone.success : site.completion === 0 ? pillTone.neutral : pillTone.brand)}>{site.completion}%</span></td>
+                <td className={cx(dataTableCellClass)} data-label="Requirements"><span className={cx(dataTableCellLabelClass)}>Requirements</span><span className={cx("grid min-w-0 gap-0.5")}>{scoped ? `${scoped} scoped` : "Global only"}<span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{globalCount} global</span></span></td>
+                <td className={cx(dataTableCellClass)} data-label="Last updated"><span className={cx(dataTableCellLabelClass)}>Last updated</span>{site.updated}</td>
+                <td className={cx(dataTableLastCellClass)} data-label="">
+                  <span className={cx(rowActionsClass)}>
+                    <IconButton label={`Edit ${site.name}`} onClick={(event) => { event.stopPropagation(); setEditing(site); }}><Pencil size={17} /></IconButton>
+                    <Link className={cx("table-action inline-grid size-9 place-items-center rounded-lg text-kc-blue-700 hover:bg-kc-blue-50 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={`/admin/sites/${site.id}`} aria-label={`Open ${site.name}`}><ChevronRight size={18} /></Link>
+                  </span>
+                </td>
+              </tr>
+            );
+          })}</tbody>
+        </table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
       </section>
-      {editing && <SiteDialog site={editing === "new" ? undefined : editing} existing={sites} onClose={() => setEditing(null)} onSave={(site) => {
+      {editing && <SiteDialog site={editing === "new" ? undefined : editing} existing={sites} regions={configRegions} segments={configSegments} onClose={() => setEditing(null)} onSave={(site) => {
         if (editing === "new") { addSite(site); setFeedback({ tone: "success", title: "Site created", body: `${site.name} (${site.code}) was added to the network.` }); }
         else { updateSite(site); setFeedback({ tone: "success", title: "Site updated", body: `${site.name} was updated.` }); }
         setEditing(null);
       }} />}
+    </div>
+  );
+}
+
+/** One card in the Config screen: an add form plus the current values as removable pills. */
+function ConfigListCard({
+  title,
+  description,
+  placeholder,
+  values,
+  onAdd,
+  onRemove,
+}: {
+  title: string;
+  description: string;
+  placeholder: string;
+  values: string[];
+  onAdd: (value: string) => void;
+  onRemove: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [removing, setRemoving] = useState<string | null>(null);
+  const duplicate = values.some((value) => value.toLowerCase() === draft.trim().toLowerCase());
+
+  function handleAdd(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = draft.trim();
+    if (!trimmed || duplicate) return;
+    onAdd(trimmed);
+    setDraft("");
+  }
+
+  return (
+    <section className={cx(tableCardClass)}>
+      <div className={cx(tableCardHeaderStartClass)}>
+        <div>
+          <p className={cx(eyebrowClasses)}>Dropdown values</p>
+          <h2 className={cx(tableCardHeaderTitleClass)}>{title}</h2>
+          <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>{description}</p>
+        </div>
+        <span className={cx(tableCardHeaderCountClass)}>{values.length} value{values.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className={cx("grid gap-3.5 p-4")}>
+        <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAdd}>
+          <input className={cx(fieldInputClass, "flex-1")} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={placeholder} aria-label={`New ${title.toLowerCase()} value`} />
+          <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!draft.trim() || duplicate}>Add</Button>
+        </form>
+        {duplicate && <small className={cx(fieldErrorClass)}>That value already exists.</small>}
+        {values.length === 0 ? (
+          <EmptyState icon={<ListChecks size={24} />} title="No values yet" description={`Add the first ${title.toLowerCase()} value above.`} />
+        ) : (
+          <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
+            {values.map((value) => (
+              <li key={value} className={cx(pillBaseClass, pillTone.neutral, "py-0.5 pr-1")}>
+                {value}
+                <button type="button" className={cx("grid size-5 place-items-center rounded-full border-0 bg-transparent p-0 hover:bg-slate-200 dark:hover:bg-slate-700")} aria-label={`Remove ${value}`} onClick={() => setRemoving(value)}>
+                  <X size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {removing && (
+        <ConfirmDialog
+          eyebrow="Config"
+          title={`Remove "${removing}"?`}
+          body="This removes the value from the dropdown. Sites that already use it keep their existing value."
+          confirmLabel="Remove value"
+          cancelLabel="Keep value"
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => { onRemove(removing); setRemoving(null); }}
+        />
+      )}
+    </section>
+  );
+}
+
+export function AdminConfigScreen() {
+  const { regions, segments, addRegion, removeRegion, addSegment, removeSegment } = useAdministration();
+  return (
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <PageHeader eyebrow="Administration" title="Config" description="Manage the shared dropdown values used on site records, such as regions and segments." />
+      <div className={cx("grid grid-cols-1 gap-5 lg:grid-cols-2")}>
+        <ConfigListCard title="Regions" description="Shown in the Region field when creating or editing a site." placeholder="For example, North America" values={regions} onAdd={addRegion} onRemove={removeRegion} />
+        <ConfigListCard title="Segments" description="Shown in the Segment field when creating or editing a site." placeholder="For example, Family Care" values={segments} onAdd={addSegment} onRemove={removeSegment} />
+      </div>
     </div>
   );
 }
@@ -281,8 +580,8 @@ export function AdminImportBatchPreviewScreen() {
   });
   const published = batch?.publishStatus === "Published";
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/imports">Master data import</Link><ChevronRight size={15} /><Link to="/admin/imports/history">Import history</Link><ChevronRight size={15} /><span aria-current="page">{batchId}</span></nav>
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/imports">Master data import</Link><ChevronRight size={15} /><Link className={cx(breadcrumbsLinkClass)} to="/admin/imports/history">Import history</Link><ChevronRight size={15} /><span aria-current="page">{batchId}</span></nav>
       <PageHeader
         eyebrow="Administration audit"
         title="Preview imported requirements"
@@ -292,40 +591,40 @@ export function AdminImportBatchPreviewScreen() {
       {published && <InlineMessage tone="success" title="Already published">This batch's requirements are live in the master requirements catalog.</InlineMessage>}
       {!rows.length && <EmptyState icon={<FileSpreadsheet size={28} />} title="No requirements in this batch" description="This import batch has no linked master requirement rows." />}
       {sectionOrder.map((section) => (
-        <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")} key={section}>
-          <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Category</p><h2>{section}</h2></div><span>{grouped[section].length} requirement{grouped[section].length === 1 ? "" : "s"}</span></div>
-          <div className={cx("history-list [display:grid] [gap:0.65rem] [padding:1.1rem] [&_article]:[display:grid] [&_article]:[grid-template-columns:auto_minmax(0,_1fr)_auto] [&_article]:[align-items:center] [&_article]:[gap:0.75rem] [&_article]:[border:1px_solid_var(--neutral-200)] [&_article]:[border-radius:12px] [&_article]:[background:var(--neutral-25)] [&_article]:[padding:0.8rem] [&_article_>_div]:[display:grid] [&_article_>_div]:[min-width:0] [&_article_span]:[overflow:hidden] [&_article_span]:[color:var(--neutral-500)] [&_article_span]:[font-size:0.72rem] [&_article_span]:[text-overflow:ellipsis] [&_article_span]:[white-space:nowrap] [&_article_small]:[overflow:hidden] [&_article_small]:[color:var(--neutral-500)] [&_article_small]:[font-size:0.72rem] [&_article_small]:[text-overflow:ellipsis] [&_article_small]:[white-space:nowrap] max-[720px]:[&_article]:[grid-template-columns:auto_minmax(0,_1fr)]")}>{grouped[section].map((item) => (
-            <article className={cx("import-preview-requirement [.history-list_article&]:[display:block] [.history-list_article&]:[overflow:hidden] [.history-list_article&]:[padding:0]")} key={item.id}>
-              <div className={cx("import-preview-requirement__summary [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:center] [gap:0.75rem] [padding:0.8rem] [.history-list_article_>_&]:[min-width:0] max-[720px]:[grid-template-columns:auto_minmax(0,_1fr)]")}>
-                <span className={cx("history-list__icon [display:grid] [width:42px] [height:42px] [place-items:center] [border-radius:11px] [background:var(--kc-50)] [color:var(--kc-700)]")}><FileText size={20} /></span>
-                <div className={cx("import-preview-requirement__identity [display:grid] [min-width:0]")}><strong>{item.id}</strong><span>{item.title}</span></div>
-                <span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]", item.status === "Draft" && "publish-badge--draft [border-color:#d6bbfb]! [background:var(--provisional-surface)] [color:var(--provisional)]!")}>{item.status}</span>
+        <section className={cx(tableCardClass)} key={section}>
+          <div className={cx(tableCardHeaderStartClass)}><div><p className={cx(eyebrowClasses)}>Category</p><h2 className={cx(tableCardHeaderTitleClass)}>{section}</h2></div><span className={cx(tableCardHeaderCountClass)}>{grouped[section].length} requirement{grouped[section].length === 1 ? "" : "s"}</span></div>
+          <div className={cx(historyListClass)}>{grouped[section].map((item) => (
+            <article className={cx("import-preview-requirement overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900")} key={item.id}>
+              <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
+                <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
+                <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{item.title}</span></div>
+                <span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span>
               </div>
-              <div className={cx("import-preview-questions [.history-list_article_>_&]:[min-width:0] [border-top:1px_solid_var(--neutral-200)] [background:var(--surface-panel)] [padding:0.9rem_1rem_1rem_4.75rem] max-[720px]:[padding-left:1rem]")}>
-                <div className={cx("import-preview-questions__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [&_h3]:[margin-top:0.15rem] [&_h3]:[font-size:0.88rem] max-[720px]:[align-items:flex-start] max-[720px]:[flex-direction:column] max-[720px]:[gap:0.6rem]")}>
-                  <div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Review questions</p><h3>Questions included with this requirement</h3></div>
-                  <span className={cx("question-count [border:1px_solid_var(--neutral-200)] [border-radius:999px] [background:var(--surface-elevated)] [padding:0.35rem_0.6rem] [font-size:0.72rem] [font-weight:650] [.history-list_article_.import-preview-questions__header_&]:[flex:none] [.history-list_article_.import-preview-questions__header_&]:[overflow:visible] [.history-list_article_.import-preview-questions__header_&]:[color:var(--neutral-700)] [.history-list_article_.import-preview-questions__header_&]:[font-size:0.72rem] [.history-list_article_.import-preview-questions__header_&]:[white-space:nowrap]")}>{item.questions.length} question{item.questions.length === 1 ? "" : "s"}</span>
+              <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
+                <div className={cx("import-preview-questions__header flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4")}>
+                  <div><p className={cx(eyebrowClasses)}>Review questions</p><h3 className={cx("mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>Questions included with this requirement</h3></div>
+                  <span className={cx(questionCountClass)}>{item.questions.length} question{item.questions.length === 1 ? "" : "s"}</span>
                 </div>
                 {item.questions.length ? (
-                  <ol className={cx("import-preview-question-list [display:grid] [gap:0.55rem] [margin:0.8rem_0_0] [padding:0] [list-style:none] [&_>_li]:[display:grid] [&_>_li]:[grid-template-columns:auto_minmax(0,_1fr)] [&_>_li]:[align-items:start] [&_>_li]:[gap:0.7rem] [&_>_li]:[border:1px_solid_var(--neutral-200)] [&_>_li]:[border-radius:10px] [&_>_li]:[background:var(--neutral-25)] [&_>_li]:[padding:0.75rem]")}>
+                  <ol className={cx("import-preview-question-list m-0 mt-3 grid list-none gap-2.5 p-0")}>
                     {item.questions.map((question, index) => {
                       const questionNumber = question.number || index + 1;
                       const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
                       return (
-                        <li key={question.id}>
-                          <span className={cx("question-number [display:grid] [width:31px] [height:31px] [place-items:center] [border-radius:9px] [background:var(--kc-50)] [color:var(--kc-800)] [font-size:0.8rem] [font-weight:750] [.history-list_article_.import-preview-question-list_&]:[overflow:visible] [.history-list_article_.import-preview-question-list_&]:[color:var(--kc-800)] [.history-list_article_.import-preview-question-list_&]:[font-size:0.8rem] [.history-list_article_.import-preview-question-list_&]:[white-space:nowrap]")}>{questionNumber}</span>
-                          <div className={cx("import-preview-question__content")}>
-                            <div className={cx("import-preview-question__heading [display:flex] [align-items:center] [justify-content:space-between] [gap:0.75rem] [&_strong]:[display:block] [&_strong]:[color:var(--neutral-500)] [&_strong]:[font-size:0.68rem] [&_strong]:[font-weight:650] max-[720px]:[align-items:flex-start] max-[720px]:[flex-direction:column] max-[720px]:[gap:0.25rem]")}>
-                              <strong>Question {questionNumber}</strong>
-                              <span className={cx("import-preview-question__evidence-status [.history-list_article_&]:[overflow:visible] [.history-list_article_&]:[color:var(--neutral-500)] [.history-list_article_&]:[font-size:0.68rem] [.history-list_article_&]:[font-weight:650] [.history-list_article_&]:[white-space:nowrap] max-[720px]:[.history-list_article_&]:[white-space:normal]")}>{evidenceRequired ? `${question.expectedEvidence.length} evidence item${question.expectedEvidence.length === 1 ? "" : "s"}` : "Evidence not required"}</span>
+                        <li className={cx("flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900")} key={question.id}>
+                          <span className={cx(questionNumberClass)}>{questionNumber}</span>
+                          <div className={cx("import-preview-question__content min-w-0 flex-1")}>
+                            <div className={cx("import-preview-question__heading flex flex-col items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-3")}>
+                              <strong className={cx("block text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {questionNumber}</strong>
+                              <span className={cx("import-preview-question__evidence-status text-xs font-semibold whitespace-normal text-slate-500 md:whitespace-nowrap dark:text-slate-400")}>{evidenceRequired ? `${question.expectedEvidence.length} evidence item${question.expectedEvidence.length === 1 ? "" : "s"}` : "Evidence not required"}</span>
                             </div>
-                            <p className={cx("import-preview-question__text [.import-preview-question-list_&]:[margin-top:0.15rem] [.import-preview-question-list_&]:[color:var(--neutral-900)] [.import-preview-question-list_&]:[font-size:0.84rem] [.import-preview-question-list_&]:[line-height:1.45]")}>{question.text}</p>
+                            <p className={cx("import-preview-question__text mt-1 text-sm leading-relaxed text-slate-900 dark:text-slate-100")}>{question.text}</p>
                             {evidenceRequired && (
-                              <div className={cx("import-preview-evidence [margin-top:0.65rem] [border-radius:9px] [background:var(--kc-50)] [padding:0.65rem_0.75rem] [&_ul]:[display:grid] [&_ul]:[gap:0.3rem] [&_ul]:[margin:0.45rem_0_0_1.1rem] [&_ul]:[padding:0] [&_li]:[color:var(--neutral-700)] [&_li]:[font-size:0.76rem] [&_li]:[line-height:1.4]")}>
-                                <p className={cx("import-preview-evidence__title [.import-preview-evidence_&]:[display:flex] [.import-preview-evidence_&]:[align-items:center] [.import-preview-evidence_&]:[gap:0.35rem] [.import-preview-evidence_&]:[margin:0] [.import-preview-evidence_&]:[color:var(--kc-800)] [.import-preview-evidence_&]:[font-size:0.72rem] [.import-preview-evidence_&]:[font-weight:700]")}><Paperclip size={14} />Expected evidence</p>
+                              <div className={cx("import-preview-evidence mt-2.5 rounded-lg bg-kc-blue-50 p-3 dark:bg-kc-blue-950")}>
+                                <p className={cx("import-preview-evidence__title m-0 flex items-center gap-1.5 text-xs font-bold text-kc-blue-800 dark:text-kc-blue-200")}><Paperclip size={14} />Expected evidence</p>
                                 {question.expectedEvidence.length ? (
-                                  <ul>{question.expectedEvidence.map((evidence, evidenceIndex) => <li key={`${question.id}-evidence-${evidenceIndex}`}>{evidence}</li>)}</ul>
-                                ) : <p className={cx("import-preview-evidence__empty [.import-preview-evidence_&]:[margin-top:0.4rem] [.import-preview-evidence_&]:[color:var(--neutral-600)] [.import-preview-evidence_&]:[font-size:0.76rem] [.import-preview-evidence_&]:[line-height:1.4]")}>Evidence is required, but no evidence description was included in the import.</p>}
+                                  <ul className={cx("m-0 mt-1.5 grid gap-1 pl-5 text-xs leading-snug text-slate-700 dark:text-slate-300")}>{question.expectedEvidence.map((evidence, evidenceIndex) => <li key={`${question.id}-evidence-${evidenceIndex}`}>{evidence}</li>)}</ul>
+                                ) : <p className={cx("import-preview-evidence__empty mt-1.5 text-xs leading-snug text-slate-600 dark:text-slate-400")}>Evidence is required, but no evidence description was included in the import.</p>}
                               </div>
                             )}
                           </div>
@@ -333,7 +632,7 @@ export function AdminImportBatchPreviewScreen() {
                       );
                     })}
                   </ol>
-                ) : <p className={cx("import-preview-questions__empty [margin-top:0.8rem] [border:1px_dashed_var(--neutral-300)] [border-radius:10px] [color:var(--neutral-500)] [padding:0.75rem] [font-size:0.8rem]")}>No review questions or expected evidence were included for this requirement.</p>}
+                ) : <p className={cx("import-preview-questions__empty mt-3 rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400")}>No review questions or expected evidence were included for this requirement.</p>}
               </div>
             </article>
           ))}</div>
@@ -345,87 +644,246 @@ export function AdminImportBatchPreviewScreen() {
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch, sites, notify } = useAdministration();
-  const siteOptions = buildSiteOptions(sites);
+  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify } = useAdministration();
   const [step, setStep] = useState(0);
-  const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
+  const [mode, setMode] = useState<RequirementImportMode | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
+  const [plan, setPlan] = useState<RequirementImportPlan | null>(null);
+  const [editableRows, setEditableRows] = useState<ImportTemplateRow[]>([]);
+  const [selectedRowNumbers, setSelectedRowNumbers] = useState<number[]>([]);
+  const [selectedRequirementIds, setSelectedRequirementIds] = useState<string[]>([]);
+  const lastSelectedRowNumber = useRef<number | null>(null);
+  const [publishNow, setPublishNow] = useState(false);
   const [mappings, setMappings] = useState<ColumnMapping[]>(INITIAL_MAPPINGS);
   const [confirmed, setConfirmed] = useState(false);
   const [result, setResult] = useState<ImportHistoryRecord | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function selectFile(selected?: File) {
+  useEffect(() => {
+    if (!result || !publishNow || result.publishStatus === "Published") return;
+    publishImportBatch(result.id);
+    setResult((current) => current ? { ...current, publishStatus: "Published" } : current);
+  }, [publishImportBatch, publishNow, result]);
+
+  async function selectFile(selected?: File) {
     if (!selected) return;
-    if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setFileError("Choose an Excel .xlsx workbook."); return; }
-    if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The workbook must be 25 MB or smaller."); return; }
-    setFile(selected); setFileError("");
+    if (!mode) { setFileError("Choose New requirements or Update requirements before uploading a workbook."); return; }
+    if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setPlan(null); setFileError("Choose the EHS360 Excel .xlsx import template."); return; }
+    if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The import file must be 25 MB or smaller."); return; }
+    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, sites); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
+    catch (error) { setFile(null); setPlan(null); setFileError(error instanceof Error ? error.message : "The workbook could not be read."); }
+  }
+  function updatePreviewRows(nextRows: ImportTemplateRow[]) {
+    setEditableRows(nextRows);
+    if (!mode || !file) return;
+    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, sites);
+    setPlan(nextPlan);
+    setSelectedRowNumbers((current) => mode === "new"
+      ? nextPlan.rows.map((row) => row.rowNumber)
+      : current.filter((rowNumber) => nextPlan.rows.some((row) => row.rowNumber === rowNumber)));
+  }
+  function togglePreviewRow(rowNumber: number, checked: boolean, shiftKey: boolean) {
+    const rowNumbers = editableRows.map((row) => row.rowNumber);
+    const lastIndex = lastSelectedRowNumber.current === null ? -1 : rowNumbers.indexOf(lastSelectedRowNumber.current);
+    const currentIndex = rowNumbers.indexOf(rowNumber);
+    const range = shiftKey && lastIndex >= 0 && currentIndex >= 0
+      ? rowNumbers.slice(Math.min(lastIndex, currentIndex), Math.max(lastIndex, currentIndex) + 1)
+      : [rowNumber];
+    setSelectedRowNumbers((current) => checked
+      ? [...new Set([...current, ...range])]
+      : current.filter((number) => !range.includes(number)));
+    lastSelectedRowNumber.current = rowNumber;
   }
   function advance() {
-    if (step === 5 && file) {
-      const record = submitImportBatch(file.name, selectedSiteIds);
+    if (step === 3 && plan && !plan.issues.some((issue) => issue.severity === "error")) {
+      const selected = new Set(selectedRowNumbers);
+      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, sites);
+      const record = submitImportBatch(stagedPlan);
       notify({
         title: `${record.fileName} imported`,
-        body: `${record.created + record.updated} requirements are staged as drafts and stay invisible to sites until published.`,
+        body: publishNow ? `${record.created + record.updated} requirements were published from this import.` : `${record.created + record.updated} requirements are staged as drafts and stay invisible to sites until published.`,
         category: "master-data",
         audience: ["administrator"],
         link: `/admin/imports/${record.id}/preview`,
       });
-      setResult(record); setStep(6); return;
+      setResult(record); setStep(4); return;
     }
-    setStep((value) => Math.min(6, value + 1));
+    setStep((value) => Math.min(4, value + 1));
   }
   function resetImport() {
-    setStep(0); setSelectedSiteIds([]); setFile(null); setFileError(""); setMappings(INITIAL_MAPPINGS); setConfirmed(false); setResult(null);
+    setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setMappings(INITIAL_MAPPINGS); setConfirmed(false); setResult(null);
   }
-  const needsReview = mappings.some((mapping) => mapping.needsReview);
+  const selectedPlan = mode && file
+    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, sites)
+    : plan;
+  const needsReview = mappings.some((mapping) => mapping.needsReview) || Boolean(selectedPlan?.issues.some((issue) => issue.severity === "error"));
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <PageHeader eyebrow="Administration" title="Master data import" description="Validate an approved KC workbook before applying requirements and hierarchy changes." actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => navigate("/admin/imports/history")} data-tour="import-history">Import history</Button>} />
-      <section className={cx("import-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/requirements">Master data</Link><ChevronRight size={15} /><span aria-current="page">Imports</span></nav>
+      <PageHeader eyebrow="Administration" title="Import requirements" description="Create new master requirements or safely update existing governed content from the approved workbook." descriptionClassName="md:whitespace-nowrap" actions={<Button variant="secondary" icon={<History size={18} />} onClick={() => navigate("/admin/imports/history")} data-tour="import-history">Import history</Button>} />
+      <section className={cx(importCardClass)}>
         <StepIndicator current={step} />
-        <div className={cx("import-stage [min-height:460px] [padding:1.5rem] max-[740px]:[min-height:0] max-[740px]:[padding:1rem]")}>
-          {step === 0 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><Building2 size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 1 of 7</p><h2>Select sites for this import</h2><p>Choose one or more sites this workbook's requirements apply to.</p></div></div><CheckboxList label="Sites" searchable options={siteOptions} selected={selectedSiteIds} onChange={setSelectedSiteIds} /></>}
-          {step === 1 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><FileInput size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 2 of 7</p><h2>Upload source workbook</h2><p>Select the approved KC Operating System and Performance Standards workbook.</p></div></div><input ref={inputRef} className={cx("visually-hidden [position:absolute]! [width:1px]! [height:1px]! [padding:0]! [margin:-1px]! [overflow:hidden]! [clip:rect(0,_0,_0,_0)]! [white-space:nowrap]! [border:0]!")} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => selectFile(event.target.files?.[0])} />{!file ? <button className={cx("dropzone [display:grid] [width:calc(100%_-_2.2rem)] [min-height:170px] [place-items:center] [align-content:center] [gap:0.45rem] [margin:1rem_1.1rem] [border:1.5px_dashed_var(--kc-300)] [border-radius:var(--radius-lg)] [background:var(--kc-50)] [color:var(--neutral-700)] [padding:1rem] hover:[border-color:var(--kc-600)] hover:[background:var(--kc-100)] [&_strong]:[font-size:0.9rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem]", "dropzone--large [width:100%] [min-height:260px] [margin:0]", fileError && "dropzone--invalid [border-color:var(--danger)]! [box-shadow:0_0_0_3px_var(--danger-surface)]")} data-tour="import-upload" onClick={() => inputRef.current?.click()} onDrop={(event) => { event.preventDefault(); selectFile(event.dataTransfer.files[0]); }} onDragOver={(event) => event.preventDefault()}><span className={cx("dropzone__icon [display:grid] [width:48px] [height:48px] [place-items:center] [border-radius:14px] [background:var(--surface-elevated)] [color:var(--kc-700)] [box-shadow:var(--shadow-1)]")}><Upload size={25} /></span><strong>Choose an Excel workbook or drag it here</strong><span>.xlsx files · Maximum 25 MB</span></button> : <div className={cx("selected-file [display:flex] [align-items:center] [gap:0.8rem] [border:1px_solid_var(--success-border)] [border-radius:var(--radius-lg)] [background:var(--success-surface)] [padding:1rem] [&_>_div]:[display:grid] [&_>_div]:[flex:1] [&_>_div_span]:[color:var(--neutral-600)] [&_>_div_span]:[font-size:0.75rem] [&_>_svg]:[color:var(--success)]")} data-tour="import-upload"><span className={cx("selected-file__icon [display:grid] [width:46px] [height:46px] [place-items:center] [border-radius:12px] [background:var(--surface-elevated)] [color:var(--success)]")}><FileSpreadsheet size={24} /></span><div><strong>{file.name}</strong><span>{(file.size / 1024 / 1024).toFixed(2)} MB · Ready to inspect</span></div><Button variant="tertiary" size="compact" onClick={() => inputRef.current?.click()}>Replace</Button><CheckCircle2 size={21} /></div>}{fileError && <InlineMessage tone="danger" title="Workbook not accepted">{fileError}</InlineMessage>}</>}
-          {step === 2 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><FileSpreadsheet size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 3 of 7</p><h2>Inspect workbook structure</h2><p>Review detected sheets and records before mapping.</p></div></div><div className={cx("inspection-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:0.8rem] [margin-bottom:1rem] [&_>_div]:[display:grid] [&_>_div]:[gap:0.15rem] [&_>_div]:[border:1px_solid_var(--neutral-200)] [&_>_div]:[border-radius:12px] [&_>_div]:[background:var(--neutral-50)] [&_>_div]:[padding:0.9rem] [&_strong]:[font-size:1.35rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.72rem] max-[740px]:[grid-template-columns:1fr]")}><div><strong>24</strong><span>Sheets detected</span></div><div><strong>752</strong><span>Requirement rows</span></div><div><strong>0</strong><span>Unknown sheets</span></div><div><strong>2</strong><span>Warnings</span></div></div><div className={cx("inspection-list [display:grid] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [overflow:hidden] [&_>_div]:[display:flex] [&_>_div]:[align-items:center] [&_>_div]:[gap:0.7rem] [&_>_div]:[padding:0.75rem_0.85rem] [&_>_div]:[border-bottom:1px_solid_var(--neutral-200)] [&_>_div:last-child]:[border-bottom:0] [&_>_div_>_span:nth-child(2)]:[display:grid] [&_>_div_>_span:nth-child(2)]:[flex:1] [&_small]:[color:var(--neutral-500)] [&_>_div_>_svg:first-child]:[color:var(--kc-700)] [&_>_div_>_svg:last-child]:[color:var(--success)]")}><div><FileCheck2 size={18} /><span><strong>Leadership & Engagement</strong><small>68 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><FileCheck2 size={18} /><span><strong>Planning</strong><small>94 rows · Valid structure</small></span><CheckCircle2 size={18} /></div><div><AlertCircle size={18} /><span><strong>Machine Safety</strong><small>2 blank guidance cells</small></span><span className={cx("warning-label [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--warning-border)]! [background:var(--warning-surface)] [color:var(--warning)]")}>Warning</span></div></div></>}
-          {step === 3 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><ArrowRight size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 4 of 7</p><h2>Map workbook columns</h2><p>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div></div><div className={cx("mapping-table [display:grid] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [&_>_div:last-child]:[border-bottom:0] [grid-template-columns:minmax(150px,_1fr)_auto_minmax(170px,_1fr)_minmax(200px,_1.3fr)_auto] [column-gap:0.75rem] [&_>_div]:[display:grid] [&_>_div]:[grid-template-columns:subgrid] [&_>_div]:[grid-column:1_/_-1] [&_>_div]:[align-items:center] [&_>_div]:[padding:0.75rem] [&_>_div]:[border-bottom:1px_solid_var(--neutral-200)] [&_>_div_>_span:not(.mapping-sample)]:[display:grid] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.68rem] [&_>_div_>_svg:last-child]:[color:var(--success)] [&_>_div:first-child]:[border-top-left-radius:var(--radius-lg)] [&_>_div:first-child]:[border-top-right-radius:var(--radius-lg)] [&_>_div:last-child]:[border-bottom-left-radius:var(--radius-lg)] [&_>_div:last-child]:[border-bottom-right-radius:var(--radius-lg)] max-[1100px]:[&_>_div]:[grid-template-columns:1fr_auto_1fr_auto] max-[740px]:[&_>_div]:[grid-template-columns:1fr_auto_1fr] max-[740px]:[&_>_div]:[gap:0.45rem] max-[740px]:[&_>_div_>_svg:last-child]:[display:none]")}>{mappings.map((mapping, index) => <div key={mapping.source} className={cx(mapping.needsReview && "mapping-table__row--flagged [.mapping-table_>_div&]:[border-bottom-color:var(--warning-border)] [.mapping-table_>_div&]:[background:var(--warning-surface)]")}><span><strong>{mapping.source}</strong><small>Source column</small></span><ArrowRight size={18} /><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /><span className={cx("mapping-sample [overflow:hidden] [color:var(--neutral-500)] [font-size:0.74rem] [text-overflow:ellipsis] [white-space:nowrap] max-[1100px]:[display:none]")}>{mapping.sample}</span>{mapping.needsReview ? <span className={cx("warning-label [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--warning-border)]! [background:var(--warning-surface)] [color:var(--warning)]")}>Needs review</span> : <CheckCircle2 size={18} />}</div>)}</div>{needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}</>}
-          {step === 4 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><ShieldCheck size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 5 of 7</p><h2>Validation results</h2><p>Resolve blocking errors before import. Warnings may be accepted with review.</p></div></div><div className={cx("validation-summary [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:0.8rem] [margin-bottom:1rem] [&_>_div]:[display:flex] [&_>_div]:[align-items:center] [&_>_div]:[gap:0.6rem] [&_>_div]:[border:1px_solid_var(--neutral-200)] [&_>_div]:[border-radius:12px] [&_>_div]:[padding:0.9rem] [&_span]:[color:var(--neutral-700)] [&_strong]:[color:var(--neutral-900)] max-[740px]:[grid-template-columns:1fr]")}><div className={cx("validation-summary__success [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]")}><CheckCircle2 size={22} /><span><strong>748</strong> valid records</span></div><div className={cx("validation-summary__warning [border-color:var(--warning-border)]! [background:var(--warning-surface)] [color:var(--warning)]")}><AlertCircle size={22} /><span><strong>4</strong> warnings</span></div><div><Circle size={22} /><span><strong>0</strong> blocking errors</span></div></div><InlineMessage tone="warning" title="Four records need review">Two records have blank guidance and two reuse an existing display order. The import can continue without data loss.</InlineMessage><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("Maitsys_Assure_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></>}
-          {step === 5 && <><div className={cx("import-stage__heading [display:flex] [gap:0.85rem] [max-width:760px] [margin-bottom:1.2rem] [&_h2]:[margin:0.15rem_0_0.25rem] [&_p:last-child]:[color:var(--neutral-600)] [&_p:last-child]:[font-size:0.82rem]")}><span className={cx("stage-icon [display:grid] [width:46px] [height:46px] [flex:0_0_46px] [place-items:center] [border-radius:13px] [background:var(--kc-50)] [color:var(--kc-700)]")}><FileCheck2 size={23} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Step 6 of 7</p><h2>Confirm import</h2><p>Review the dry-run result before applying master data changes.</p></div></div><div className={cx("dry-run-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:0.8rem] [margin-bottom:1rem] [&_>_div]:[display:grid] [&_>_div]:[gap:0.15rem] [&_>_div]:[border:1px_solid_var(--neutral-200)] [&_>_div]:[border-radius:12px] [&_>_div]:[background:var(--neutral-50)] [&_>_div]:[padding:0.9rem] [&_strong]:[font-size:1.35rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem] [&_>_div]:[position:relative] [&_>_div]:[padding-left:2.1rem] max-[740px]:[grid-template-columns:1fr]")}><div><span className={cx("dry-run-dot [position:absolute] [top:1rem] [left:0.85rem] [width:9px] [height:9px] [border-radius:50%] dry-run-dot--create [background:var(--success)]")} /><strong>4</strong><span>Create</span></div><div><span className={cx("dry-run-dot [position:absolute] [top:1rem] [left:0.85rem] [width:9px] [height:9px] [border-radius:50%] dry-run-dot--update [background:var(--kc-600)]")} /><strong>2</strong><span>Update</span></div><div><span className={cx("dry-run-dot [position:absolute] [top:1rem] [left:0.85rem] [width:9px] [height:9px] [border-radius:50%] dry-run-dot--same [background:var(--neutral-400)]")} /><strong>746</strong><span>Unchanged</span></div><div><span className={cx("dry-run-dot [position:absolute] [top:1rem] [left:0.85rem] [width:9px] [height:9px] [border-radius:50%] dry-run-dot--conflict [background:var(--danger)]")} /><strong>0</strong><span>Conflicts</span></div></div><InlineMessage tone="info" title="Import scope">This action updates master requirements for {siteNamesFor(sites, selectedSiteIds) || "the selected sites"} and writes an administrator audit record.</InlineMessage><label className={cx("confirmation-check [display:flex] [align-items:flex-start] [gap:0.6rem] [margin-top:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:11px] [padding:0.8rem] [font-size:0.8rem] [&_input]:[width:18px] [&_input]:[height:18px] [&_input]:[accent-color:var(--kc-600)]")}><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span>I reviewed the validation warnings and confirm this import scope.</span></label></>}
-          {step === 6 && result && (() => {
+        <div className={cx(importStageClass)}>
+          {step === 0 && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><FileInput size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 1 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose an import flow</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>New imports add master requirements. Updates safely change existing requirement and question IDs.</p></div>
+            </div>
+            <div className={cx("grid gap-4 md:grid-cols-2")}>
+              {(["new", "update"] as const).map((choice) => <button key={choice} type="button" onClick={() => { if (mode !== choice) { setFile(null); setPlan(null); setSelectedRowNumbers([]); } setMode(choice); }} className={cx("rounded-xl border p-5 text-left transition-colors", mode === choice ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 hover:border-kc-blue-300 dark:border-slate-700") }>
+                <strong className={cx("block text-base text-slate-900 dark:text-slate-100")}>{choice === "new" ? "New requirements" : "Update requirements"}</strong>
+                <span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>{choice === "new" ? "Create new requirements and questions from unused IDs." : "Match Requirement ID + Question ID, preview changes, and add new questions safely."}</span>
+              </button>)}
+            </div>
+          </>}
+          {step === 1 && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><FileInput size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 2 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Upload source workbook</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Use the EHS360 Master Requirement Import Template or an approved workbook with the same columns.</p></div>
+            </div>
+            <input ref={inputRef} className={cx("sr-only")} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void selectFile(event.target.files?.[0])} />
+            {!file ? (
+              <button
+                className={cx(dropzoneClass, fileError && "dropzone--invalid border-red-600 ring-3 ring-red-100 dark:border-red-400 dark:ring-red-950")}
+                data-tour="import-upload"
+                onClick={() => inputRef.current?.click()}
+                onDrop={(event) => { event.preventDefault(); void selectFile(event.dataTransfer.files[0]); }}
+                onDragOver={(event) => event.preventDefault()}
+              >
+                <span className={cx("dropzone__icon grid size-12 place-items-center rounded-xl bg-white text-kc-blue-700 shadow-sm dark:bg-slate-800 dark:text-kc-blue-300")}><Upload size={25} /></span>
+                <strong className={cx("text-base")}>Choose the completed Excel import template</strong>
+                <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>.xlsx files · Maximum 25 MB</span>
+              </button>
+            ) : (
+              <div className={cx(selectedFileClass)} data-tour="import-upload">
+                <span className={cx("selected-file__icon grid size-12 flex-none place-items-center rounded-lg bg-white text-emerald-700 dark:bg-slate-800 dark:text-emerald-300")}><FileSpreadsheet size={24} /></span>
+                <div className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{file.name}</strong><span className={cx("text-xs text-slate-600 dark:text-slate-400")}>{(file.size / 1024 / 1024).toFixed(2)} MB · Ready to inspect</span></div>
+                <Button variant="tertiary" size="compact" onClick={() => inputRef.current?.click()}>Replace</Button>
+                <CheckCircle2 size={21} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} />
+              </div>
+            )}
+            {fileError && <InlineMessage tone="danger" title="Workbook not accepted">{fileError}</InlineMessage>}
+          </>}
+          {step === 2 && <>
+            <div className={cx("mb-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(42rem,1.6fr)] xl:items-center xl:gap-6")}>
+            <div className={cx(importStageHeadingClass, "mb-0 max-w-none")}>
+              <span className={cx(stageIconClass)}><FileSpreadsheet size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 3 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Review and edit imported requirements</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the parsed workbook data, deselect anything not ready to apply, or open a requirement to edit it.</p></div>
+            </div>
+            <div className={cx(inspectionGridClass, "mb-0")}>
+              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>1</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Import Template sheet read</span></div>
+              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.sourceRows ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Source rows</span></div>
+              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.upserts.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Affected requirements</span></div>
+              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Validation findings</span></div>
+            </div>
+            </div>
+            <div className={cx("mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700")} style={{ maxHeight: "65vh" }}>
+              <div className={cx("sticky top-0 left-0 z-20 flex min-w-full flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Workbook rows</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>Edit any import-template value, add a row, or remove a row before release. Select multiple rows to apply together.</p></div><div className={cx("flex flex-wrap items-center gap-2")}><span className={cx("text-xs font-semibold text-slate-600 dark:text-slate-300")}>{selectedRowNumbers.length} of {editableRows.length} selected</span><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers(editableRows.map((row) => row.rowNumber))}>Select all</Button><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers([])}>Clear</Button><Button variant="secondary" size="compact" icon={<Plus size={16} />} onClick={() => updatePreviewRows([...editableRows, { ...Object.fromEntries(importTemplateColumns.map((column) => [column, ""])), rowNumber: Math.max(4, ...editableRows.map((row) => row.rowNumber)) + 1 } as ImportTemplateRow])}>Add row</Button></div></div>
+              <table className={cx("min-w-400 text-left text-xs")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx("min-w-36 p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t border-slate-100 align-top dark:border-slate-800")}><td className={cx("sticky left-0 bg-white p-2 dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold text-slate-500 dark:text-slate-400")}>{rowIndex + 1}</td>{importTemplateColumns.map((column) => <td key={column} className={cx("p-1.5")}><textarea rows={2} className={cx("min-w-36 resize-y rounded-md border border-slate-200 bg-white p-1.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100")} value={row[column]} onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))} /></td>)}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>)}</tbody></table>
+            </div>
+            <div className={cx("hidden")}>
+              <div className={cx("flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Requirements to apply</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>All valid requirements are selected by default. Deselect a row to exclude it from this import.</p></div><Button variant="tertiary" size="compact" onClick={() => setSelectedRequirementIds(plan?.upserts.map((requirement) => requirement.id) ?? [])}>Select all</Button></div>
+              {plan?.upserts.map((requirement) => <label key={requirement.id} className={cx("flex items-start gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800")}><input className={cx("mt-0.5 size-4.5 accent-kc-blue-600")} type="checkbox" checked={selectedRequirementIds.includes(requirement.id)} onChange={(event) => setSelectedRequirementIds((current) => event.target.checked ? [...current, requirement.id] : current.filter((id) => id !== requirement.id))} /><span className={cx("min-w-0 flex-1")}><strong className={cx("block text-sm text-slate-900 dark:text-slate-100")}>{requirement.id} · {requirement.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{requirement.section} · {requirement.questions.length} question{requirement.questions.length === 1 ? "" : "s"} · {requirement.siteIds.length ? `${requirement.siteIds.length} scoped site${requirement.siteIds.length === 1 ? "" : "s"}` : "All sites"}</span></span><Link className={cx("text-xs font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} to={`/admin/requirements/${requirement.id}`}>Edit</Link></label>)}
+            </div>
+            <div className={cx("hidden", inspectionListClass)}>
+              <div className={cx(inspectionRowClass)}><FileCheck2 size={18} className={cx("flex-none text-kc-blue-700 dark:text-kc-blue-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Leadership & Engagement</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>68 rows · Valid structure</small></span><CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} /></div>
+              <div className={cx(inspectionRowClass)}><FileCheck2 size={18} className={cx("flex-none text-kc-blue-700 dark:text-kc-blue-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Planning</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>94 rows · Valid structure</small></span><CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} /></div>
+              <div className={cx(inspectionRowClass)}><AlertCircle size={18} className={cx("flex-none text-amber-700 dark:text-amber-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Machine Safety</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>2 blank guidance cells</small></span><span className={cx(warningLabelClass)}>Warning</span></div>
+            </div>
+          </>}
+          {step === 3 && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><CheckCircle2 size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 4 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose how to release changes</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Apply the selected requirements now, then either publish them immediately or keep the batch in review.</p></div>
+            </div>
+            <div className={cx("grid gap-3 md:grid-cols-2")}>
+              <button type="button" onClick={() => setPublishNow(false)} className={cx("rounded-xl border p-4 text-left", !publishNow ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Publish after review</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Stage the selected changes as Draft and publish later from the batch preview.</span></button>
+              <button type="button" onClick={() => setPublishNow(true)} className={cx("rounded-xl border p-4 text-left", publishNow ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Publish now</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Stage and immediately publish the selected requirements after confirmation.</span></button>
+            </div>
+            <InlineMessage className={cx("mt-4")} tone="info" title={`${selectedRowNumbers.length} workbook row${selectedRowNumbers.length === 1 ? "" : "s"} selected`}>{publishNow ? "Selected changes will become live immediately after confirmation." : "Selected changes will remain Draft until an administrator publishes the batch."}</InlineMessage>
+          </>}
+          {step === -1 && plan && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><ArrowRight size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 4 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Map workbook columns</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div>
+            </div>
+            <div className={cx(mappingTableClass)}>{mappings.map((mapping, index) => (
+              <div className={cx(mappingRowClass, mapping.needsReview && "mapping-table__row--flagged border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950")} key={mapping.source}>
+                <span className={cx("grid min-w-32 flex-none gap-0.5")}><strong className={cx("text-sm text-slate-900 dark:text-slate-100")}>{mapping.source}</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>Source column</small></span>
+                <ArrowRight size={18} className={cx("flex-none text-slate-400 dark:text-slate-500")} />
+                <div className={cx("min-w-40 flex-1")}><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /></div>
+                <span className={cx("mapping-sample hidden min-w-0 flex-1 truncate text-xs text-slate-500 lg:block dark:text-slate-400")}>{mapping.sample}</span>
+                {mapping.needsReview ? <span className={cx(warningLabelClass)}>Needs review</span> : <CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} />}
+              </div>
+            ))}</div>
+            {needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}
+          </>}
+          {step === -1 && plan && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><ShieldCheck size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 5 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Validation results</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Resolve blocking errors before import. Warnings may be accepted with review.</p></div>
+            </div>
+            <div className={cx(validationSummaryClass)}>
+              <div className={cx(validationTileClass, "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300")}><CheckCircle2 size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.sourceRows ?? 0}</strong> rows checked</span></div>
+              <div className={cx(validationTileClass, "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300")}><AlertCircle size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "warning").length ?? 0}</strong> warnings</span></div>
+              <div className={cx(validationTileClass, "border-slate-200 dark:border-slate-700")}><Circle size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "error").length ?? 0}</strong> blocking errors</span></div>
+            </div>
+            {plan?.issues.length ? <InlineMessage tone={plan.issues.some((issue) => issue.severity === "error") ? "danger" : "warning"} title="Workbook findings">{plan.issues.slice(0, 5).map((issue) => `Row ${issue.row}${issue.field ? ` · ${issue.field}` : ""}: ${issue.message}`).join(" ")}</InlineMessage> : <InlineMessage tone="success" title="Workbook validated">The Import Template rows are ready for a staged draft import.</InlineMessage>}
+            <div className={cx("mt-4")}><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHS360_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></div>
+          </>}
+          {step === -1 && plan && <>
+            <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><FileCheck2 size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 6 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Confirm import</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the dry-run result before applying master data changes.</p></div>
+            </div>
+            <div className={cx(dryRunGridClass)}>
+              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--create bg-emerald-600 dark:bg-emerald-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.created ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Create</span></div>
+              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--update bg-kc-blue-600")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{(plan?.updated ?? 0) + (plan?.addedQuestions ?? 0)}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Update / add question</span></div>
+              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--same bg-slate-400 dark:bg-slate-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.unchanged ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Unchanged</span></div>
+              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--conflict bg-red-600 dark:bg-red-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "error").length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Conflicts</span></div>
+            </div>
+            <InlineMessage tone="info" title="Import scope">Each row uses its Applicable Sites column. A blank value applies that requirement to all sites and writes an administrator audit record.</InlineMessage>
+            {plan?.changes.length ? <div className={cx("mt-4 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700")}><div className={cx("border-b border-slate-200 px-3.5 py-2 text-sm font-bold text-slate-900 dark:border-slate-700 dark:text-slate-100")}>Planned changes</div>{plan.changes.slice(0, 12).map((change, index) => <div key={`${change.requirementId}-${change.questionId ?? "requirement"}-${change.field}-${index}`} className={cx("grid gap-0.5 border-b border-slate-100 px-3.5 py-2.5 text-sm last:border-b-0 dark:border-slate-800")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{change.requirementId}{change.questionId ? ` · ${change.questionId}` : ""} · {change.field}</strong><span className={cx("text-xs text-slate-600 dark:text-slate-400")}>{change.before ? `${change.before} → ` : ""}{change.after ?? "Added"}</span></div>)}</div> : null}
+            <label className={cx("confirmation-check mt-4 flex items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-sm dark:border-slate-700")}>
+              <input className={cx("size-4.5 flex-none accent-kc-blue-600")} type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+              <span>I reviewed the validation warnings and confirm this import scope.</span>
+            </label>
+          </>}
+          {step === 4 && result && (() => {
             const latest = importHistory.find((record) => record.id === result.id) ?? result;
             const published = latest.publishStatus === "Published";
             const requirementCount = latest.created + latest.updated;
             return (
-              <div className={cx("result-state [display:grid] [max-width:640px] [justify-items:center] [margin:3rem_auto] [text-align:center] [&_h2]:[margin:0.25rem_0_0.5rem] [&_p]:[color:var(--neutral-600)]")}>
-                <span className={cx("result-state__icon [display:grid] [width:68px] [height:68px] [place-items:center] [margin-bottom:1rem] [border-radius:50%] [background:var(--success-surface)] [color:var(--success)]", published && "result-state__icon--published [background:var(--kc-50)] [color:var(--kc-700)]")}><CheckCircle2 size={34} /></span>
-                <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>{published ? "Published" : "Import complete"}</p>
-                <h2>{published ? "Requirements are live" : "Review and publish this import"}</h2>
-                <p>{published
+              <div className={cx(resultStateClass)}>
+                <span className={cx("result-state__icon mb-4 grid size-17 place-items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300", published && "result-state__icon--published bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}><CheckCircle2 size={34} /></span>
+                <p className={cx(eyebrowClasses)}>{published ? "Published" : "Import complete"}</p>
+                <h2 className={cx("mt-1 mb-2 text-xl font-bold text-slate-900 dark:text-slate-100")}>{published ? "Requirements are live" : "Review and publish this import"}</h2>
+                <p className={cx("text-sm text-slate-600 dark:text-slate-400")}>{published
                   ? `All ${requirementCount} requirements from this import are now live in the master requirements catalog.`
                   : `${requirementCount} requirements are staged as drafts. They stay invisible to sites until you publish them.`}</p>
-                <div className={cx("result-summary [display:grid] [width:100%] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:0.65rem] [margin-top:1.5rem] [&_>_div]:[display:grid] [&_>_div]:[gap:0.15rem] [&_>_div]:[border:1px_solid_var(--neutral-200)] [&_>_div]:[border-radius:12px] [&_>_div]:[background:var(--neutral-25)] [&_>_div]:[padding:0.8rem_0.5rem] [&_strong]:[font-size:1.35rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.72rem] max-[740px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))]")}>
-                  <div><strong>{latest.created}</strong><span>Created</span></div>
-                  <div><strong>{latest.updated}</strong><span>Updated</span></div>
-                  <div><strong>{latest.unchanged}</strong><span>Unchanged</span></div>
-                  <div><strong>{latest.siteIds.length || "All"}</strong><span>{latest.siteIds.length === 1 ? "Site" : "Sites"}</span></div>
+                <div className={cx("result-summary mt-6 grid w-full grid-cols-2 gap-2.5 md:grid-cols-4")}>
+                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.created}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Created</span></div>
+                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.updated}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Updated</span></div>
+                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.unchanged}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Unchanged</span></div>
+                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.siteIds.length || "All"}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{latest.siteIds.length === 1 ? "Site" : "Sites"}</span></div>
                 </div>
-                <p className={cx("result-state__audit [margin-top:1rem] [font-size:0.78rem] [&_strong]:[color:var(--neutral-800)]")}>Audit reference <strong>{latest.id}</strong></p>
-                <div className={cx("result-state__primary [display:flex] [flex-wrap:wrap] [justify-content:center] [gap:0.65rem] [margin-top:1.4rem] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")}>
+                <p className={cx("result-state__audit mt-4 text-sm text-slate-600 dark:text-slate-400")}>Audit reference <strong className={cx("text-slate-800 dark:text-slate-200")}>{latest.id}</strong></p>
+                <div className={cx("result-state__primary mt-5 flex flex-col items-stretch justify-center gap-2.5 md:flex-row md:flex-wrap")}>
                   {!published && <Button variant="primary" icon={<Check size={17} />} onClick={() => { publishImportBatch(latest.id); notifyBatchPublished(notify, latest, requirementCount, sites); }}>Publish {requirementCount} requirements</Button>}
                   <Button variant="secondary" icon={<FileText size={17} />} onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>{published ? "View imported requirements" : "Review before publishing"}</Button>
                 </div>
-                <div className={cx("result-state__links [display:flex] [align-items:center] [justify-content:center] [gap:0.7rem] [margin-top:1rem] [&_button]:[border:0] [&_button]:[background:none] [&_button]:[padding:0] [&_button]:[color:var(--kc-700)] [&_button]:[font-size:0.8rem] [&_button]:[font-weight:650] [&_button]:[cursor:pointer] [&_button:hover]:[color:var(--kc-800)] [&_button:hover]:[text-decoration:underline]")}>
-                  <button type="button" onClick={() => navigate("/admin/imports/history")}>View audit entry</button>
-                  <span className={cx("divider-dot [width:3px] [height:3px] [border-radius:50%] [background:var(--neutral-400)] max-[740px]:[display:none]")} />
-                  <button type="button" onClick={resetImport}>Import another file</button>
+                <div className={cx("result-state__links mt-4 flex items-center justify-center gap-2.5")}>
+                  <button className={cx("border-0 bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} type="button" onClick={() => navigate("/admin/imports/history")}>View audit entry</button>
+                  <span className={cx("divider-dot hidden size-1 rounded-full bg-slate-400 md:block dark:bg-slate-500")} />
+                  <button className={cx("border-0 bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} type="button" onClick={resetImport}>Import another file</button>
                 </div>
               </div>
             );
           })()}
         </div>
-        {step < 6 && <div className={cx("import-card__footer [display:flex] [align-items:center] [justify-content:space-between] [border-top:1px_solid_var(--neutral-200)] [padding:0.8rem_1rem] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && selectedSiteIds.length === 0) || (step === 1 && !file) || (step === 3 && needsReview) || (step === 5 && !confirmed)} icon={<ArrowRight size={17} />} iconPosition="end">{step === 5 ? "Confirm import" : "Continue"}</Button></div>}
+        {step < 4 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !mode) || (step === 1 && !file) || (step === 2 && (needsReview || selectedRowNumbers.length === 0)) || (step === 3 && (needsReview || selectedRowNumbers.length === 0))} icon={<ArrowRight size={17} />} iconPosition="end">{step === 3 ? (publishNow ? "Publish selected changes" : "Stage for review") : "Continue"}</Button></div>}
       </section>
     </div>
   );
@@ -457,34 +915,38 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
     onChange([...questions, { id, number: String(nextNumber), text: "", expectedEvidence: [], evidenceRequired: false }]);
   }
   return (
-    <div className={cx("question-list [display:grid] [gap:1rem]")}>
-      {!questions.length && <p className={cx("question-editor-empty [border:1px_dashed_var(--neutral-300)] [border-radius:var(--radius-lg)] [padding:1rem] [color:var(--neutral-500)] [font-size:0.78rem] [text-align:center]")}>No assessment questions yet. Add the first one below.</p>}
+    <div className={cx("question-list grid gap-4")}>
+      {!questions.length && <p className={cx("question-editor-empty rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400")}>No assessment questions yet. Add the first one below.</p>}
       {questions.map((question, index) => {
         const invalid = submitted && !question.text.trim();
         const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
         return (
-          <article className={cx("question-card [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1.1rem] [box-shadow:var(--shadow-1)] max-[740px]:[padding:0.9rem]", invalid && "question-card--invalid [border-color:var(--danger-border)] [box-shadow:0_0_0_3px_var(--danger-surface)]")} key={question.id}>
-            <div className={cx("question-card__header [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:start] [gap:0.8rem] [&_p]:[color:var(--neutral-500)] [&_p]:[font-size:0.68rem] [&_p]:[font-weight:600] [&_h3]:[max-width:780px] [&_h3]:[margin-top:0.2rem] [&_h3]:[font-size:0.95rem] [&_h3]:[line-height:1.5] max-[740px]:[grid-template-columns:auto_minmax(0,_1fr)]")}>
-              <span className={cx("question-number [display:grid] [width:31px] [height:31px] [place-items:center] [border-radius:9px] [background:var(--kc-50)] [color:var(--kc-800)] [font-size:0.8rem] [font-weight:750] [.history-list_article_.import-preview-question-list_&]:[overflow:visible] [.history-list_article_.import-preview-question-list_&]:[color:var(--kc-800)] [.history-list_article_.import-preview-question-list_&]:[font-size:0.8rem] [.history-list_article_.import-preview-question-list_&]:[white-space:nowrap]")}>{index + 1}</span>
-              <div>
-                <p>Question {index + 1}</p>
-                <textarea rows={2} className={cx("question-text-input [.question-card__header_&]:[width:100%] [.question-card__header_&]:[margin-top:0.2rem] [.question-card__header_&]:[border:1px_solid_var(--neutral-300)] [.question-card__header_&]:[border-radius:var(--radius-md)] [.question-card__header_&]:[outline:0] [.question-card__header_&]:[background:var(--surface-input)] [.question-card__header_&]:[color:var(--neutral-900)] [.question-card__header_&]:[padding:0.55rem_0.65rem] [.question-card__header_&]:[font-size:0.95rem] [.question-card__header_&]:[line-height:1.5] [.question-card__header_&]:[resize:vertical] [.question-card__header_&:focus]:[border-color:var(--kc-600)] [.question-card__header_&:focus]:[box-shadow:0_0_0_3px_var(--kc-100)]")} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
-                {invalid && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter the question text.</small>}
+          <article className={cx("question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm md:p-4.5", invalid && "question-card--invalid border-red-200 ring-3 ring-red-100 dark:border-red-800 dark:ring-red-950", "dark:border-slate-700 dark:bg-slate-900")} key={question.id}>
+            <div className={cx("question-card__header flex flex-wrap items-start gap-3 md:flex-nowrap")}>
+              <span className={cx(questionNumberClass)}>{index + 1}</span>
+              <div className={cx("min-w-0 flex-1")}>
+                <p className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {index + 1}</p>
+                <textarea rows={2} className={cx("question-text-input mt-1 w-full max-w-195 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-base leading-relaxed text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
+                {invalid && <small className={cx(fieldErrorClass)}>Enter the question text.</small>}
               </div>
               <IconButton label={`Delete question ${index + 1}`} onClick={() => removeQuestion(question.id)}><Trash2 size={17} /></IconButton>
             </div>
-            <div className={cx("question-evidence [display:grid] [gap:0.5rem] [margin:0.85rem_0_0] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-md)] [background:var(--surface-elevated)] [padding:0.75rem_0.9rem] [&_ul]:[display:grid] [&_ul]:[gap:0.3rem] [&_ul]:[margin:0] [&_ul]:[padding-left:1.1rem] [&_ul]:[color:var(--neutral-600)] [&_ul]:[font-size:0.76rem] [&_ul]:[line-height:1.5] question-evidence--editable")}>
-              <label className={cx("question-evidence__toggle [display:inline-flex] [align-items:center] [gap:0.45rem] [color:var(--neutral-800)] [font-size:0.78rem] [font-weight:650] [&_input]:[width:17px] [&_input]:[height:17px] [&_input]:[accent-color:var(--kc-600)]")}><input type="checkbox" checked={evidenceRequired} onChange={(event) => updateQuestion(question.id, { evidenceRequired: event.target.checked })} /> <span>Evidence required for this question</span></label>
-              {evidenceRequired && <><span className={cx("question-evidence__title [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[font-weight:500] [&_small]:[text-transform:none] [&_small]:[letter-spacing:normal] [display:flex] [align-items:center] [gap:0.4rem] [color:var(--kc-700)] [font-size:0.72rem] [font-weight:700] [text-transform:uppercase] [letter-spacing:0.02em]")}><Paperclip size={14} /> Required evidence <small>Shown only with Question {index + 1}</small></span>
-              <div className={cx("question-evidence__editor [display:grid] [gap:0.45rem]")}>
-                {question.expectedEvidence.map((item, evidenceIndex) => (
-                  <div className={cx("question-evidence__item [display:flex] [align-items:center] [gap:0.45rem] [&_input]:[width:100%] [&_input]:[min-width:0] [&_input]:[min-height:38px] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.45rem_0.65rem] [&_input]:[font-size:0.78rem] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)]")} key={`${question.id}-evidence-${evidenceIndex}`}>
-                    <input value={item} onChange={(event) => updateEvidenceItem(question, evidenceIndex, event.target.value)} placeholder="For example, Current risk register" aria-label={`Evidence item ${evidenceIndex + 1} for question ${index + 1}`} />
-                    <IconButton label={`Remove evidence item ${evidenceIndex + 1} from question ${index + 1}`} onClick={() => removeEvidenceItem(question, evidenceIndex)}><Trash2 size={16} /></IconButton>
-                  </div>
-                ))}
-                <Button variant="tertiary" icon={<Plus size={16} />} onClick={() => addEvidenceItem(question)}>Add evidence item</Button>
-              </div></>}
+            <div className={cx("question-evidence question-evidence--editable mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900")}>
+              <label className={cx("question-evidence__toggle inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200")}>
+                <input className={cx("size-4.5 accent-kc-blue-600")} type="checkbox" checked={evidenceRequired} onChange={(event) => updateQuestion(question.id, { evidenceRequired: event.target.checked })} /> <span>Evidence required for this question</span>
+              </label>
+              {evidenceRequired && <>
+                <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300")}><Paperclip size={14} /> Required evidence <small className={cx("ml-auto text-xs font-normal tracking-normal text-slate-500 normal-case dark:text-slate-400")}>Shown only with Question {index + 1}</small></span>
+                <div className={cx("question-evidence__editor grid gap-2")}>
+                  {question.expectedEvidence.map((item, evidenceIndex) => (
+                    <div className={cx("question-evidence__item flex items-center gap-2")} key={`${question.id}-evidence-${evidenceIndex}`}>
+                      <input className={cx("min-h-9.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={item} onChange={(event) => updateEvidenceItem(question, evidenceIndex, event.target.value)} placeholder="For example, Current risk register" aria-label={`Evidence item ${evidenceIndex + 1} for question ${index + 1}`} />
+                      <IconButton label={`Remove evidence item ${evidenceIndex + 1} from question ${index + 1}`} onClick={() => removeEvidenceItem(question, evidenceIndex)}><Trash2 size={16} /></IconButton>
+                    </div>
+                  ))}
+                  <Button variant="tertiary" icon={<Plus size={16} />} onClick={() => addEvidenceItem(question)}>Add evidence item</Button>
+                </div>
+              </>}
             </div>
           </article>
         );
@@ -514,51 +976,68 @@ function AdminRequirementNavigator({
   const published = requirements.filter((requirement) => requirement.status === "Published").length;
 
   return (
-    <aside className={cx("assessment-navigator [display:flex] [height:100%] [flex-direction:column] [overflow-y:auto] [border-right:1px_solid_var(--neutral-200)] [background:var(--surface-panel)] [padding:1rem] [.sheet_&]:[border:0] admin-requirement-navigator")} aria-label="Master requirement navigator">
-      <div className={cx("assessment-navigator__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:0.75rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1rem]")}>
-        <div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Master content</p><h2>Requirements</h2></div>
+    <aside className={cx("assessment-navigator admin-requirement-navigator flex h-full flex-col overflow-x-hidden overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900")} aria-label="Master requirement navigator">
+      <div className={cx("assessment-navigator__header mb-4 flex items-start justify-between gap-3")}>
+        <div><p className={cx(eyebrowClasses)}>Master content</p><h2 className={cx("mt-0.5 text-base font-bold text-slate-900 dark:text-slate-100")}>Requirements</h2></div>
         {onClose && <IconButton label="Close requirement navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
       <ProgressBar value={requirements.length ? Math.round((published / requirements.length) * 100) : 0} label="Requirements published" />
-      <label className={cx("navigator-search [display:flex] [min-height:40px] [align-items:center] [gap:0.45rem] [margin:1rem_0] [border:1px_solid_var(--neutral-300)] [border-radius:9px] [padding:0_0.65rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[font-size:0.8rem]")}>
+      <label className={cx("navigator-search my-4 flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-2.5 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:text-slate-400 dark:focus-within:ring-kc-blue-900")}>
         <Search size={17} />
-        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
+        <input className={cx("min-w-0 flex-1 border-0 bg-transparent text-sm outline-none")} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
       </label>
-      <div className={cx("navigator-group [flex:1]")}>
-        <div className={cx("navigator-group__trigger [display:flex] [width:100%] [align-items:center] [border:0] [text-align:left] [gap:0.45rem] [background:transparent] [color:var(--neutral-700)] [padding:0.45rem_0.35rem] [font-size:0.74rem] [font-weight:700] [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-weight:500]")} aria-expanded="true"><ChevronDown size={17} /><span>Master requirements</span><small>{published} of {requirements.length}</small></div>
-        <div className={cx("navigator-items [display:grid] [gap:0.15rem] [margin-top:0.25rem]")}>
+      <div className={cx("navigator-group flex-1")}>
+        <div className={cx("navigator-group__trigger flex w-full items-center gap-2 border-0 bg-transparent px-1.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-300")} aria-expanded="true"><ChevronDown size={17} /><span>Master requirements</span><small className={cx("ml-auto font-medium text-slate-500 dark:text-slate-400")}>{published} of {requirements.length}</small></div>
+        <div className={cx("navigator-items mt-1 grid gap-0.5")}>
           {filtered.map((requirement) => {
             const isCurrent = requirement.id === current.id;
             return (
-              <button key={requirement.id} className={cx("navigator-item [display:flex] [width:100%] [align-items:center] [border:0] [text-align:left] [min-height:51px] [gap:0.6rem] [border-radius:9px] [background:transparent] [padding:0.45rem_0.5rem] [color:var(--neutral-700)] hover:[background:var(--neutral-50)] [&_>_span:nth-child(2)]:[display:grid] [&_>_span:nth-child(2)]:[min-width:0] [&_>_span:nth-child(2)]:[flex:1] [&_>_span:nth-child(2)]:[font-size:0.76rem] [&_>_span:nth-child(2)]:[font-weight:600] [&_>_span:nth-child(2)]:[line-height:1.25] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.64rem] [&_small]:[font-weight:600] [&_>_svg:last-child]:[color:var(--neutral-400)]", isCurrent && "navigator-item--current [background:var(--kc-100)] [border:1px_solid_var(--kc-200)] [color:var(--kc-900)] [font-weight:700] [box-shadow:inset_5px_0_0_var(--kc-600)]")} onClick={() => onNavigate(requirement)}>
-                {isCurrent ? <span className={cx("nav-state [flex:0_0_auto] nav-state--current [display:grid] [width:19px] [height:19px] [place-items:center] [border-radius:50%] [background:var(--kc-600)] [color:#fff] [box-shadow:0_0_0_3px_var(--kc-200)]")}><Circle size={12} fill="currentColor" /></span> : requirement.status === "Published" ? <CheckCircle2 size={17} className={cx("nav-state [flex:0_0_auto] nav-state--complete [color:var(--success)]")} /> : <Circle size={16} className={cx("nav-state [flex:0_0_auto] nav-state--incomplete [color:var(--neutral-400)]")} />}
-                <span><small>{requirement.id} · {requirement.section}</small>{requirement.title}</span>
-                <ChevronRight size={16} />
+              <button
+                className={cx(
+                  "navigator-item flex min-h-13 w-full items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
+                  isCurrent && "navigator-item--current border-kc-blue-200 border-l-4 border-l-kc-blue-600 bg-kc-blue-100 pl-1.5 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:border-l-kc-blue-500 dark:bg-kc-blue-900 dark:text-kc-blue-100",
+                )}
+                key={requirement.id}
+                onClick={() => onNavigate(requirement)}
+              >
+                {isCurrent ? (
+                  <span className={cx("nav-state nav-state--current grid size-5 flex-none place-items-center rounded-full bg-kc-blue-600 text-white ring-3 ring-kc-blue-200 dark:ring-kc-blue-800")}><Circle size={12} fill="currentColor" /></span>
+                ) : requirement.status === "Published" ? (
+                  <CheckCircle2 size={17} className={cx("nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300")} />
+                ) : (
+                  <Circle size={16} className={cx("nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500")} />
+                )}
+                <span className={cx("grid min-w-0 flex-1 gap-0.5 text-sm font-semibold leading-tight")}><small className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>{requirement.id} · {requirement.section}</small>{requirement.title}</span>
+                <ChevronRight size={16} className={cx("flex-none text-slate-400 dark:text-slate-500")} />
               </button>
             );
           })}
-          {!filtered.length && <p className={cx("navigator-empty [margin:0] [padding:1rem_0.75rem] [color:var(--neutral-500)] [font-size:0.76rem] [text-align:center]")}>No requirements match your search.</p>}
+          {!filtered.length && <p className={cx("navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400")}>No requirements match your search.</p>}
         </div>
       </div>
-      <Button className={cx("next-incomplete [width:100%] [margin-top:1rem]")} variant="secondary" icon={<ListChecks size={18} />} onClick={onViewAll}>All requirements</Button>
+      <Button className={cx("next-incomplete mt-4 w-full")} variant="secondary" icon={<ListChecks size={18} />} onClick={onViewAll}>All requirements</Button>
     </aside>
   );
 }
 
+const auditChangeBoxClass = "min-w-0 flex-1 rounded-lg bg-slate-50 p-2.5 dark:bg-slate-900";
+const auditChangeLabelClass = "text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400";
+const auditChangeValueClass = "mt-1 text-sm leading-snug wrap-anywhere text-slate-800 dark:text-slate-200";
+
 function RequirementAuditChangeDetail({ change }: { change: RequirementAuditChange }) {
   if (change.before !== undefined && change.after !== undefined) {
     return (
-      <div className={cx("requirement-audit-change__diff [display:grid] [grid-template-columns:minmax(0,_1fr)_auto_minmax(0,_1fr)] [align-items:center] [gap:0.65rem] [min-width:0] [&_>_div]:[min-width:0] [&_>_div]:[border-radius:9px] [&_>_div]:[background:var(--neutral-50)] [&_>_div]:[padding:0.65rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.62rem] [&_span]:[font-weight:700] [&_span]:[text-transform:uppercase] [&_span]:[letter-spacing:0.04em] [&_p]:[margin-top:0.22rem] [&_p]:[color:var(--neutral-800)] [&_p]:[font-size:0.76rem] [&_p]:[line-height:1.45] [&_p]:[overflow-wrap:anywhere] max-[720px]:[grid-template-columns:1fr] max-[720px]:[&_>_svg]:[transform:rotate(90deg)]")}>
-        <div><span>Before</span><p>{change.before}</p></div>
-        <ArrowRight size={16} />
-        <div><span>After</span><p>{change.after}</p></div>
+      <div className={cx("requirement-audit-change__diff flex min-w-0 flex-col items-stretch gap-2.5 md:flex-row md:items-center")}>
+        <div className={cx(auditChangeBoxClass)}><span className={cx(auditChangeLabelClass)}>Before</span><p className={cx(auditChangeValueClass)}>{change.before}</p></div>
+        <ArrowRight size={16} className={cx("mx-auto flex-none rotate-90 text-slate-400 md:rotate-0 dark:text-slate-500")} />
+        <div className={cx(auditChangeBoxClass)}><span className={cx(auditChangeLabelClass)}>After</span><p className={cx(auditChangeValueClass)}>{change.after}</p></div>
       </div>
     );
   }
   return (
-    <div className={cx("requirement-audit-change__single [min-width:0] [border-radius:9px] [background:var(--neutral-50)] [padding:0.65rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.62rem] [&_span]:[font-weight:700] [&_span]:[text-transform:uppercase] [&_span]:[letter-spacing:0.04em] [&_p]:[margin-top:0.22rem] [&_p]:[color:var(--neutral-800)] [&_p]:[font-size:0.76rem] [&_p]:[line-height:1.45] [&_p]:[overflow-wrap:anywhere]")}>
-      <span>{change.kind === "deleted" ? "Removed value" : "Recorded value"}</span>
-      <p>{change.before ?? change.after ?? "No value"}</p>
+    <div className={cx("requirement-audit-change__single min-w-0", auditChangeBoxClass)}>
+      <span className={cx(auditChangeLabelClass)}>{change.kind === "deleted" ? "Removed value" : "Recorded value"}</span>
+      <p className={cx(auditChangeValueClass)}>{change.before ?? change.after ?? "No value"}</p>
     </div>
   );
 }
@@ -579,38 +1058,42 @@ export function AdminRequirementAuditScreen() {
     .filter((entry) => entry.changes.length > 0)
     .filter((entry) => `${entry.requirementId} ${entry.requirementTitle} ${entry.summary} ${entry.recordedBy.name} ${entry.recordedBy.email} ${entry.action} ${entry.batchId ?? ""} ${entry.changes.map((change) => `${change.label} ${change.before ?? ""} ${change.after ?? ""}`).join(" ")}`.toLowerCase().includes(query.toLowerCase()));
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem] requirement-audit-page")}>
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100 requirement-audit-page")}>
       <PageHeader
         eyebrow="Administration"
         title="Requirement audit log"
         description="Review detailed changes across every master requirement, including questions, expected evidence, publishing state, and site scope."
-        actions={<Button variant="primary" icon={<Download size={17} />} disabled={!filteredEntries.length} onClick={() => downloadTextFile("Maitsys_Assure_requirement_audit_log.csv", requirementAuditCsv(filteredEntries))}>Export audit log</Button>}
+        actions={<Button variant="primary" icon={<Download size={17} />} disabled={!filteredEntries.length} onClick={() => downloadTextFile("EHS360_requirement_audit_log.csv", requirementAuditCsv(filteredEntries))}>Export audit log</Button>}
       />
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("dashboard-filter-bar [display:flex] [align-items:center] [gap:0.7rem] [margin-top:1.25rem] [flex-wrap:wrap] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] max-[1100px]:[align-items:stretch] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")}>
-          <label className={cx("search-control [display:flex] [min-width:250px] [min-height:42px] [flex:1] [align-items:center] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [background:var(--surface-input)] [padding:0_0.75rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.85rem] [.dashboard-filter-bar_&]:[flex:0_1_420px] [.dashboard-filter-bar_&]:[min-width:0] [.dashboard-filter-bar--expanded_&]:[flex:0_1_420px] [.dashboard-filter-bar--expanded_&]:[min-width:0] [.filter-row_&]:[flex:0_1_420px] [.filter-row_&]:[min-width:0] [.content-toolbar_&]:[flex:0_1_420px] [.content-toolbar_&]:[min-width:0] [.requirement-main--editor_.checkbox-list__toolbar_&]:[flex:1_1_320px] [.requirement-main--editor_.checkbox-list__toolbar_&]:[min-width:0] [.checkbox-list__toolbar_&_>_input]:[min-height:0] [.checkbox-list__toolbar_&_>_input]:[border:0]! [.checkbox-list__toolbar_&_>_input]:[border-radius:0] [.checkbox-list__toolbar_&_>_input]:[box-shadow:none]! [.checkbox-list__toolbar_&_>_input]:[outline:0]! [.checkbox-list__toolbar_&_>_input]:[padding:0] [.checkbox-list__toolbar_&]:[flex:0_1_420px] [.checkbox-list__toolbar_&]:[min-width:0] max-[1100px]:[.dashboard-filter-bar_&]:[width:100%] max-[1100px]:[.dashboard-filter-bar_&]:[flex-basis:100%] max-[1100px]:[.dashboard-filter-bar_&]:[min-width:0] max-[740px]:[width:100%] max-[740px]:[max-width:none] max-[740px]:[min-width:0] max-[740px]:[flex-basis:auto]!")}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search requirement, actor, action, or value" /></label>
+      <section className={cx(tableCardClass)}>
+        <div className={cx(dashboardFilterBarClass)}>
+          <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search requirement, actor, action, or value" /></label>
           <Select label="Filter requirement" icon={<FileText size={18} />} searchable value={requirementFilter} onChange={setRequirementFilter} options={[{ value: "all", label: "All requirements" }, ...requirementOptions]} />
           <Select label="Filter change area" icon={<Filter size={18} />} value={target} onChange={(value) => setTarget(value as typeof target)} options={[{ value: "all", label: "All changes" }, ...Object.entries(requirementAuditTargetLabels).map(([value, label]) => ({ value, label }))]} />
         </div>
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Recorded timeline</p><h2>Requirement change history</h2></div><span>{filteredEntries.length} of {allEntries.length} events shown</span></div>
+        <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Recorded timeline</p><h2 className={cx(tableCardHeaderTitleClass)}>Requirement change history</h2></div><span className={cx(tableCardHeaderCountClass)}>{filteredEntries.length} of {allEntries.length} events shown</span></div>
         {filteredEntries.length ? (
-          <div className={cx("requirement-audit-timeline [position:relative] [display:grid] [gap:0] [padding:1.25rem_1.25rem_1.25rem_4.6rem] before:[position:absolute] before:[top:1.5rem] before:[bottom:1.5rem] before:[left:2.25rem] before:[width:2px] before:[border-radius:999px] before:[background:linear-gradient(var(--kc-300),_var(--neutral-200))] before:[content:''] max-[720px]:[padding:1rem_0.8rem_1rem_3.6rem] max-[720px]:before:[left:1.65rem]")}>
+          <div className={cx("requirement-audit-timeline relative grid gap-0 p-5 pl-18 before:absolute before:top-6 before:bottom-6 before:left-9 before:w-0.5 before:rounded-full before:bg-linear-to-b before:from-kc-blue-300 before:to-slate-200 md:pl-18 dark:before:from-kc-blue-800 dark:before:to-slate-700")}>
             {filteredEntries.map((entry) => {
               const expanded = expandedEntries.has(entry.id);
               const detailsId = `audit-entry-details-${entry.id}`;
               return (
-              <article className={cx("requirement-audit-entry [position:relative] [margin-bottom:1.15rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [&:last-child]:[margin-bottom:0]", expanded && "requirement-audit-entry--expanded")} key={entry.id}>
-                <header className={cx("requirement-audit-entry__header [display:grid] [grid-template-columns:minmax(0,_1fr)_auto] [align-items:start] [gap:0.8rem] [border-radius:var(--radius-lg)] [background:var(--neutral-25)] [padding:1rem] [.requirement-audit-entry--expanded_&]:[border-bottom:1px_solid_var(--neutral-200)] [.requirement-audit-entry--expanded_&]:[border-radius:var(--radius-lg)_var(--radius-lg)_0_0] [&_p]:[color:var(--neutral-500)] [&_p]:[font-size:0.72rem] [&_h3]:[margin-top:0.35rem] [&_h3]:[font-size:0.95rem] [&_p]:[margin-top:0.25rem] [&_p]:[overflow-wrap:anywhere] max-[720px]:[grid-template-columns:1fr]")}>
-                  <span className={cx("requirement-audit-entry__icon [position:absolute] [z-index:1] [top:0.8rem] [left:-3.55rem] [display:grid] [width:42px] [height:42px] [place-items:center] [border:4px_solid_var(--surface-panel)] [border-radius:50%] [background:var(--kc-50)] [color:var(--kc-700)] [box-shadow:0_0_0_1px_var(--kc-200)] max-[720px]:[left:-2.95rem]")}><History size={19} /></span>
-                  <div>
-                    <div className={cx("requirement-audit-entry__meta [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.55rem] [&_time]:[color:var(--neutral-500)] [&_time]:[font-size:0.72rem]")}><span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]")}>{requirementAuditActionLabels[entry.action]}</span><time dateTime={entry.recordedAt}>{new Date(entry.recordedAt).toLocaleString()}</time></div>
-                    {masterRequirements.some((requirement) => requirement.id === entry.requirementId) ? <Link className={cx("requirement-audit-entry__entity [display:inline-flex] [width:fit-content] [align-items:center] [gap:0.3rem] [margin-top:0.45rem] [color:var(--kc-800)] [font-size:0.76rem] [font-weight:750] [a&:hover]:[color:var(--kc-600)] [a&:hover]:[text-decoration:underline]")} to={`/admin/requirements/${entry.requirementId}`}>{entry.requirementId} · {entry.requirementTitle}<ArrowRight size={14} /></Link> : <span className={cx("requirement-audit-entry__entity [display:inline-flex] [width:fit-content] [align-items:center] [gap:0.3rem] [margin-top:0.45rem] [color:var(--kc-800)] [font-size:0.76rem] [font-weight:750] [a&:hover]:[color:var(--kc-600)] [a&:hover]:[text-decoration:underline] requirement-audit-entry__entity--deleted [color:var(--neutral-500)]")}>{entry.requirementId} · {entry.requirementTitle} · Deleted requirement</span>}
-                    <h3>{entry.summary}</h3>
-                    <p>{entry.recordedBy.name} · {entry.recordedBy.email}{entry.batchId ? ` · Import ${entry.batchId}` : ""}</p>
+              <article className={cx("requirement-audit-entry relative mb-4.5 rounded-xl border border-slate-200 bg-white shadow-sm last:mb-0 dark:border-slate-700 dark:bg-slate-900", expanded && "requirement-audit-entry--expanded")} key={entry.id}>
+                <header className={cx("requirement-audit-entry__header flex flex-col items-start gap-3 rounded-xl bg-slate-50 p-4 md:flex-row md:justify-between dark:bg-slate-900", expanded && "border-b border-slate-200 md:rounded-b-none dark:border-slate-700")}>
+                  <span className={cx("requirement-audit-entry__icon absolute top-3 -left-12 z-1 grid size-10 place-items-center rounded-full border-4 border-white bg-kc-blue-50 text-kc-blue-700 ring-1 ring-kc-blue-200 md:-left-14 dark:border-slate-900 dark:bg-kc-blue-950 dark:text-kc-blue-300")}><History size={19} /></span>
+                  <div className={cx("min-w-0 flex-1")}>
+                    <div className={cx("requirement-audit-entry__meta flex flex-wrap items-center gap-2")}><span className={cx(publishBadgeClass, pillTone.success)}>{requirementAuditActionLabels[entry.action]}</span><time className={cx("text-xs text-slate-500 dark:text-slate-400")} dateTime={entry.recordedAt}>{new Date(entry.recordedAt).toLocaleString()}</time></div>
+                    {masterRequirements.some((requirement) => requirement.id === entry.requirementId) ? (
+                      <Link className={cx("requirement-audit-entry__entity mt-1.5 inline-flex w-fit items-center gap-1 text-sm font-bold text-kc-blue-800 hover:text-kc-blue-600 hover:underline dark:text-kc-blue-200 dark:hover:text-kc-blue-400")} to={`/admin/requirements/${entry.requirementId}`}>{entry.requirementId} · {entry.requirementTitle}<ArrowRight size={14} /></Link>
+                    ) : (
+                      <span className={cx("requirement-audit-entry__entity requirement-audit-entry__entity--deleted mt-1.5 inline-flex w-fit items-center gap-1 text-sm font-bold text-slate-500 dark:text-slate-400")}>{entry.requirementId} · {entry.requirementTitle} · Deleted requirement</span>
+                    )}
+                    <h3 className={cx("mt-1.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>{entry.summary}</h3>
+                    <p className={cx("mt-1 text-xs wrap-anywhere text-slate-500 dark:text-slate-400")}>{entry.recordedBy.name} · {entry.recordedBy.email}{entry.batchId ? ` · Import ${entry.batchId}` : ""}</p>
                   </div>
                   <button
                     type="button"
-                    className={cx("requirement-audit-entry__toggle [display:inline-flex] [min-height:32px] [align-items:center] [gap:0.35rem] [border:1px_solid_var(--neutral-200)] [border-radius:999px] [background:var(--surface-elevated)] [color:var(--neutral-600)] [padding:0.3rem_0.55rem] [cursor:pointer] [font-size:0.7rem] [font-weight:700] [white-space:nowrap] hover:[border-color:var(--kc-300)] hover:[background:var(--kc-50)] hover:[color:var(--kc-800)] focus-visible:[outline:3px_solid_rgb(2_132_199_/_0.2)] focus-visible:[outline-offset:2px] [&_svg]:[transition:transform_160ms_ease] max-[720px]:[grid-column:1] max-[720px]:[justify-self:start]", expanded && "requirement-audit-entry__toggle--expanded [&_svg]:[transform:rotate(180deg)]")}
+                    className={cx("requirement-audit-entry__toggle inline-flex min-h-8 flex-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold whitespace-nowrap text-slate-600 hover:border-kc-blue-300 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
                     aria-expanded={expanded}
                     aria-controls={detailsId}
                     aria-label={`${expanded ? "Hide" : "Show"} ${entry.changes.length} change${entry.changes.length === 1 ? "" : "s"} for ${entry.requirementId}`}
@@ -622,13 +1105,16 @@ export function AdminRequirementAuditScreen() {
                     })}
                   >
                     <span>{entry.changes.length} change{entry.changes.length === 1 ? "" : "s"}</span>
-                    <ChevronDown size={15} aria-hidden="true" />
+                    <ChevronDown size={15} className={cx("transition-transform", expanded && "rotate-180")} aria-hidden="true" />
                   </button>
                 </header>
-                {expanded && <ol className={cx("requirement-audit-changes [display:grid] [gap:0.7rem] [margin:0] [padding:1rem] [list-style:none] [&_>_li]:[display:grid] [&_>_li]:[grid-template-columns:minmax(190px,_0.42fr)_minmax(0,_1fr)] [&_>_li]:[gap:1rem] [&_>_li]:[border:1px_solid_var(--neutral-200)] [&_>_li]:[border-radius:11px] [&_>_li]:[padding:0.8rem] max-[720px]:[&_>_li]:[grid-template-columns:1fr]")} id={detailsId}>
+                {expanded && <ol className={cx("requirement-audit-changes m-0 grid list-none gap-2.5 p-4")} id={detailsId}>
                   {entry.changes.map((change, index) => (
-                    <li key={`${entry.id}-${index}`}>
-                      <div className={cx("requirement-audit-change__header [display:flex] [align-items:flex-start] [gap:0.6rem] [min-width:0] [&_>_div]:[display:grid] [&_>_div]:[gap:0.15rem] [&_>_div]:[min-width:0] [&_strong]:[font-size:0.78rem] [&_strong]:[line-height:1.4] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.68rem]")}><span className={cx("requirement-audit-change__kind [flex:none] [border-radius:999px] [padding:0.22rem_0.45rem] [font-size:0.62rem] [font-weight:750] [text-transform:capitalize]", `requirement-audit-change__kind--${change.kind}`)}>{requirementAuditChangeKindLabel(change)}</span><div><strong>{change.label}</strong><span>{requirementAuditTargetLabels[change.target]}</span></div></div>
+                    <li className={cx("flex flex-col gap-4 rounded-xl border border-slate-200 p-3.5 md:flex-row dark:border-slate-700")} key={`${entry.id}-${index}`}>
+                      <div className={cx("requirement-audit-change__header flex min-w-0 items-start gap-2.5 md:w-56 md:flex-none")}>
+                        <span className={cx("requirement-audit-change__kind flex-none rounded-full px-2 py-1 text-xs font-bold capitalize", `requirement-audit-change__kind--${change.kind}`)}>{requirementAuditChangeKindLabel(change)}</span>
+                        <div className={cx("grid min-w-0 gap-0.5")}><strong className={cx("text-sm leading-snug text-slate-900 dark:text-slate-100")}>{change.label}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{requirementAuditTargetLabels[change.target]}</span></div>
+                      </div>
                       <RequirementAuditChangeDetail change={change} />
                     </li>
                   ))}
@@ -670,8 +1156,8 @@ export function AdminRequirementDetailScreen() {
 
   if (requirementId && !existing) {
     return (
-      <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-        <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
+      <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+        <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
         <EmptyState icon={<Search size={27} />} title="Requirement not found" description="This master requirement does not exist or was removed." />
       </div>
     );
@@ -718,53 +1204,96 @@ export function AdminRequirementDetailScreen() {
   }
 
   return (
-    <div className={cx("requirement-page [min-width:0] admin-requirement-page")}>
-      <div className={cx("requirement-mobile-toolbar [display:none] max-[1500px]:[position:sticky] max-[1500px]:[z-index:8] max-[1500px]:[top:var(--content-offset)] max-[1500px]:[display:flex] max-[1500px]:[justify-content:flex-end] max-[1500px]:[gap:0.55rem] max-[1500px]:[border-bottom:1px_solid_var(--neutral-200)] max-[1500px]:[background:var(--surface-mobile-bar)] max-[1500px]:[padding:0.55rem_1rem] max-[1500px]:[backdrop-filter:blur(15px)] max-[1100px]:[top:var(--content-offset)] max-[1100px]:[justify-content:space-between] admin-requirement-mobile-toolbar")}>
+    <div className={cx("requirement-page admin-requirement-page min-w-0")}>
+      <div className={cx(requirementMobileToolbarClass)} style={{ top: "var(--content-offset)", background: "var(--surface-mobile-bar)" }}>
         <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
         <Button variant="secondary" onClick={() => requestNavigation("list")}>All requirements</Button>
       </div>
-      <div className={cx("requirement-layout [display:grid] [width:100%] [min-width:0] [min-height:calc(100vh_-_var(--content-offset))] [grid-template-columns:400px_minmax(500px,_1fr)_320px] max-[1500px]:[grid-template-columns:320px_minmax(500px,_1fr)] max-[1100px]:[display:block] requirement-layout--admin-editor [grid-template-columns:minmax(280px,_320px)_minmax(0,_1fr)]")}>
-        <div className={cx("requirement-layout__navigator [position:sticky] [top:var(--content-offset)] [height:calc(100vh_-_var(--content-offset))] [align-self:start] max-[1500px]:[top:calc(var(--content-offset)_+_55px)] max-[1500px]:[height:calc(100vh_-_var(--content-offset)_-_55px)] max-[1100px]:[display:none]")}><AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} /></div>
-        <div className={cx("requirement-main [min-width:0] [padding:1.5rem_var(--page-gutter)_4rem] max-[740px]:[padding:1rem_0.85rem_3rem] requirement-main--editor [width:min(100%,_900px)] [margin-right:auto] [margin-left:auto] [.requirement-layout--admin-editor_&]:[width:100%] [.requirement-layout--admin-editor_&]:[max-width:none] [.requirement-layout--admin-editor_&]:[margin:0]")}>
-        <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">{isNew ? "New requirement" : draft.id}</span></nav>
-        <header className={cx("requirement-header [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:radial-gradient(circle_at_95%_0%,_rgb(var(--accent-soft-rgb)_/_0.12),_transparent_15rem),_var(--surface-panel)] [padding:1.2rem_1.25rem] [box-shadow:var(--shadow-1)] max-[740px]:[padding:1rem]")}>
-          <div className={cx("requirement-header__meta [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.6rem] [color:var(--neutral-500)] [font-size:0.72rem]")}>
-            <input className={cx("requirement-id-input [border:1px_solid_var(--kc-200)] [border-radius:999px] [background:var(--kc-50)] [color:var(--kc-800)] [padding:0.22rem_0.65rem] [font-size:0.72rem] [font-weight:750] [outline:0] [min-width:0] [max-width:100%] disabled:[opacity:0.75] focus:[border-color:var(--kc-600)] focus:[box-shadow:0_0_0_3px_var(--kc-100)]", submitted && !draft.id.trim() && "field-invalid-input [border-color:var(--danger)]! [box-shadow:0_0_0_3px_var(--danger-surface)]")} style={{ width: `${draft.id ? Math.max(8, draft.id.length + 2) : "For example, OS 2.4.1".length + 2}ch` }} value={draft.id} disabled={!isNew} onChange={(event) => update("id", event.target.value)} placeholder="For example, OS 2.4.1" aria-label="Requirement ID" />
-            <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
-          </div>
-          <div className={cx("requirement-header__title [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [margin-top:0.8rem] [&_>_div:first-child]:[flex:1] [&_>_div:first-child]:[min-width:0] [&_h1]:[max-width:720px] [&_h1]:[margin-top:0.2rem] [&_h1]:[font-size:clamp(1.45rem,_2.6vw,_1.9rem)] max-[740px]:[display:grid]")}>
-            <div>
-              <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Requirement</p>
-              <textarea className={cx("requirement-title-input [width:100%] [max-width:720px] [margin-top:0.2rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [outline:0] [background:var(--surface-input)] [color:var(--neutral-900)] [padding:0.5rem_0.65rem] [font-size:clamp(1rem,_1.4vw,_1.125rem)] [font-weight:700] [line-height:1.4] [resize:vertical] focus:[border-color:var(--kc-600)] focus:[box-shadow:0_0_0_3px_var(--kc-100)]", submitted && !draft.title.trim() && "field-invalid-input [border-color:var(--danger)]! [box-shadow:0_0_0_3px_var(--danger-surface)]")} rows={2} value={draft.title} onChange={(event) => update("title", event.target.value)} placeholder="Requirement title" aria-label="Requirement title" />
+      <div className={cx(requirementLayoutClass)} style={{ minHeight: "calc(100vh - var(--content-offset))" }}>
+        <div className={cx(requirementNavigatorWrapClass)} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
+          <AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} />
+        </div>
+        <div className={cx(requirementMainClass)} style={{ paddingInline: "var(--page-gutter)" }}>
+          <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">{isNew ? "New requirement" : draft.id}</span></nav>
+          <header className={cx("requirement-header rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-5 dark:border-slate-700 dark:bg-slate-900")}>
+            <div className={cx("requirement-header__meta flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400")}>
+              <input
+                className={cx(
+                  "requirement-id-input min-w-0 max-w-full rounded-full border border-kc-blue-200 bg-kc-blue-50 px-2.5 py-1 text-xs font-bold text-kc-blue-800 outline-none disabled:opacity-75 focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+                  submitted && !draft.id.trim() && "field-invalid-input border-red-600! ring-3 ring-red-100 dark:border-red-400!",
+                )}
+                style={{ width: `${draft.id ? Math.max(8, draft.id.length + 2) : "For example, OS 2.4.1".length + 2}ch` }}
+                value={draft.id}
+                disabled={!isNew}
+                onChange={(event) => update("id", event.target.value)}
+                placeholder="For example, OS 2.4.1"
+                aria-label="Requirement ID"
+              />
+              <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
             </div>
-            <div className={cx("requirement-header__controls [display:flex] [flex:0_0_auto] [flex-wrap:wrap] [align-items:center] [justify-content:flex-end] [gap:0.6rem]")}>
-              <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
+            <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
+              <div className={cx("min-w-0 md:flex-1")}>
+                <p className={cx(eyebrowClasses)}>Requirement</p>
+                <textarea
+                  className={cx(
+                    "requirement-title-input mt-0.5 w-full max-w-180 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-lg leading-snug font-bold text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900",
+                    submitted && !draft.title.trim() && "field-invalid-input border-red-600! ring-3 ring-red-100 dark:border-red-400!",
+                  )}
+                  rows={2}
+                  value={draft.title}
+                  onChange={(event) => update("title", event.target.value)}
+                  placeholder="Requirement title"
+                  aria-label="Requirement title"
+                />
+              </div>
+              <div className={cx("requirement-header__controls flex flex-none flex-wrap items-center justify-end gap-2.5")}>
+                <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
+              </div>
             </div>
-          </div>
-          <div className={cx("requirement-header__footer [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.6rem] [margin-top:1rem] [border-top:1px_solid_var(--neutral-100)] [padding-top:0.75rem] [color:var(--neutral-500)] [font-size:0.72rem]")}>
-            <span>{draft.siteIds.length ? `${draft.siteIds.length} of ${sites.length} sites scoped` : "Applies to all sites"}</span>
-          </div>
-          <div className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input:not([type=checkbox]):not([type=radio])]:[width:100%] [&_input:not([type=checkbox]):not([type=radio])]:[border:1px_solid_var(--neutral-300)] [&_input:not([type=checkbox]):not([type=radio])]:[border-radius:var(--radius-md)] [&_input:not([type=checkbox]):not([type=radio])]:[outline:0] [&_input:not([type=checkbox]):not([type=radio])]:[background:var(--surface-input)] [&_input:not([type=checkbox]):not([type=radio])]:[color:var(--neutral-900)] [&_input:not([type=checkbox]):not([type=radio])]:[padding:0.68rem_0.75rem] [&_input:not([type=checkbox]):not([type=radio])]:[font-size:0.86rem] [&_input:not([type=checkbox]):not([type=radio])]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input:not([type=checkbox]):not([type=radio])]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:not([type=checkbox]):not([type=radio]):focus]:[border-color:var(--kc-600)] [&_input:not([type=checkbox]):not([type=radio]):focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem] field--wide [grid-column:1_/_-1]")}>
-            <span>Sites <small>Leave empty to apply to all sites</small></span>
-            <CheckboxList label="Sites" searchable options={siteOptions} selected={draft.siteIds} onChange={(values) => setDraft((current) => ({ ...current, siteIds: values }))} />
-            <div className={cx("requirement-selected-sites [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.45rem_0.65rem] [color:var(--neutral-600)] [font-size:0.74rem] [&_>_strong]:[color:var(--neutral-800)] [&_>_strong]:[font-size:0.76rem]")} aria-live="polite">
-              <strong>Selected sites</strong>
-              {draft.siteIds.length ? <span className={cx("requirement-selected-sites__list [display:flex] [flex-wrap:wrap] [gap:0.35rem] [&_>_span]:[border:1px_solid_var(--kc-200)] [&_>_span]:[border-radius:999px] [&_>_span]:[background:var(--kc-50)] [&_>_span]:[padding:0.2rem_0.45rem] [&_>_span]:[color:var(--kc-800)] [&_>_span]:[font-size:0.7rem] [&_>_span]:[font-weight:650]")}>{siteOptions.filter((site) => draft.siteIds.includes(site.value)).map((site) => <span key={site.value}>{site.label}</span>)}</span> : <span>All sites</span>}
+            <div className={cx("requirement-header__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400")}>
+              <span>{draft.siteIds.length ? `${draft.siteIds.length} of ${sites.length} sites scoped` : "Applies to all sites"}</span>
             </div>
-          </div>
-          {submitted && !valid && <InlineMessage tone="danger" title="Complete required fields">Requirement ID, title, section, and text for every question are required before saving.</InlineMessage>}
-        </header>
-        <section className={cx("questions-section [margin-top:1.5rem]")} aria-labelledby="admin-questions-title">
-          <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Assessment questions</p><h2 id="admin-questions-title">Add, edit, or remove questions</h2></div><span className={cx("question-count [border:1px_solid_var(--neutral-200)] [border-radius:999px] [background:var(--surface-elevated)] [padding:0.35rem_0.6rem] [font-size:0.72rem] [font-weight:650] [.history-list_article_.import-preview-questions__header_&]:[flex:none] [.history-list_article_.import-preview-questions__header_&]:[overflow:visible] [.history-list_article_.import-preview-questions__header_&]:[color:var(--neutral-700)] [.history-list_article_.import-preview-questions__header_&]:[font-size:0.72rem] [.history-list_article_.import-preview-questions__header_&]:[white-space:nowrap]")}>{draft.questions.length} questions</span></div>
-          <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
-        </section>
-        <footer className={cx("requirement-footer [position:sticky] [z-index:5] [bottom:0.75rem] [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [margin-top:1.5rem] [border:1px_solid_var(--border-translucent)] [border-radius:var(--radius-lg)] [background:var(--surface-translucent)] [padding:0.65rem] [box-shadow:0_12px_34px_rgb(15_23_42_/_0.12)] [backdrop-filter:blur(18px)] [&_>_div]:[display:flex] [&_>_div]:[align-items:center] [&_>_div]:[gap:0.85rem] max-[1100px]:[bottom:calc(82px_+_env(safe-area-inset-bottom))] max-[740px]:[bottom:calc(72px_+_env(safe-area-inset-bottom))] max-[740px]:[display:grid] max-[740px]:[grid-template-columns:1fr_1fr] max-[740px]:[gap:0.55rem] max-[740px]:[padding:0.5rem] max-[740px]:[&_>_div]:[width:100%]")}>
-          <div><Button variant="secondary" onClick={() => navigate("/admin/requirements")}>Cancel</Button>{!isNew && <Button variant="tertiary" icon={<Trash2 size={17} />} onClick={() => setDeleteConfirmOpen(true)}>Delete requirement</Button>}</div>
-          <Button variant="primary" icon={<Check size={17} />} onClick={save}>{isNew ? "Add requirement" : "Save changes"}</Button>
-        </footer>
+            <div className={cx(fieldWideWrapClass, "mt-4")}>
+              <span className={cx(fieldLabelRowClass)}>Sites <small className={cx("text-xs font-normal text-slate-500 dark:text-slate-400")}>Leave empty to apply to all sites</small></span>
+              <CheckboxList label="Sites" searchable options={siteOptions} selected={draft.siteIds} onChange={(values) => setDraft((current) => ({ ...current, siteIds: values }))} />
+              <div className={cx("requirement-selected-sites flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400")} aria-live="polite">
+                <strong className={cx("text-xs text-slate-800 dark:text-slate-200")}>Selected sites</strong>
+                {draft.siteIds.length ? (
+                  <span className={cx("requirement-selected-sites__list flex flex-wrap gap-1.5")}>{siteOptions.filter((site) => draft.siteIds.includes(site.value)).map((site) => <span className={cx("rounded-full border border-kc-blue-200 bg-kc-blue-50 px-1.5 py-0.5 text-xs font-semibold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")} key={site.value}>{site.label}</span>)}</span>
+                ) : <span>All sites</span>}
+              </div>
+            </div>
+            {submitted && !valid && <InlineMessage className={cx("mt-4")} tone="danger" title="Complete required fields">Requirement ID, title, section, and text for every question are required before saving.</InlineMessage>}
+          </header>
+          <section className={cx("questions-section mt-6")} aria-labelledby="admin-questions-title">
+            <div className={cx("section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between")}>
+              <div><p className={cx(eyebrowClasses)}>Assessment questions</p><h2 className={cx("mt-0.5 text-lg font-bold text-slate-900 dark:text-slate-100")} id="admin-questions-title">Add, edit, or remove questions</h2></div>
+              <span className={cx(questionCountClass)}>{draft.questions.length} questions</span>
+            </div>
+            <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
+          </section>
+          <footer
+            className={cx("requirement-footer sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-2 shell:bottom-4 shell:flex shell:justify-between shell:gap-3.5 shell:p-2.5")}
+            style={{
+              borderColor: "var(--border-translucent)",
+              background: "var(--surface-translucent)",
+              boxShadow: "0 12px 34px rgb(15 23 42 / 0.12)",
+              backdropFilter: "blur(18px)",
+            }}
+          >
+            <div className={cx("flex w-full items-center gap-3.5 shell:w-auto")}><Button variant="secondary" onClick={() => navigate("/admin/requirements")}>Cancel</Button>{!isNew && <Button variant="tertiary" icon={<Trash2 size={17} />} onClick={() => setDeleteConfirmOpen(true)}>Delete requirement</Button>}</div>
+            <Button variant="primary" icon={<Check size={17} />} onClick={save}>{isNew ? "Add requirement" : "Save changes"}</Button>
+          </footer>
+        </div>
       </div>
-      </div>
-      {navigatorOpen && <div className={cx("sheet-layer [position:fixed] [z-index:100] [inset:0] [display:none] [place-items:center] max-[1500px]:[display:block]")}><button className={cx("sheet-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close requirement navigator" onClick={() => setNavigatorOpen(false)} /><div className={cx("sheet [position:absolute] [top:0] [bottom:0] [width:min(390px,_calc(100%_-_2rem))] [overflow-y:auto] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] sheet--left [left:0]")}><AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} onClose={() => setNavigatorOpen(false)} /></div></div>}
+      {navigatorOpen && (
+        <div className={cx(sheetLayerClass)}>
+          <button className={cx(sheetBackdropClass)} aria-label="Close requirement navigator" onClick={() => setNavigatorOpen(false)} />
+          <div className={cx(sheetClass, "sheet--left")}>
+            <AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} onClose={() => setNavigatorOpen(false)} />
+          </div>
+        </div>
+      )}
       {pendingNavigation && <ConfirmDialog eyebrow="Unsaved changes" title="Leave this requirement without saving?" body="Your changes to this requirement will be discarded. Save changes before continuing if you want to keep them." confirmLabel="Leave without saving" cancelLabel="Keep editing" onCancel={() => setPendingNavigation(null)} onConfirm={confirmNavigation} />}
       {deleteConfirmOpen && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${draft.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { removeMasterRequirement(draft.id); navigate("/admin/requirements", { state: { feedback: `${draft.id} was deleted.` } }); }} />}
     </div>
@@ -806,37 +1335,70 @@ export function AdminRequirementsScreen() {
     (status === "Published and draft" || item.status === status) &&
     (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <PageHeader eyebrow="Administration" title="Master requirements" description="Manage governed requirements, questions, expected evidence, hierarchy, and publishing state." actions={<Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate("/admin/requirements/new")} data-tour="add-requirement">Add requirement</Button>} />
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <PageHeader
+        eyebrow="Administration"
+        title="Master data"
+        description="Manage governed requirements, questions, evidence, publishing state, and approved imports."
+        actions={
+          <div className={cx("flex flex-wrap items-center justify-end gap-2")}>
+            <div className={cx("inline-flex items-stretch rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800")} aria-label="Requirement import actions">
+              <IconButton
+                label="Download import template"
+                tooltipPlacement="bottom"
+                className={cx("rounded-r-none border-r border-slate-300 dark:border-slate-600")}
+                onClick={() => downloadStaticFile(`${assetBaseUrl}templates/Maitsys-Assure-Master-Requirement-Import-Template.xlsx`, "EHS360 Master Requirement Import Template.xlsx")}
+              >
+                <Download size={18} />
+              </IconButton>
+              <Button variant="secondary" className={cx("rounded-l-none border-0 px-4")} icon={<Upload size={17} />} onClick={() => navigate("/admin/imports")}>
+                Import
+              </Button>
+            </div>
+            <Button variant="primary" icon={<Plus size={18} />} onClick={() => navigate("/admin/requirements/new")} data-tour="add-requirement">Add requirement</Button>
+          </div>
+        }
+      />
       {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("dashboard-filter-bar [display:flex] [align-items:center] [gap:0.7rem] [margin-top:1.25rem] [flex-wrap:wrap] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] max-[1100px]:[align-items:stretch] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column]")} data-tour="requirement-filters">
-          <label className={cx("search-control [display:flex] [min-width:250px] [min-height:42px] [flex:1] [align-items:center] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [background:var(--surface-input)] [padding:0_0.75rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.85rem] [.dashboard-filter-bar_&]:[flex:0_1_420px] [.dashboard-filter-bar_&]:[min-width:0] [.dashboard-filter-bar--expanded_&]:[flex:0_1_420px] [.dashboard-filter-bar--expanded_&]:[min-width:0] [.filter-row_&]:[flex:0_1_420px] [.filter-row_&]:[min-width:0] [.content-toolbar_&]:[flex:0_1_420px] [.content-toolbar_&]:[min-width:0] [.requirement-main--editor_.checkbox-list__toolbar_&]:[flex:1_1_320px] [.requirement-main--editor_.checkbox-list__toolbar_&]:[min-width:0] [.checkbox-list__toolbar_&_>_input]:[min-height:0] [.checkbox-list__toolbar_&_>_input]:[border:0]! [.checkbox-list__toolbar_&_>_input]:[border-radius:0] [.checkbox-list__toolbar_&_>_input]:[box-shadow:none]! [.checkbox-list__toolbar_&_>_input]:[outline:0]! [.checkbox-list__toolbar_&_>_input]:[padding:0] [.checkbox-list__toolbar_&]:[flex:0_1_420px] [.checkbox-list__toolbar_&]:[min-width:0] max-[1100px]:[.dashboard-filter-bar_&]:[width:100%] max-[1100px]:[.dashboard-filter-bar_&]:[flex-basis:100%] max-[1100px]:[.dashboard-filter-bar_&]:[min-width:0] max-[740px]:[width:100%] max-[740px]:[max-width:none] max-[740px]:[min-width:0] max-[740px]:[flex-basis:auto]!")}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
+      <section className={cx(tableCardClass)}>
+        <div className={cx(dashboardFilterBarClass)} data-tour="requirement-filters">
+          <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
           <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...sections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Governed content</p><h2>Requirements</h2></div><span>{rows.length} records shown</span></div>
+        <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Governed content</p><h2 className={cx(tableCardHeaderTitleClass)}>Requirements</h2></div><span className={cx(tableCardHeaderCountClass)}>{rows.length} records shown</span></div>
         {rows.length ? (
-          <div className={cx("data-table-wrap [max-width:100%] max-[1100px]:[width:100%] max-[1100px]:[max-width:none] max-[1100px]:[overflow:visible]")}>
-            <table className={cx("data-table [width:100%] [table-layout:fixed] [border-collapse:collapse] [font-size:0.79rem] [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:[padding:0.8rem_1rem] [&_th]:[border-bottom:1px_solid_var(--neutral-200)] [&_th]:[text-align:left] [&_th]:[vertical-align:middle] [&_td]:[padding:0.8rem_1rem] [&_td]:[border-bottom:1px_solid_var(--neutral-200)] [&_td]:[text-align:left] [&_td]:[vertical-align:middle] [&_th]:[background:var(--neutral-50)] [&_th]:[color:var(--neutral-600)] [&_th]:[font-size:0.69rem] [&_th]:[font-weight:750] [&_th]:[letter-spacing:0.01em] [&_tr:last-child_td]:[border-bottom:0] [&_tbody_tr:hover]:[background:var(--neutral-25)] [&_td_>_strong]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[margin-top:0.18rem] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[color:var(--neutral-500)] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[font-size:0.7rem] [&_td:nth-child(3)]:[max-width:390px] max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0] max-[1100px]:[&_tbody]:[display:grid] max-[1100px]:[&_tbody]:[width:100%] max-[1100px]:[&_tbody]:[min-width:0] max-[1100px]:[&_tr]:[display:block] max-[1100px]:[&_tr]:[width:100%] max-[1100px]:[&_tr]:[min-width:0] max-[1100px]:[&_td]:[display:grid] max-[1100px]:[&_td]:[width:100%] max-[1100px]:[&_td]:[min-width:0] max-[1100px]:[&_thead]:[position:absolute] max-[1100px]:[&_thead]:[display:block] max-[1100px]:[&_thead]:[width:1px] max-[1100px]:[&_thead]:[height:1px] max-[1100px]:[&_thead]:[padding:0] max-[1100px]:[&_thead]:[margin:-1px] max-[1100px]:[&_thead]:[overflow:hidden] max-[1100px]:[&_thead]:[clip:rect(0,_0,_0,_0)] max-[1100px]:[&_thead]:[white-space:nowrap] max-[1100px]:[&_thead]:[border:0] max-[1100px]:[&_thead_tr]:[position:absolute] max-[1100px]:[&_thead_tr]:[display:block] max-[1100px]:[&_thead_tr]:[width:1px] max-[1100px]:[&_thead_tr]:[min-width:0] max-[1100px]:[&_thead_tr]:[height:1px] max-[1100px]:[&_thead_tr]:[overflow:hidden] max-[1100px]:[&_thead_tr]:[padding:0] max-[1100px]:[&_thead_tr]:[border:0] max-[1100px]:[&_thead_tr]:[clip-path:inset(50%)] max-[1100px]:[&_thead_th]:[position:absolute] max-[1100px]:[&_thead_th]:[display:block] max-[1100px]:[&_thead_th]:[width:1px] max-[1100px]:[&_thead_th]:[min-width:0] max-[1100px]:[&_thead_th]:[height:1px] max-[1100px]:[&_thead_th]:[overflow:hidden] max-[1100px]:[&_thead_th]:[padding:0] max-[1100px]:[&_thead_th]:[border:0] max-[1100px]:[&_thead_th]:[clip-path:inset(50%)] max-[1100px]:[&_tbody]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[1100px]:[&_tbody]:[gap:0.75rem] max-[1100px]:[&_tbody]:[padding:0.85rem] max-[1100px]:[&_tbody_tr]:[overflow:hidden] max-[1100px]:[&_tbody_tr]:[border:1px_solid_var(--neutral-200)] max-[1100px]:[&_tbody_tr]:[border-radius:var(--radius-lg)] max-[1100px]:[&_tbody_tr]:[background:var(--neutral-25)] max-[1100px]:[&_tbody_tr]:[box-shadow:var(--shadow-1)] max-[1100px]:[&_td]:[grid-template-columns:minmax(116px,_0.45fr)_minmax(0,_1fr)] max-[1100px]:[&_td]:[align-items:center] max-[1100px]:[&_td]:[gap:0.75rem] max-[1100px]:[&_td]:[min-height:48px] max-[1100px]:[&_td]:[padding:0.7rem_0.85rem] max-[1100px]:[&_td]:[border-bottom:1px_solid_var(--neutral-200)] max-[1100px]:[&_td::before]:[color:var(--neutral-500)] max-[1100px]:[&_td::before]:[content:attr(data-label)] max-[1100px]:[&_td::before]:[font-size:0.67rem] max-[1100px]:[&_td::before]:[font-weight:750] max-[1100px]:[&_td::before]:[letter-spacing:0.01em] max-[1100px]:[&_td:last-child]:[min-height:44px] max-[1100px]:[&_td:last-child]:[grid-template-columns:1fr] max-[1100px]:[&_td:last-child]:[justify-items:end] max-[1100px]:[&_td:last-child]:[border-bottom:0] max-[1100px]:[&_td:last-child]:[background:var(--neutral-50)] max-[1100px]:[&_td:last-child::before]:[display:none] max-[1100px]:[&_td[data-label='']::before]:[display:none] max-[1100px]:[&_td_>_strong]:[min-width:0] max-[1100px]:[&_td_>_strong]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_span]:[min-width:0] max-[1100px]:[&_td_>_span]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_div]:[min-width:0] max-[1100px]:[&_td_>_div]:[overflow-wrap:anywhere] max-[820px]:[&_tbody]:[grid-template-columns:1fr] data-table--requirements [table-layout:fixed] [&_th:nth-child(1)]:[width:13%] [&_th:nth-child(2)]:[width:35%] [&_th:nth-child(3)]:[width:18%] [&_th:nth-child(4)]:[width:14%] [&_th:nth-child(5)]:[width:11%] [&_th:nth-child(6)]:[width:9%]")}>
-              <thead><tr><th>ID</th><th>Requirement</th><th>Section</th><th>Sites</th><th>Status</th><th>Actions</th></tr></thead>
-              <tbody>{rows.map((item) => (
-                <tr key={item.id} className={cx("data-table__row--link [cursor:pointer] hover:[background:var(--kc-50)]")} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
-                  <td data-label="ID"><strong>{item.id}</strong></td>
-                  <td data-label="Requirement"><strong>{item.title}</strong><span>Guidance and evidence requirements configured</span></td>
-                  <td data-label="Section">{item.section}</td>
-                  <td data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}>{siteCodesSummary(sites, item.siteIds).text}</td>
-                  <td data-label="Status"><span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]", item.status === "Draft" && "publish-badge--draft [border-color:#d6bbfb]! [background:var(--provisional-surface)] [color:var(--provisional)]!")}>{item.status}</span></td>
-                  <td data-label="Actions"><span className={cx("row-actions [display:flex]! [gap:0.1rem] max-[1100px]:[.data-table_&]:[justify-content:flex-end] row-actions--menu [position:relative]")}>
-                    <IconButton label={`Edit ${item.id}`} onClick={(event) => { event.stopPropagation(); navigate(`/admin/requirements/${item.id}`); }}><Pencil size={17} /></IconButton>
-                    <IconButton label={`More actions for ${item.id}`} onClick={(event) => { event.stopPropagation(); setMenu(menu === item.id ? null : item.id); }}><MoreHorizontal size={18} /></IconButton>
-                    {menu === item.id && <span className={cx("row-menu [position:absolute] [z-index:20] [top:calc(100%_+_0.25rem)] [right:0] [display:grid]! [width:160px] [overflow:hidden] [border:1px_solid_var(--neutral-200)] [border-radius:10px] [background:var(--surface-elevated)] [box-shadow:var(--shadow-2)] [&_button]:[display:flex] [&_button]:[align-items:center] [&_button]:[gap:0.4rem] [&_button]:[border:0] [&_button]:[border-bottom:1px_solid_var(--neutral-100)] [&_button]:[background:transparent] [&_button]:[color:var(--neutral-800)] [&_button]:[padding:0.65rem_0.75rem] [&_button]:[font-size:0.74rem] [&_button]:[text-align:left] [&_button:hover]:[background:var(--kc-50)] [&_button:hover]:[color:var(--kc-800)]")} onClick={(event) => event.stopPropagation()}>
-                      <button onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button>
-                      <button onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button>
-                      <button className={cx("row-menu__delete [.row-menu_&]:[color:var(--danger)] [.row-menu_&:hover]:[background:var(--danger-surface)] [.row-menu_&:hover]:[color:var(--danger)]")} onClick={() => { setDeleting(item); setMenu(null); }}><Trash2 size={15} /> Delete requirement</button>
-                    </span>}
-                  </span></td>
+          <div className={cx(dataTableWrapClass)}>
+            <table className={cx(dataTableClass, "data-table--requirements")}>
+              <thead className={cx(dataTableHeadClass)}><tr>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>ID</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/4")}>Requirement</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Section</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Sites</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Status</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Actions</th>
+              </tr></thead>
+              <tbody className={cx(dataTableBodyClass)}>{rows.map((item) => (
+                <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={item.id} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
+                  <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
+                  <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>Guidance and evidence requirements configured</span></span></td>
+                  <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span>{item.section}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}><span className={cx(dataTableCellLabelClass)}>Sites</span>{siteCodesSummary(sites, item.siteIds).text}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
+                  <td className={cx(dataTableLastCellClass)} data-label="Actions">
+                    <span className={cx(rowActionsClass, "row-actions--menu relative")}>
+                      <IconButton label={`Edit ${item.id}`} onClick={(event) => { event.stopPropagation(); navigate(`/admin/requirements/${item.id}`); }}><Pencil size={17} /></IconButton>
+                      <IconButton label={`More actions for ${item.id}`} onClick={(event) => { event.stopPropagation(); setMenu(menu === item.id ? null : item.id); }}><MoreHorizontal size={18} /></IconButton>
+                      {menu === item.id && (
+                        <span className={cx(rowMenuClass)} onClick={(event) => event.stopPropagation()}>
+                          <button className={cx(rowMenuButtonClass)} onClick={() => { updateMasterRequirement({ ...item, status: item.status === "Published" ? "Draft" : "Published" }); setFeedback(`${item.id} status changed to ${item.status === "Published" ? "Draft" : "Published"}.`); setMenu(null); }}>{item.status === "Published" ? "Move to draft" : "Publish"}</button>
+                          <button className={cx(rowMenuButtonClass)} onClick={() => { const copy = { ...item, id: `${item.id}-COPY-${Date.now().toString().slice(-4)}`, title: `${item.title} copy`, status: "Draft" as const, importBatchId: undefined }; addMasterRequirement(copy); setFeedback(`${item.id} was duplicated as a draft.`); setMenu(null); }}><Copy size={15} /> Duplicate</button>
+                          <button className={cx("row-menu__delete", rowMenuDeleteButtonClass)} onClick={() => { setDeleting(item); setMenu(null); }}><Trash2 size={15} /> Delete requirement</button>
+                        </span>
+                      )}
+                    </span>
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
@@ -850,7 +1412,6 @@ export function AdminRequirementsScreen() {
 
 const roleLabels: Record<SiteUserRole, string> = {
   "site-contributor": "Site contributor",
-  "enterprise-viewer": "Regional / enterprise viewer",
   administrator: "Administrator",
 };
 
@@ -859,30 +1420,31 @@ function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; si
   const [submitted, setSubmitted] = useState(false);
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email.trim());
   const valid = Boolean(draft.name.trim()) && emailValid;
-  return <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")}><button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close user editor" onClick={onClose} /><section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out]")} role="dialog" aria-modal="true" aria-labelledby="site-user-dialog-title">
-    <div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Site access</p><h2 id="site-user-dialog-title">{user ? `Edit ${user.name}` : "Assign user to site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
-    <div className={cx("dialog-form [display:grid] [gap:1rem] [padding:1.1rem] form-grid [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:1rem_1.15rem] [padding:1.2rem] max-[740px]:[grid-template-columns:1fr]")}>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]", submitted && !draft.name.trim() && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-        <span>Full name <b>Required</b></span>
-        <input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="For example, Maya Patel" />
-        {submitted && !draft.name.trim() && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter a name for this person.</small>}
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]", submitted && !emailValid && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-        <span>Email <b>Required</b></span>
-        <input type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
-        {submitted && !emailValid && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter a valid email address.</small>}
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]")}>
-        <span>Role</span>
-        <Select label="Role" value={draft.role} onChange={(value) => setDraft((current) => ({ ...current, role: value as SiteUserRole }))} options={(Object.keys(roleLabels) as SiteUserRole[]).map((value) => ({ value, label: roleLabels[value] }))} />
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]")}>
-        <span>Status</span>
-        <Select label="Status" value={draft.status} onChange={(value) => setDraft((current) => ({ ...current, status: value as SiteUser["status"] }))} options={[{ value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }]} />
-      </label>
+  return (
+    <div className={cx(dialogLayerClass)}>
+      <button className={cx(dialogBackdropClass)} aria-label="Close user editor" onClick={onClose} />
+      <section className={cx(dialogClass)} role="dialog" aria-modal="true" aria-labelledby="site-user-dialog-title">
+        <div className={cx(dialogHeaderClass)}><div><p className={cx(eyebrowClasses)}>Site access</p><h2 className={cx(dialogHeaderTitleClass)} id="site-user-dialog-title">{user ? `Edit ${user.name}` : "Assign user to site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
+        <div className={cx(dialogFormClass)}>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Full name <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <input className={cx(fieldInputClass, submitted && !draft.name.trim() && fieldInvalidClass)} value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder="For example, Maya Patel" />
+            {submitted && !draft.name.trim() && <small className={cx(fieldErrorClass)}>Enter a name for this person.</small>}
+          </label>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Email <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <input className={cx(fieldInputClass, submitted && !emailValid && fieldInvalidClass)} type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
+            {submitted && !emailValid && <small className={cx(fieldErrorClass)}>Enter a valid email address.</small>}
+          </label>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Status</span>
+            <Select label="Status" value={draft.status} onChange={(value) => setDraft((current) => ({ ...current, status: value as SiteUser["status"] }))} options={[{ value: "Active", label: "Active" }, { value: "Inactive", label: "Inactive" }]} />
+          </label>
+        </div>
+        <div className={cx(dialogFooterClass)}><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => { setSubmitted(true); if (valid) onSave({ ...draft, name: draft.name.trim(), email: draft.email.trim() }); }}>{user ? "Save changes" : "Assign user"}</Button></div>
+      </section>
     </div>
-    <div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => { setSubmitted(true); if (valid) onSave({ ...draft, name: draft.name.trim(), email: draft.email.trim() }); }}>{user ? "Save changes" : "Assign user"}</Button></div>
-  </section></div>;
+  );
 }
 
 export function AdminSiteDetailScreen() {
@@ -894,8 +1456,8 @@ export function AdminSiteDetailScreen() {
   const site = sites.find((item) => item.id === siteId);
   if (!site) {
     return (
-      <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-        <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
+      <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+        <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">Not found</span></nav>
         <EmptyState icon={<Search size={27} />} title="Site not found" description="This site is not part of the KC site network." />
       </div>
     );
@@ -926,38 +1488,52 @@ export function AdminSiteDetailScreen() {
   }
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
-      <PageHeader eyebrow="Administration" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<><Button variant="secondary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Assign user</Button><Link className={cx("button [display:inline-flex] [min-width:0] [align-items:center] [justify-content:center] [gap:0.5rem] [border:1px_solid_transparent] [border-radius:var(--radius-md)] [font-size:0.9rem] [font-weight:650] [line-height:1] [white-space:nowrap] [transition:background_120ms_ease,_border-color_120ms_ease,_box-shadow_120ms_ease,_color_120ms_ease,_transform_80ms_ease] disabled:[background:var(--neutral-100)] disabled:[border-color:var(--neutral-200)] disabled:[color:var(--neutral-400)] disabled:[box-shadow:none] [.question-evidence__editor_>_&]:[justify-self:start] [.question-evidence__attachments-header_>_&]:[flex:0_0_auto] [.site-assessment-area-row_>_&]:[justify-self:end] max-[900px]:[.site-assessment-area-row_>_&]:[grid-column:1_/_-1] max-[900px]:[.site-assessment-area-row_>_&]:[justify-self:stretch] max-[900px]:[.site-assessment-area-row_>_&]:[width:100%] max-[760px]:[.site-assessment-priority_&]:[width:100%] [.action-editor__header_>_&]:[margin-left:auto] max-[1500px]:[.requirement-mobile-toolbar_&:first-child]:[display:none] max-[1100px]:[.requirement-mobile-toolbar_&:first-child]:[display:inline-flex] max-[740px]:[.page-header__actions_&]:[width:100%] max-[740px]:[.overview-callout_&]:[grid-column:1_/_-1] max-[740px]:[.overview-callout_&]:[width:100%] max-[740px]:[.requirement-footer_>_&]:[width:100%] max-[740px]:[.requirement-footer_>_div_&]:[width:100%] max-[740px]:[.dialog__footer_&]:[width:100%] max-[740px]:[.section-drilldown-row_>_&]:[grid-column:1_/_-1] max-[740px]:[.section-drilldown-row_>_&]:[width:100%] max-[740px]:[.import-card__footer_&]:[width:100%] max-[740px]:[.result-state_&]:[width:100%] [.help-role-grid_&]:[width:100%] [.help-role-grid_&]:[margin-top:auto] max-[900px]:[.help-role-grid_&]:[width:auto] max-[620px]:[.setup-welcome__actions_&]:[width:100%] max-[620px]:[.tour-card__footer_&:last-child]:[flex:1] max-[620px]:[.setup-reminder_>_&]:[grid-column:2_/_-1] max-[620px]:[.setup-reminder_>_&]:[grid-row:2] max-[620px]:[.setup-reminder_>_&]:[width:100%] max-[620px]:[.help-role-grid_&]:[grid-column:1_/_-1] max-[620px]:[.help-role-grid_&]:[width:100%] max-[620px]:[.setup-complete_&]:[width:100%] [.passkey-add_&]:[width:100%] [.passkey-setup-message_&]:[flex:0_0_auto] max-[620px]:[.passkey-enrollment-choice_&]:[grid-column:2] max-[620px]:[.passkey-enrollment-choice_&]:[justify-self:start] max-[620px]:[.settings-card--split_>_&]:[width:100%] [.settings-index-empty_&]:[margin-top:0.3rem] max-[620px]:[.session-panel_&]:[grid-column:1_/_-1] max-[620px]:[.session-panel_&]:[width:100%] [.first-login-passkey__complete_&]:[margin-top:0.35rem] max-[620px]:[.first-login-passkey__actions_&]:[width:100%] button--primary [background:var(--brand-solid)] [border-color:var(--brand-solid)] [color:#fff] [box-shadow:0_1px_2px_rgb(12_42_62_/_0.16)] [&:hover:not(:disabled)]:[background:var(--brand-solid-hover)] [&:hover:not(:disabled)]:[border-color:var(--brand-solid-hover)] [&:active:not(:disabled)]:[background:var(--brand-solid-active)] [&:active:not(:disabled)]:[transform:translateY(1px)] button--default [min-height:42px] [padding:0.68rem_1rem]")} to={`/sites/${site.id}`}><ListChecks size={18} /><span>View assessment</span></Link></>} />
+    <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/sites">Sites</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
+      <PageHeader eyebrow="Administration" title={site.name} description={`${site.code} · ${site.region} · ${site.segment}`} actions={<>
+        <Button variant="secondary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Assign user</Button>
+        <Link className={cx(linkButtonBaseClass, "min-h-10 px-4 py-2.5 bg-kc-blue-600 text-white hover:bg-kc-blue-700 active:bg-kc-blue-800")} to={`/sites/${site.id}`}><ListChecks size={18} /><span>View assessment</span></Link>
+      </>} />
       {feedback && <InlineMessage tone={feedback.includes("already assigned") ? "warning" : "success"} title={feedback.includes("already assigned") ? "User not assigned" : "Site access updated"}>{feedback}</InlineMessage>}
 
-      <div className={cx("metrics-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:1rem] [margin-top:1.25rem] max-[1500px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[740px]:[grid-template-columns:1fr]")}>
+      <div className={cx(metricsGridClass)}>
         <MetricCard label="Completion" value={`${site.completion}%`} detail="Assessment completion" icon={<Target size={21} />} tone="brand" />
         <MetricCard label="Open gaps" value={site.gaps} detail="No and Partial responses" icon={<AlertCircle size={21} />} tone={site.gaps > 20 ? "danger" : "neutral"} />
         <MetricCard label="Last updated" value={site.updated} detail="Current assessment record" icon={<History size={21} />} />
         <MetricCard label="Assigned users" value={users.length} detail={`${users.filter((user) => user.status === "Active").length} active`} icon={<UsersRound size={21} />} />
       </div>
 
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Site access</p><h2>Assigned users</h2></div><span>{users.length} user{users.length === 1 ? "" : "s"}</span></div>
-        {users.length ? <div className={cx("data-table-wrap [max-width:100%] max-[1100px]:[width:100%] max-[1100px]:[max-width:none] max-[1100px]:[overflow:visible]")}><table className={cx("data-table [width:100%] [table-layout:fixed] [border-collapse:collapse] [font-size:0.79rem] [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:[padding:0.8rem_1rem] [&_th]:[border-bottom:1px_solid_var(--neutral-200)] [&_th]:[text-align:left] [&_th]:[vertical-align:middle] [&_td]:[padding:0.8rem_1rem] [&_td]:[border-bottom:1px_solid_var(--neutral-200)] [&_td]:[text-align:left] [&_td]:[vertical-align:middle] [&_th]:[background:var(--neutral-50)] [&_th]:[color:var(--neutral-600)] [&_th]:[font-size:0.69rem] [&_th]:[font-weight:750] [&_th]:[letter-spacing:0.01em] [&_tr:last-child_td]:[border-bottom:0] [&_tbody_tr:hover]:[background:var(--neutral-25)] [&_td_>_strong]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[margin-top:0.18rem] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[color:var(--neutral-500)] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[font-size:0.7rem] [&_td:nth-child(3)]:[max-width:390px] max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0] max-[1100px]:[&_tbody]:[display:grid] max-[1100px]:[&_tbody]:[width:100%] max-[1100px]:[&_tbody]:[min-width:0] max-[1100px]:[&_tr]:[display:block] max-[1100px]:[&_tr]:[width:100%] max-[1100px]:[&_tr]:[min-width:0] max-[1100px]:[&_td]:[display:grid] max-[1100px]:[&_td]:[width:100%] max-[1100px]:[&_td]:[min-width:0] max-[1100px]:[&_thead]:[position:absolute] max-[1100px]:[&_thead]:[display:block] max-[1100px]:[&_thead]:[width:1px] max-[1100px]:[&_thead]:[height:1px] max-[1100px]:[&_thead]:[padding:0] max-[1100px]:[&_thead]:[margin:-1px] max-[1100px]:[&_thead]:[overflow:hidden] max-[1100px]:[&_thead]:[clip:rect(0,_0,_0,_0)] max-[1100px]:[&_thead]:[white-space:nowrap] max-[1100px]:[&_thead]:[border:0] max-[1100px]:[&_thead_tr]:[position:absolute] max-[1100px]:[&_thead_tr]:[display:block] max-[1100px]:[&_thead_tr]:[width:1px] max-[1100px]:[&_thead_tr]:[min-width:0] max-[1100px]:[&_thead_tr]:[height:1px] max-[1100px]:[&_thead_tr]:[overflow:hidden] max-[1100px]:[&_thead_tr]:[padding:0] max-[1100px]:[&_thead_tr]:[border:0] max-[1100px]:[&_thead_tr]:[clip-path:inset(50%)] max-[1100px]:[&_thead_th]:[position:absolute] max-[1100px]:[&_thead_th]:[display:block] max-[1100px]:[&_thead_th]:[width:1px] max-[1100px]:[&_thead_th]:[min-width:0] max-[1100px]:[&_thead_th]:[height:1px] max-[1100px]:[&_thead_th]:[overflow:hidden] max-[1100px]:[&_thead_th]:[padding:0] max-[1100px]:[&_thead_th]:[border:0] max-[1100px]:[&_thead_th]:[clip-path:inset(50%)] max-[1100px]:[&_tbody]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[1100px]:[&_tbody]:[gap:0.75rem] max-[1100px]:[&_tbody]:[padding:0.85rem] max-[1100px]:[&_tbody_tr]:[overflow:hidden] max-[1100px]:[&_tbody_tr]:[border:1px_solid_var(--neutral-200)] max-[1100px]:[&_tbody_tr]:[border-radius:var(--radius-lg)] max-[1100px]:[&_tbody_tr]:[background:var(--neutral-25)] max-[1100px]:[&_tbody_tr]:[box-shadow:var(--shadow-1)] max-[1100px]:[&_td]:[grid-template-columns:minmax(116px,_0.45fr)_minmax(0,_1fr)] max-[1100px]:[&_td]:[align-items:center] max-[1100px]:[&_td]:[gap:0.75rem] max-[1100px]:[&_td]:[min-height:48px] max-[1100px]:[&_td]:[padding:0.7rem_0.85rem] max-[1100px]:[&_td]:[border-bottom:1px_solid_var(--neutral-200)] max-[1100px]:[&_td::before]:[color:var(--neutral-500)] max-[1100px]:[&_td::before]:[content:attr(data-label)] max-[1100px]:[&_td::before]:[font-size:0.67rem] max-[1100px]:[&_td::before]:[font-weight:750] max-[1100px]:[&_td::before]:[letter-spacing:0.01em] max-[1100px]:[&_td:last-child]:[min-height:44px] max-[1100px]:[&_td:last-child]:[grid-template-columns:1fr] max-[1100px]:[&_td:last-child]:[justify-items:end] max-[1100px]:[&_td:last-child]:[border-bottom:0] max-[1100px]:[&_td:last-child]:[background:var(--neutral-50)] max-[1100px]:[&_td:last-child::before]:[display:none] max-[1100px]:[&_td[data-label='']::before]:[display:none] max-[1100px]:[&_td_>_strong]:[min-width:0] max-[1100px]:[&_td_>_strong]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_span]:[min-width:0] max-[1100px]:[&_td_>_span]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_div]:[min-width:0] max-[1100px]:[&_td_>_div]:[overflow-wrap:anywhere] max-[820px]:[&_tbody]:[grid-template-columns:1fr]")}><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>{users.map((user) => (
-          <tr key={user.id}>
-            <td data-label="Name"><strong>{user.name}</strong></td>
-            <td data-label="Email">{user.email}</td>
-            <td data-label="Role">{roleLabels[user.role]}</td>
-            <td data-label="Status"><span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]", user.status === "Inactive" && "publish-badge--draft [border-color:#d6bbfb]! [background:var(--provisional-surface)] [color:var(--provisional)]!")}>{user.status}</span></td>
-            <td data-label="Actions"><span className={cx("row-actions [display:flex]! [gap:0.1rem] max-[1100px]:[.data-table_&]:[justify-content:flex-end]")}><IconButton label={`Edit ${user.name}`} onClick={() => setEditing(user)}><Pencil size={17} /></IconButton><IconButton label={`Remove ${user.name} from this site`} onClick={() => setRemoving(user)}><Trash2 size={17} /></IconButton></span></td>
-          </tr>
-        ))}</tbody></table></div> : <EmptyState icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
+      <section className={cx(tableCardClass)}>
+        <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Site access</p><h2 className={cx(tableCardHeaderTitleClass)}>Assigned users</h2></div><span className={cx(tableCardHeaderCountClass)}>{users.length} user{users.length === 1 ? "" : "s"}</span></div>
+        {users.length ? (
+          <div className={cx(dataTableWrapClass)}>
+            <table className={cx(dataTableClass)}>
+              <thead className={cx(dataTableHeadClass)}><tr><th className={cx(dataTableHeaderCellClass)}>Name</th><th className={cx(dataTableHeaderCellClass)}>Email</th><th className={cx(dataTableHeaderCellClass)}>Role</th><th className={cx(dataTableHeaderCellClass)}>Status</th><th className={cx(dataTableHeaderCellClass)}>Actions</th></tr></thead>
+              <tbody className={cx(dataTableBodyClass)}>{users.map((user, index) => {
+                const cellClass = cx(dataTableCellClass, index === users.length - 1 && "shell:border-b-0");
+                const lastCellClass = cx(dataTableLastCellClass, index !== users.length - 1 && "shell:border-b");
+                return (
+                  <tr className={cx(dataTableRowClass)} key={user.id}>
+                    <td className={cellClass} data-label="Name"><span className={cx(dataTableCellLabelClass)}>Name</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{user.name}</strong></td>
+                    <td className={cellClass} data-label="Email"><span className={cx(dataTableCellLabelClass)}>Email</span>{user.email}</td>
+                    <td className={cellClass} data-label="Role"><span className={cx(dataTableCellLabelClass)}>Role</span>{roleLabels[user.role]}</td>
+                    <td className={cellClass} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, user.status === "Inactive" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{user.status}</span></td>
+                    <td className={lastCellClass} data-label="Actions"><span className={cx(dataTableCellLabelClass)}>Actions</span><span className={cx(rowActionsClass)}><IconButton label={`Edit ${user.name}`} onClick={() => setEditing(user)}><Pencil size={17} /></IconButton><IconButton label={`Remove ${user.name} from this site`} onClick={() => setRemoving(user)}><Trash2 size={17} /></IconButton></span></td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </div>
+        ) : <EmptyState icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
       </section>
 
-      <section className={cx("page-section [margin-top:2.2rem]")}>
-        <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Read-only</p><h2>Program &amp; standard owners</h2></div></div>
+      <section className={cx("page-section mt-9")}>
+        <div className={cx(sectionTitleRowClass)}><div><p className={cx(eyebrowClasses)}>Read-only</p><h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Program &amp; standard owners</h2></div></div>
         <OwnersPanel owners={hasRealSiteRecords ? ownerRecords : null} />
       </section>
 
-      <section className={cx("page-section [margin-top:2.2rem]")}>
-        <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Read-only</p><h2>Site information</h2></div></div>
+      <section className={cx("page-section mt-9")}>
+        <div className={cx(sectionTitleRowClass)}><div><p className={cx(eyebrowClasses)}>Read-only</p><h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Site information</h2></div></div>
         <ContactsPanel contacts={hasRealSiteRecords ? siteContacts : null} />
       </section>
 
@@ -978,119 +1554,68 @@ function blankSite(): DashboardSite {
 }
 
 
-const ADD_NEW_VALUE = "__add_new__";
-
-/**
- * Value picker that avoids the native <datalist> popup (OS-drawn, unstyleable) while still
- * allowing a value that does not exist yet: the styled Select lists known values plus an
- * "Add new" entry which swaps in a text field.
- */
-function ValueWithAddNew({
-  label,
-  value,
-  options,
-  placeholder,
-  invalid,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  placeholder: string;
-  invalid?: boolean;
-  onChange: (value: string) => void;
-}) {
-  const [addingNew, setAddingNew] = useState(false);
-  const known = options.includes(value);
-  const showInput = addingNew || (Boolean(value) && !known);
-  if (showInput) {
-    return (
-      <span className={cx("value-add-new [display:flex] [align-items:center] [gap:0.5rem] [min-width:0] [&_input]:[flex:1] [&_input]:[min-width:0] [&_>_button]:[flex:none] [&_>_button]:[border:0] [&_>_button]:[background:none] [&_>_button]:[padding:0] [&_>_button]:[color:var(--kc-700)] [&_>_button]:[font-size:0.74rem] [&_>_button]:[font-weight:650] [&_>_button]:[white-space:nowrap] [&_>_button]:[cursor:pointer] [&_>_button:hover]:[color:var(--kc-800)] [&_>_button:hover]:[text-decoration:underline]")}>
-        <input
-          autoFocus
-          value={value}
-          placeholder={placeholder}
-          aria-label={`New ${label.toLowerCase()}`}
-          aria-invalid={invalid || undefined}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        {options.length > 0 && (
-          <button type="button" onClick={() => { setAddingNew(false); onChange(""); }}>
-            Choose existing
-          </button>
-        )}
-      </span>
-    );
-  }
-  return (
-    <Select
-      label={label}
-      value={value}
-      onChange={(next) => {
-        if (next === ADD_NEW_VALUE) { setAddingNew(true); onChange(""); return; }
-        onChange(next);
-      }}
-      options={[
-        ...(value ? [] : [{ value: "", label: `Select ${label.toLowerCase()}` }]),
-        ...options.map((option) => ({ value: option, label: option })),
-        { value: ADD_NEW_VALUE, label: `+ Add new ${label.toLowerCase()}` },
-      ]}
-    />
-  );
-}
-
-function SiteDialog({ site, existing, onClose, onSave }: { site?: DashboardSite; existing: DashboardSite[]; onClose: () => void; onSave: (site: DashboardSite) => void }) {
+function SiteDialog({ site, existing, regions, segments, onClose, onSave }: { site?: DashboardSite; existing: DashboardSite[]; regions: string[]; segments: string[]; onClose: () => void; onSave: (site: DashboardSite) => void }) {
   const [draft, setDraft] = useState<DashboardSite>(site ?? blankSite());
   const [submitted, setSubmitted] = useState(false);
   const trimmedCode = draft.code.trim();
   const duplicateCode = Boolean(trimmedCode) && existing.some((item) => item.code.toLowerCase() === trimmedCode.toLowerCase() && item.id !== draft.id);
   const valid = Boolean(draft.name.trim() && trimmedCode && draft.region.trim() && draft.segment.trim()) && !duplicateCode;
   const set = (key: keyof DashboardSite, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  return <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")}><button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close site editor" onClick={onClose} /><section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out]")} role="dialog" aria-modal="true" aria-labelledby="site-dialog-title">
-    <div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Site network</p><h2 id="site-dialog-title">{site ? `Edit ${site.name}` : "Create site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
-    <div className={cx("dialog-form [display:grid] [gap:1rem] [padding:1.1rem] form-grid [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:1rem_1.15rem] [padding:1.2rem] max-[740px]:[grid-template-columns:1fr]")}>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]", submitted && !draft.name.trim() && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-        <span>Site name <b>Required</b></span>
-        <input value={draft.name} onChange={(event) => set("name", event.target.value)} placeholder="For example, Northstar Manufacturing" />
-        {submitted && !draft.name.trim() && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter the site name.</small>}
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", (submitted && !trimmedCode) || duplicateCode ? "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]" : undefined)}>
-        <span>Site code <b>Required</b></span>
-        <input value={draft.code} onChange={(event) => set("code", event.target.value)} placeholder="KC-NSM-042" />
-        {submitted && !trimmedCode && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter the KC site code.</small>}
-        {duplicateCode && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>This site code already exists.</small>}
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", submitted && !draft.region.trim() && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-        <span>Region <b>Required</b></span>
-        <ValueWithAddNew
-          label="Region"
-          value={draft.region}
-          options={[...new Set(existing.map((item) => item.region))].filter(Boolean).sort()}
-          placeholder="North America"
-          invalid={submitted && !draft.region.trim()}
-          onChange={(value) => set("region", value)}
-        />
-        {submitted && !draft.region.trim() && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter the region.</small>}
-      </label>
-      <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]", submitted && !draft.segment.trim() && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-        <span>Segment <b>Required</b></span>
-        <ValueWithAddNew
-          label="Segment"
-          value={draft.segment}
-          options={[...new Set(existing.map((item) => item.segment))].filter(Boolean).sort()}
-          placeholder="Family Care"
-          invalid={submitted && !draft.segment.trim()}
-          onChange={(value) => set("segment", value)}
-        />
-        {submitted && !draft.segment.trim() && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter the business segment.</small>}
-      </label>
+  return (
+    <div className={cx(dialogLayerClass)}>
+      <button className={cx(dialogBackdropClass)} aria-label="Close site editor" onClick={onClose} />
+      <section className={cx(dialogClass)} role="dialog" aria-modal="true" aria-labelledby="site-dialog-title">
+        <div className={cx(dialogHeaderClass)}><div><p className={cx(eyebrowClasses)}>Site network</p><h2 className={cx(dialogHeaderTitleClass)} id="site-dialog-title">{site ? `Edit ${site.name}` : "Create site"}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
+        <div className={cx(dialogFormClass)}>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Site name <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <input className={cx(fieldInputClass, submitted && !draft.name.trim() && fieldInvalidClass)} value={draft.name} onChange={(event) => set("name", event.target.value)} placeholder="For example, Northstar Manufacturing" />
+            {submitted && !draft.name.trim() && <small className={cx(fieldErrorClass)}>Enter the site name.</small>}
+          </label>
+          <label className={cx(fieldClass)}>
+            <span className={cx(fieldLabelRowClass)}>Site code <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <input className={cx(fieldInputClass, ((submitted && !trimmedCode) || duplicateCode) && fieldInvalidClass)} value={draft.code} onChange={(event) => set("code", event.target.value)} placeholder="KC-NSM-042" />
+            {submitted && !trimmedCode && <small className={cx(fieldErrorClass)}>Enter the KC site code.</small>}
+            {duplicateCode && <small className={cx(fieldErrorClass)}>This site code already exists.</small>}
+          </label>
+          <label className={cx(fieldClass)}>
+            <span className={cx(fieldLabelRowClass)}>Region <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <Select
+              label="Region"
+              value={draft.region}
+              onChange={(value) => set("region", value)}
+              options={[
+                { value: "", label: "Select region" },
+                ...[...new Set([...regions, ...(draft.region ? [draft.region] : [])])].sort().map((value) => ({ value, label: value })),
+              ]}
+            />
+            {submitted && !draft.region.trim() && <small className={cx(fieldErrorClass)}>Choose the region.</small>}
+          </label>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Segment <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
+            <Select
+              label="Segment"
+              value={draft.segment}
+              onChange={(value) => set("segment", value)}
+              options={[
+                { value: "", label: "Select segment" },
+                ...[...new Set([...segments, ...(draft.segment ? [draft.segment] : [])])].sort().map((value) => ({ value, label: value })),
+              ]}
+            />
+            {submitted && !draft.segment.trim() && <small className={cx(fieldErrorClass)}>Choose the business segment.</small>}
+          </label>
+        </div>
+        <div className={cx(dialogFooterClass)}>
+          <Button variant="tertiary" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" icon={<Check size={17} />} onClick={() => {
+            setSubmitted(true);
+            if (!valid) return;
+            onSave({ ...draft, name: draft.name.trim(), code: trimmedCode, region: draft.region.trim(), segment: draft.segment.trim(), id: draft.id || slugifySiteId(trimmedCode) });
+          }}>{site ? "Save changes" : "Create site"}</Button>
+        </div>
+      </section>
     </div>
-    <div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={onClose}>Cancel</Button><Button variant="primary" icon={<Check size={17} />} onClick={() => {
-      setSubmitted(true);
-      if (!valid) return;
-      onSave({ ...draft, name: draft.name.trim(), code: trimmedCode, region: draft.region.trim(), segment: draft.segment.trim(), id: draft.id || slugifySiteId(trimmedCode) });
-    }}>{site ? "Save changes" : "Create site"}</Button></div>
-  </section></div>;
+  );
 }
 
 interface SiteImportOutcome {

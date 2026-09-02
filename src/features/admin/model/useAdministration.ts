@@ -1,5 +1,6 @@
 import { useApplicationData } from "../../../app/providers/ApplicationDataProvider";
 import { useAuth } from "../../auth";
+import type { RequirementImportPlan } from "./importWorkbook";
 
 /** Administration state and commands exposed without leaking repository details to pages. */
 export function useAdministration() {
@@ -14,9 +15,15 @@ export function useAdministration() {
     sites,
     ownerRecords,
     siteContacts,
+    regions,
+    segments,
     addSite,
     updateSite,
     importSites,
+    addRegion,
+    removeRegion,
+    addSegment,
+    removeSegment,
     publishImportBatch,
     submitImportBatch,
     addMasterRequirement: addMasterRequirementToState,
@@ -38,11 +45,17 @@ export function useAdministration() {
     sites,
     ownerRecords,
     siteContacts,
+    regions,
+    segments,
     addSite,
     updateSite,
     importSites,
+    addRegion,
+    removeRegion,
+    addSegment,
+    removeSegment,
     publishImportBatch: (batchId: string) => publishImportBatch(batchId, auditActor),
-    submitImportBatch: (fileName: string, siteIds: string[]) => submitImportBatch(fileName, siteIds, auditActor),
+    submitImportBatch: (plan: RequirementImportPlan) => submitImportBatch(plan, auditActor),
     addMasterRequirement: (requirement: Parameters<typeof addMasterRequirementToState>[0]) => addMasterRequirementToState(requirement, auditActor),
     updateMasterRequirement: (requirement: Parameters<typeof updateMasterRequirementInState>[0]) => updateMasterRequirementInState(requirement, auditActor),
     removeMasterRequirement: (requirementId: string) => removeMasterRequirementFromState(requirementId, auditActor),

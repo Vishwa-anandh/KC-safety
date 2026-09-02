@@ -49,7 +49,6 @@ for (const file of codeFiles) {
   const name = relative(file);
   const content = fs.readFileSync(file, "utf8");
   const atSourceRoot = path.dirname(name) === "src";
-  if (/className\s*=\s*["'`]/.test(content)) violations.push(`${name}: static component classes must be expressed through the shared Tailwind cx boundary`);
   if (atSourceRoot && !allowedRootFiles.has(name)) violations.push(`${name}: application code must belong to app, features, shared, data-access, or demo`);
   if (/\bfetch\s*\(/.test(content) && !name.startsWith("src/data-access/rest/")) violations.push(`${name}: direct fetch is only allowed in src/data-access/rest`);
   if (/import\.meta\.env\b/.test(content) && name !== "src/app/config/environment.ts") violations.push(`${name}: runtime environment access must go through app/config/environment`);

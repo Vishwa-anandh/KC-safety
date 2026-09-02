@@ -15,6 +15,7 @@ import type {
 export interface ImportHistoryRecord {
   id: string;
   fileName: string;
+  mode?: "new" | "update";
   importedAt: string;
   importedBy: string;
   siteIds: string[];
@@ -23,6 +24,18 @@ export interface ImportHistoryRecord {
   unchanged: number;
   status: "Completed";
   publishStatus: "Draft" | "Published";
+}
+
+export interface RequirementImportValidationResult {
+  valid: boolean;
+  errors: Array<{ row: number; field?: string; message: string }>;
+  warnings: Array<{ row: number; field?: string; message: string }>;
+}
+
+export interface RequirementImportPreview {
+  batch: ImportHistoryRecord;
+  requirements: MasterRequirement[];
+  changes: Array<{ requirementId: string; questionId?: string; field: string; before?: string; after?: string }>;
 }
 
 export interface AssignedSite {
@@ -46,6 +59,9 @@ export interface AppSnapshot {
   notifications: AppNotification[];
   assignedSite: AssignedSite;
   lastUpdated: string;
+  /** Admin-curated dropdown values shown on the site form — see the Config screen. */
+  regions: string[];
+  segments: string[];
 }
 
 export type DataSourceKind = "demo" | "api";
@@ -66,6 +82,14 @@ export interface AppDataRepository {
 export interface AuthenticationRepository<TUser> {
   signInWithPassword(email: string, password: string): Promise<TUser>;
   signOut?(): Promise<void>;
+  /** Always resolves, whether or not the address has an account — callers must not use success
+   *  to infer that an account exists. */
+  requestPasswordReset?(email: string): Promise<void>;
+  /** Server infers the account from the caller's session; there is no user id parameter.
+   *  Validates `currentPassword` and emails a short-lived code to confirm the change. */
+  requestPasswordChangeCode?(currentPassword: string): Promise<{ maskedEmail: string; devCode?: string }>;
+  /** Applies `newPassword` once `code` (from requestPasswordChangeCode) is verified. */
+  confirmPasswordChange?(code: string, newPassword: string): Promise<void>;
 }
 
 export interface WebAuthnRepository {
@@ -104,7 +128,9 @@ export interface AdministrationRepository {
   createSiteUser(siteId: string, input: Omit<SiteUser, "id">): Promise<SiteUser>;
   updateSiteUser(siteId: string, user: SiteUser): Promise<SiteUser>;
   removeSiteUser(siteId: string, userId: string): Promise<void>;
-  importRequirements(input: FormData): Promise<ImportHistoryRecord>;
+  validateRequirementImport(input: FormData): Promise<RequirementImportValidationResult>;
+  stageRequirementImport(input: FormData): Promise<RequirementImportPreview>;
+  getRequirementImportPreview(batchId: string): Promise<RequirementImportPreview>;
   publishImport(batchId: string): Promise<void>;
 }
 

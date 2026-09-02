@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../auth";
+import { ChangePasswordDialog, useAuth } from "../../auth";
 import { useGuidedSetup, type UserRole } from "../../onboarding";
 import { AccentSelector, ThemeSelector, useTheme } from "../model/ThemeProvider";
 import { Button, ConfirmDialog, IconButton, InlineMessage, PageHeader, ProgressBar } from "../../../shared/ui/UI";
@@ -65,7 +65,6 @@ const sections: Array<{ id: SettingsSectionId; label: string; description: strin
 
 const roleCapabilities: Record<UserRole, string[]> = {
   "site-contributor": ["Edit the assigned site assessment", "Maintain site contacts and program owners", "Complete corrective-action information and evidence"],
-  "enterprise-viewer": ["Review authorized enterprise sites", "Open read-only site drill-downs", "Export the current filtered dashboard view"],
   administrator: ["Review enterprise performance", "Run governed workbook imports", "Create, audit, and publish master requirements"],
 };
 
@@ -88,11 +87,47 @@ function deviceDescription() {
   return `${browser} on ${platform}`;
 }
 
+// Shared recipes duplicated across this file's six settings screens — keep them in one place so
+// every section's card/badge/subheading looks identical (canonical card / tinted-pill recipes).
+const settingsCardClass = "settings-card grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4.5 dark:border-slate-700 dark:bg-slate-900";
+const settingSubheadingClass = "setting-subheading flex flex-col items-start justify-between gap-1.5 sm:flex-row sm:gap-4";
+const settingSubheadingLabelClass = "text-sm text-slate-800 dark:text-slate-200";
+const settingSubheadingHintClass = "text-xs leading-snug text-slate-500 dark:text-slate-400";
+const statusPillBaseClass = "inline-flex w-fit flex-none items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold";
+const dialogLayerClass = "dialog-layer fixed inset-0 z-100 grid place-items-center p-4";
+const dialogBackdropClass = "dialog-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm";
+const dialogClass = "dialog dialog--compact relative max-h-full w-full max-w-md overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900";
+const dialogHeaderClass = "dialog__header flex items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-slate-700";
+const dialogTitleEyebrowClass = "eyebrow text-sm font-semibold text-kc-blue-700 dark:text-kc-blue-300";
+const dialogTitleClass = "mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100";
+const dialogContextClass = "dialog-context mx-4 mt-4 border-l-3 border-kc-blue-500 py-1 pl-3 text-sm text-slate-700 dark:border-kc-blue-400 dark:text-slate-300";
+const dialogFooterClass = "dialog__footer flex flex-col-reverse items-stretch gap-4 border-t border-slate-200 p-4 md:flex-row md:items-center md:justify-end dark:border-slate-700";
+const actionTileGridClass = "grid grid-cols-1 gap-2.5 lg:grid-cols-3";
+const actionTileClass = "flex min-w-0 min-h-24 items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-left text-slate-700 transition-colors hover:border-kc-blue-300 hover:bg-kc-blue-50 hover:text-kc-blue-800 lg:min-h-18 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-kc-blue-700 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200";
+const actionTileIconClass = "grid size-9 flex-none place-items-center rounded-lg bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300";
+const actionTileTitleClass = "text-sm font-semibold text-slate-900 dark:text-slate-100";
+const actionTileHintClass = "text-xs leading-snug text-slate-500 dark:text-slate-400";
+
 function SettingToggle({ checked, label, description, onChange }: { checked: boolean; label: string; description: string; onChange: (checked: boolean) => void }) {
   return (
-    <div className={cx("preference-row [display:flex] [min-height:68px] [align-items:center] [justify-content:space-between] [gap:1rem] [background:var(--surface-panel)] [padding:0.75rem_0.85rem] [.preference-row_+_&]:[border-top:1px_solid_var(--neutral-200)] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_strong]:[font-size:0.76rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.67rem] [&_span]:[line-height:1.4] max-[620px]:[min-height:64px] max-[620px]:[padding:0.68rem]")}>
-      <div><strong>{label}</strong><span>{description}</span></div>
-      <button type="button" className={cx("switch-control [position:relative] [width:46px] [height:28px] [flex:0_0_46px] [border:1px_solid_var(--neutral-300)] [border-radius:999px] [background:var(--neutral-200)] [padding:2px] [transition:border-color_160ms_ease,_background_160ms_ease] [&_>_span]:[display:block] [&_>_span]:[width:22px] [&_>_span]:[height:22px] [&_>_span]:[border-radius:50%] [&_>_span]:[background:white] [&_>_span]:[box-shadow:0_2px_6px_rgb(15_23_42_/_0.22)] [&_>_span]:[transform:translateX(0)] [&_>_span]:[transition:transform_180ms_cubic-bezier(0.22,_1,_0.36,_1)]", checked && "switch-control--checked [border-color:var(--success-solid)] [background:var(--success-solid)] [&_>_span]:[transform:translateX(17px)]")} role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span /></button>
+    <div className="preference-row flex min-h-16 items-center justify-between gap-4 bg-white px-3.5 py-3 sm:min-h-17 dark:bg-slate-900">
+      <div className="grid min-w-0">
+        <strong className="text-sm text-slate-900 dark:text-slate-100">{label}</strong>
+        <span className="text-xs leading-snug text-slate-500 dark:text-slate-400">{description}</span>
+      </div>
+      <button
+        type="button"
+        className={cx(
+          "switch-control relative h-7 w-11.5 shrink-0 rounded-full border border-slate-300 bg-slate-200 p-0.5 transition-colors dark:border-slate-600 dark:bg-slate-700",
+          checked && "switch-control--checked border-emerald-700 bg-emerald-700 dark:border-emerald-500 dark:bg-emerald-500",
+        )}
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+      >
+        <span className={cx("block size-5.5 rounded-full bg-white shadow-sm transition-transform", checked && "translate-x-4.5")} />
+      </button>
     </div>
   );
 }
@@ -110,28 +145,81 @@ export function SettingsLayout() {
   const visibleSections = sections.filter((section) => !normalizedQuery || `${section.label} ${section.description} ${section.keywords}`.toLowerCase().includes(normalizedQuery));
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem] settings-workspace")}>
-      <div className={cx("settings-shell [display:grid] [min-width:0] [grid-template-columns:260px_minmax(0,_1fr)] [align-items:start] [gap:1rem] max-[900px]:[grid-template-columns:1fr] max-[620px]:[gap:0.7rem]")}>
-        <aside className={cx("settings-index [position:sticky] [top:calc(var(--content-offset)_+_1rem)] [display:grid] [max-height:calc(100vh_-_var(--content-offset)_-_2rem)] [gap:0.7rem] [overflow:hidden_auto] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:0.7rem] [&_nav]:[display:grid] [&_nav]:[gap:0.18rem] [&_nav_>_a]:[display:flex] [&_nav_>_a]:[min-width:0] [&_nav_>_a]:[min-height:54px] [&_nav_>_a]:[align-items:center] [&_nav_>_a]:[gap:0.6rem] [&_nav_>_a]:[border:1px_solid_transparent] [&_nav_>_a]:[border-radius:11px] [&_nav_>_a]:[background:transparent] [&_nav_>_a]:[color:var(--neutral-600)] [&_nav_>_a]:[padding:0.48rem] [&_nav_>_a]:[text-align:left] [&_nav_>_a]:[transition:border-color_130ms_ease,_background_130ms_ease,_color_130ms_ease,_transform_100ms_ease] [&_nav_>_a:hover]:[background:var(--neutral-50)] [&_nav_>_a:hover]:[color:var(--neutral-900)] [&_nav_>_a:active]:[transform:scale(0.99)] [&_nav_>_a_>_span:first-child]:[display:grid] [&_nav_>_a_>_span:first-child]:[width:34px] [&_nav_>_a_>_span:first-child]:[height:34px] [&_nav_>_a_>_span:first-child]:[flex:0_0_34px] [&_nav_>_a_>_span:first-child]:[place-items:center] [&_nav_>_a_>_span:first-child]:[border-radius:9px] [&_nav_>_a_>_span:first-child]:[background:var(--neutral-50)] [&_nav_>_a_>_span:first-child]:[color:var(--neutral-500)] [&_nav_>_a_>_span:last-child]:[display:grid] [&_nav_>_a_>_span:last-child]:[min-width:0] [&_nav_strong]:[overflow:hidden] [&_nav_strong]:[font-size:0.76rem] [&_nav_strong]:[text-overflow:ellipsis] [&_nav_strong]:[white-space:nowrap] [&_nav_small]:[overflow:hidden] [&_nav_small]:[color:var(--neutral-500)] [&_nav_small]:[font-size:0.64rem] [&_nav_small]:[text-overflow:ellipsis] [&_nav_small]:[white-space:nowrap] max-[900px]:[z-index:15] max-[900px]:[top:calc(var(--content-offset)_+_0.5rem)] max-[900px]:[display:grid] max-[900px]:[max-height:none] max-[900px]:[overflow:visible] max-[900px]:[border-radius:16px] max-[900px]:[&_nav]:[display:flex] max-[900px]:[&_nav]:[flex-wrap:wrap] max-[900px]:[&_nav]:[padding-bottom:0.15rem] max-[900px]:[&_nav_>_a]:[min-height:42px] max-[900px]:[&_nav_>_a]:[flex:0_1_auto] max-[900px]:[&_nav_>_a]:[padding:0.35rem_0.55rem] max-[900px]:[&_nav_>_a_>_span:first-child]:[width:30px] max-[900px]:[&_nav_>_a_>_span:first-child]:[height:30px] max-[900px]:[&_nav_>_a_>_span:first-child]:[flex-basis:30px] max-[900px]:[&_nav_small]:[display:none] max-[620px]:[top:calc(var(--content-offset)_+_0.35rem)] max-[620px]:[border-radius:14px] max-[620px]:[padding:0.55rem] max-[620px]:[&_nav_>_a]:[min-height:40px] max-[620px]:[&_nav_>_a_>_span:first-child]:[display:none] max-[620px]:[&_nav_strong]:[font-size:0.69rem]")} aria-label="Settings navigation">
-          <label className={cx("settings-search [position:relative] [display:flex] [min-height:42px] [align-items:center] [gap:0.45rem] [border:1px_solid_var(--neutral-300)] [border-radius:11px] [background:var(--surface-input)] [color:var(--neutral-500)] [padding:0_0.65rem] [&:focus-within]:[border-color:var(--kc-500)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[width:100%] [&_input]:[min-width:0] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.78rem] [&_input::placeholder]:[color:var(--neutral-400)] [&_>_button]:[display:grid] [&_>_button]:[width:28px] [&_>_button]:[height:28px] [&_>_button]:[flex:0_0_28px] [&_>_button]:[place-items:center] [&_>_button]:[border:0] [&_>_button]:[border-radius:8px] [&_>_button]:[background:transparent] [&_>_button]:[color:var(--neutral-500)] [&_>_button:hover]:[background:var(--neutral-100)] [&_>_button:hover]:[color:var(--neutral-800)]")}><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search settings" aria-label="Search settings" />{query && <button type="button" aria-label="Clear settings search" onClick={() => setQuery("")}><X size={16} /></button>}</label>
+    <div
+      className="page-container settings-workspace w-full pt-5 pb-14 sm:pt-9 sm:pb-16"
+      style={{ paddingLeft: "var(--page-gutter)", paddingRight: "var(--page-gutter)" }}
+    >
+      <div className="settings-shell flex min-w-0 items-start gap-3 sm:gap-4 lg:flex-row lg:items-start max-lg:flex-col">
+        <aside
+          className="settings-index sticky z-10 grid gap-2.5 overflow-auto rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm lg:w-65 lg:flex-none lg:p-2.5 dark:border-slate-700 dark:bg-slate-900"
+          style={{ top: "calc(var(--content-offset) + 1rem)", maxHeight: "calc(100vh - var(--content-offset) - 2rem)" }}
+          aria-label="Settings navigation"
+        >
+          <label className="settings-search relative flex min-h-10.5 items-center gap-2 rounded-xl border border-slate-300 bg-white px-2.5 text-slate-500 focus-within:border-kc-blue-500 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800">
+            <Search size={17} />
+            <input
+              className="w-full min-w-0 border-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search settings"
+              aria-label="Search settings"
+            />
+            {query && (
+              <button
+                type="button"
+                className="grid size-7 flex-none place-items-center rounded-lg border-0 bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                aria-label="Clear settings search"
+                onClick={() => setQuery("")}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </label>
           {visibleSections.length > 0 ? (
-            <nav>
+            <nav className="grid gap-1 lg:flex lg:flex-wrap lg:gap-1">
               {visibleSections.map((section) => {
                 const Icon = section.icon;
                 return (
-                  <NavLink key={section.id} to={settingsRoute(section.id)} className={({ isActive }) => cx(isActive && "settings-index__item--active [.settings-index_nav_>_&]:[border-color:var(--kc-200)] [.settings-index_nav_>_&]:[background:var(--kc-50)] [.settings-index_nav_>_&]:[color:var(--kc-800)] [.settings-index_nav_>_&_>_span:first-child]:[background:var(--surface-panel)] [.settings-index_nav_>_&_>_span:first-child]:[color:var(--kc-700)] [.settings-index_nav_>_&_>_span:first-child]:[box-shadow:var(--shadow-1)]")}>
-                    <span><Icon size={18} /></span>
-                    <span><strong>{section.label}</strong><small>{section.description}</small></span>
+                  <NavLink
+                    key={section.id}
+                    to={settingsRoute(section.id)}
+                    className={({ isActive }) =>
+                      cx(
+                        "flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border border-transparent p-2 text-left text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-99 lg:min-h-10.5 lg:flex-1 lg:basis-40 lg:p-2 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+                        isActive && "settings-index__item--active border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+                      )
+                    }
+                  >
+                    <span className={cx("grid size-8.5 flex-none place-items-center rounded-lg bg-slate-50 text-slate-500 lg:size-7.5 dark:bg-slate-800 dark:text-slate-400")}>
+                      <Icon size={18} />
+                    </span>
+                    <span className="grid min-w-0">
+                      <strong className="overflow-hidden text-xs text-ellipsis whitespace-nowrap">{section.label}</strong>
+                      <small className="overflow-hidden text-xs text-slate-500 text-ellipsis whitespace-nowrap lg:hidden dark:text-slate-400">{section.description}</small>
+                    </span>
                   </NavLink>
                 );
               })}
             </nav>
           ) : (
-            <div className={cx("settings-index-empty [display:grid] [place-items:center] [gap:0.4rem] [padding:1.75rem_0.75rem] [border:1px_dashed_var(--neutral-300)] [border-radius:var(--radius-lg)] [color:var(--neutral-500)] [text-align:center] [&_svg]:[color:var(--kc-600)] [&_strong]:[color:var(--neutral-800)] [&_strong]:[font-size:0.82rem] [&_p]:[font-size:0.7rem]")}><Search size={22} /><strong>No settings found</strong><p>Try a broader word such as theme, passkey, alert, or setup.</p><Button size="compact" variant="secondary" onClick={() => setQuery("")}>Clear search</Button></div>
+            <div className="settings-index-empty grid place-items-center gap-1.5 rounded-xl border border-dashed border-slate-300 p-7 text-center text-slate-500 dark:border-slate-600 dark:text-slate-400">
+              <Search size={22} className="text-kc-blue-600 dark:text-kc-blue-400" />
+              <strong className="text-sm text-slate-800 dark:text-slate-200">No settings found</strong>
+              <p className="text-xs">Try a broader word such as theme, passkey, alert, or setup.</p>
+              <Button size="compact" variant="secondary" onClick={() => setQuery("")}>Clear search</Button>
+            </div>
           )}
-          <div className={cx("settings-index__account [display:flex] [min-width:0] [align-items:center] [gap:0.55rem] [border-top:1px_solid_var(--neutral-200)] [padding:0.7rem_0.35rem_0.1rem] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_strong]:[overflow:hidden] [&_strong]:[text-overflow:ellipsis] [&_strong]:[white-space:nowrap] [&_span]:[overflow:hidden] [&_span]:[text-overflow:ellipsis] [&_span]:[white-space:nowrap] [&_strong]:[font-size:0.73rem] [&_div_>_span]:[color:var(--neutral-500)] [&_div_>_span]:[font-size:0.62rem] max-[900px]:[display:none]")}><span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px]")}>{user?.initials ?? profile.initials}</span><div><strong>{user?.name ?? profile.name}</strong><span>{user?.roleLabel ?? profile.label}</span></div></div>
+          <div className="settings-index__account hidden min-w-0 items-center gap-2 border-t border-slate-200 px-1.5 pt-2.5 lg:flex dark:border-slate-700">
+            <span className="avatar inline-grid size-9.5 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">
+              {user?.initials ?? profile.initials}
+            </span>
+            <div className="grid min-w-0">
+              <strong className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-slate-900 dark:text-slate-100">{user?.name ?? profile.name}</strong>
+              <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-slate-500 dark:text-slate-400">{user?.roleLabel ?? profile.label}</span>
+            </div>
+          </div>
         </aside>
-        <div className={cx("settings-content [min-width:0] [display:grid] [grid-template-columns:minmax(0,_1fr)] [gap:0.85rem]")}>
+        <div className="settings-content grid min-w-0 flex-1 gap-3.5">
           <Outlet />
         </div>
       </div>
@@ -144,14 +232,50 @@ export function AccountSettings() {
   const { profile } = useGuidedSetup();
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Account and access" description="Your signed-in account controls your role, work scope, and protected permissions." actions={<span className={cx("managed-badge [display:inline-flex] [flex:0_0_auto] [align-items:center] [gap:0.32rem] [border-radius:999px] [padding:0.32rem_0.55rem] [font-size:0.64rem] [font-weight:700] [margin-left:auto] [background:var(--neutral-100)] [color:var(--neutral-600)] max-[620px]:[margin-left:0]")}><LockKeyhole size={14} /> Organization managed</span>} />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]")}>
-        <div className={cx("settings-identity [display:grid] [grid-template-columns:auto_minmax(120px,_0.7fr)_minmax(200px,_1.3fr)] [align-items:center] [gap:0.9rem] [border-radius:14px] [background:var(--neutral-25)] [padding:0.9rem] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_>_div_strong]:[font-size:0.88rem] [&_>_div_a]:[overflow:hidden] [&_>_div_a]:[color:var(--neutral-500)] [&_>_div_a]:[font-size:0.72rem] [&_>_div_a]:[text-overflow:ellipsis] [&_dl]:[display:grid] [&_dl]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] [&_dl]:[gap:0.65rem] [&_dl]:[margin:0] [&_dl_>_div]:[display:grid] [&_dl_>_div]:[gap:0.12rem] [&_dl_>_div]:[border-left:1px_solid_var(--neutral-200)] [&_dl_>_div]:[padding-left:0.8rem] [&_dt]:[color:var(--neutral-500)] [&_dt]:[font-size:0.65rem] [&_dd]:[margin:0] [&_dd]:[color:var(--neutral-800)] [&_dd]:[font-size:0.76rem] [&_dd]:[font-weight:650] max-[900px]:[grid-template-columns:auto_1fr] max-[900px]:[&_dl]:[grid-column:1_/_-1] max-[620px]:[grid-template-columns:auto_1fr] max-[620px]:[padding:0.75rem] max-[620px]:[&_dl]:[grid-template-columns:1fr] max-[620px]:[&_dl_>_div]:[border-top:1px_solid_var(--neutral-200)] max-[620px]:[&_dl_>_div]:[border-left:0] max-[620px]:[&_dl_>_div]:[padding-top:0.55rem] max-[620px]:[&_dl_>_div]:[padding-left:0] settings-identity--expanded [grid-template-columns:auto_minmax(120px,_0.65fr)_minmax(200px,_1.35fr)] [border:1px_solid_var(--neutral-200)] max-[900px]:[grid-template-columns:auto_minmax(0,_1fr)] max-[900px]:[&_dl]:[grid-column:1_/_-1] max-[620px]:[grid-template-columns:auto_minmax(0,_1fr)]")}>
-          <span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px] avatar--large [width:52px]! [height:52px]! [font-size:0.84rem]")}>{user?.initials ?? profile.initials}</span>
-          <div><strong>{user?.name ?? profile.name}</strong><a href={`mailto:${user?.email}`}>{user?.email}</a></div>
-          <dl><div><dt>Role</dt><dd>{user?.roleLabel ?? profile.label}</dd></div><div><dt>Authorized scope</dt><dd>{user?.scope ?? profile.scope}</dd></div></dl>
+      <PageHeader
+        eyebrow="Personal workspace"
+        title="Account and access"
+        description="Your signed-in account controls your role, work scope, and protected permissions."
+        actions={
+          <span className="managed-badge inline-flex flex-none items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <LockKeyhole size={14} /> Organization managed
+          </span>
+        }
+      />
+      <section className={settingsCardClass}>
+        <div className="settings-identity grid grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[auto_minmax(120px,0.65fr)_minmax(200px,1.35fr)] dark:border-slate-700 dark:bg-slate-900">
+          <span className="avatar avatar--large inline-grid size-13 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-sm font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">
+            {user?.initials ?? profile.initials}
+          </span>
+          <div className="grid min-w-0">
+            <strong className="text-sm text-slate-900 dark:text-slate-100">{user?.name ?? profile.name}</strong>
+            <a href={`mailto:${user?.email}`} className="overflow-hidden text-xs text-ellipsis text-slate-500 dark:text-slate-400">{user?.email}</a>
+          </div>
+          <dl className="col-span-full m-0 grid grid-cols-1 gap-2.5 sm:col-span-1">
+            <div className="grid gap-0.5 border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3.5 dark:border-slate-700">
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Role</dt>
+              <dd className="m-0 text-sm font-semibold text-slate-800 dark:text-slate-200">{user?.roleLabel ?? profile.label}</dd>
+            </div>
+            <div className="grid gap-0.5 border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3.5 dark:border-slate-700">
+              <dt className="text-xs text-slate-500 dark:text-slate-400">Authorized scope</dt>
+              <dd className="m-0 text-sm font-semibold text-slate-800 dark:text-slate-200">{user?.scope ?? profile.scope}</dd>
+            </div>
+          </dl>
         </div>
-        <div className={cx("access-summary [display:grid] [grid-template-columns:minmax(150px,_0.5fr)_minmax(0,_1.5fr)] [align-items:start] [gap:1rem] [border-top:1px_solid_var(--neutral-200)] [padding-top:0.95rem] [&_>_div]:[display:grid] [&_>_div_strong]:[font-size:0.78rem] [&_>_div_span]:[color:var(--neutral-500)] [&_>_div_span]:[font-size:0.66rem] [&_ul]:[display:grid] [&_ul]:[grid-template-columns:repeat(3,_minmax(0,_1fr))] [&_ul]:[gap:0.55rem] [&_ul]:[margin:0] [&_ul]:[padding:0] [&_ul]:[list-style:none] [&_li]:[display:flex] [&_li]:[align-items:flex-start] [&_li]:[gap:0.4rem] [&_li]:[border-radius:10px] [&_li]:[background:var(--neutral-25)] [&_li]:[color:var(--neutral-700)] [&_li]:[padding:0.65rem] [&_li]:[font-size:0.69rem] [&_li]:[line-height:1.4] [&_li_svg]:[flex:0_0_auto] [&_li_svg]:[color:var(--success)] max-[1180px]:[grid-template-columns:1fr] max-[1180px]:[&_ul]:[grid-template-columns:1fr] max-[620px]:[&_li]:[padding:0.6rem]")}><div><strong>What you can do</strong><span>Based on your current role</span></div><ul>{roleCapabilities[profile.id].map((capability) => <li key={capability}><Check size={16} />{capability}</li>)}</ul></div>
+        <div className="access-summary grid grid-cols-1 items-start gap-4 border-t border-slate-200 pt-4 lg:grid-cols-[minmax(150px,0.5fr)_minmax(0,1.5fr)] dark:border-slate-700">
+          <div className="grid gap-0.5">
+            <strong className="text-sm text-slate-900 dark:text-slate-100">What you can do</strong>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Based on your current role</span>
+          </div>
+          <ul className="m-0 grid grid-cols-1 gap-2 p-0 sm:grid-cols-3">
+            {roleCapabilities[profile.id].map((capability) => (
+              <li key={capability} className="flex items-start gap-1.5 rounded-lg bg-slate-50 p-2.5 text-xs leading-snug text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Check size={16} className="flex-none text-emerald-700 dark:text-emerald-400" />
+                {capability}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
     </>
   );
@@ -161,11 +285,53 @@ export function AppearanceSettings() {
   const { preference, resolvedTheme } = useTheme();
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Appearance" description="Choose how the application looks without changing your work." actions={<small className={cx("settings-page-state [color:var(--neutral-500)] [font-size:0.68rem]")}>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>} />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]")}>
-        <div className={cx("appearance-setting [display:grid] [gap:0.65rem] [.appearance-setting_+_&]:[border-top:1px_solid_var(--neutral-200)] [.appearance-setting_+_&]:[padding-top:1rem]")}><div className={cx("setting-subheading [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [&_>_div]:[display:grid] [&_strong]:[font-size:0.78rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.66rem] [&_span]:[line-height:1.4] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[line-height:1.4] max-[620px]:[flex-direction:column] max-[620px]:[gap:0.3rem]")}><div><strong>Color theme</strong><span>System follows this device and updates automatically.</span></div></div><ThemeSelector /></div>
-        <div className={cx("appearance-setting [display:grid] [gap:0.65rem] [.appearance-setting_+_&]:[border-top:1px_solid_var(--neutral-200)] [.appearance-setting_+_&]:[padding-top:1rem]")}><div className={cx("setting-subheading [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [&_>_div]:[display:grid] [&_strong]:[font-size:0.78rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.66rem] [&_span]:[line-height:1.4] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[line-height:1.4] max-[620px]:[flex-direction:column] max-[620px]:[gap:0.3rem]")}><div><strong>Accent colour</strong><span>Applies to buttons, links, and highlights in both light and dark themes.</span></div></div><AccentSelector /></div>
-        <div className={cx("appearance-preview [position:relative] [display:grid] [min-height:126px] [grid-template-columns:68px_minmax(0,_1fr)] [overflow:hidden] [border:1px_solid_var(--neutral-200)] [border-radius:14px] [background:var(--neutral-25)] [&_>_small]:[position:absolute] [&_>_small]:[right:0.65rem] [&_>_small]:[bottom:0.45rem] [&_>_small]:[color:var(--neutral-500)] [&_>_small]:[font-size:0.58rem] max-[620px]:[min-height:110px] max-[620px]:[grid-template-columns:52px_minmax(0,_1fr)]")} aria-label={`${resolvedTheme} theme preview`}><div className={cx("appearance-preview__rail [display:grid] [align-content:start] [gap:0.45rem] [background:var(--nav-background)] [padding:0.85rem_0.65rem] [&_span]:[height:11px] [&_span]:[border-radius:5px] [&_span]:[background:var(--nav-hover)] [&_span:first-child]:[width:72%] [&_span:first-child]:[background:var(--nav-accent)] [&_span:first-child]:[opacity:0.42]")}><span /><span /><span /></div><div className={cx("appearance-preview__body [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [align-content:start] [gap:0.55rem] [padding:0.85rem] [&_>_span]:[height:12px] [&_>_span]:[grid-column:1_/_-1] [&_>_span]:[border-radius:5px] [&_>_span]:[background:var(--neutral-200)] [&_>_div]:[display:grid] [&_>_div]:[gap:0.35rem] [&_>_div]:[border:1px_solid_var(--neutral-200)] [&_>_div]:[border-radius:9px] [&_>_div]:[background:var(--surface-panel)] [&_>_div]:[padding:0.6rem] [&_div_>_span]:[height:8px] [&_div_>_span]:[border-radius:4px] [&_div_>_span]:[background:var(--neutral-200)] [&_div_>_span:first-child]:[width:55%] [&_div_>_span:first-child]:[background:var(--kc-300)]")}><span /><div><span /><span /></div><div><span /><span /></div></div><small>Live {resolvedTheme} preview</small></div>
+      <PageHeader
+        eyebrow="Personal workspace"
+        title="Appearance"
+        description="Choose how the application looks without changing your work."
+        actions={<small className="settings-page-state text-xs text-slate-500 dark:text-slate-400">{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>}
+      />
+      <section className={settingsCardClass}>
+        <div className="appearance-setting grid gap-2.5 not-first:border-t not-first:border-slate-200 not-first:pt-4 dark:not-first:border-slate-700">
+          <div className={settingSubheadingClass}>
+            <div className="grid gap-0.5">
+              <strong className={settingSubheadingLabelClass}>Color theme</strong>
+              <span className={settingSubheadingHintClass}>System follows this device and updates automatically.</span>
+            </div>
+          </div>
+          <ThemeSelector />
+        </div>
+        <div className="appearance-setting grid gap-2.5 not-first:border-t not-first:border-slate-200 not-first:pt-4 dark:not-first:border-slate-700">
+          <div className={settingSubheadingClass}>
+            <div className="grid gap-0.5">
+              <strong className={settingSubheadingLabelClass}>Accent colour</strong>
+              <span className={settingSubheadingHintClass}>Applies to buttons, links, and highlights in both light and dark themes.</span>
+            </div>
+          </div>
+          <AccentSelector />
+        </div>
+        <div
+          className="appearance-preview relative grid min-h-27.5 grid-cols-[52px_1fr] overflow-hidden rounded-2xl border border-slate-200 sm:min-h-31.5 sm:grid-cols-[68px_1fr] dark:border-slate-700"
+          aria-label={`${resolvedTheme} theme preview`}
+        >
+          <div className="appearance-preview__rail grid content-start gap-2 p-2.5" style={{ background: "var(--nav-background)" }}>
+            <span className="h-2.75 w-9 rounded-md opacity-42" style={{ background: "var(--nav-accent)" }} />
+            <span className="h-2.75 rounded-md" style={{ background: "var(--nav-hover)" }} />
+            <span className="h-2.75 rounded-md" style={{ background: "var(--nav-hover)" }} />
+          </div>
+          <div className="appearance-preview__body grid grid-cols-2 content-start gap-2 bg-slate-50 p-3 dark:bg-slate-900">
+            <span className="col-span-full h-3 rounded-md bg-slate-200 dark:bg-slate-700" />
+            <div className="grid gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-800">
+              <span className="h-2 w-1/2 rounded bg-kc-blue-300 dark:bg-kc-blue-700" />
+              <span className="h-2 rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+            <div className="grid gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-800">
+              <span className="h-2 w-1/2 rounded bg-kc-blue-300 dark:bg-kc-blue-700" />
+              <span className="h-2 rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+          </div>
+          <small className="absolute right-2.5 bottom-2 text-xs text-slate-500 dark:text-slate-400">Live {resolvedTheme} preview</small>
+        </div>
       </section>
     </>
   );
@@ -183,16 +349,46 @@ export function NotificationsSettings() {
 
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Notifications" description="Choose which work changes should reach you and how often summaries are prepared." actions={savedAt && <span className={cx("settings-saved [display:inline-flex] [align-items:center] [gap:0.35rem] [border-radius:999px] [background:var(--success-surface)] [color:var(--success)] [padding:0.38rem_0.6rem] [font-size:0.7rem] [font-weight:700]")} role="status"><Check size={16} /> Preferences saved</span>} />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]")}>
-        <div className={cx("preference-list [display:grid] [border:1px_solid_var(--neutral-200)] [border-radius:14px] [overflow:hidden]")}>
+      <PageHeader
+        eyebrow="Personal workspace"
+        title="Notifications"
+        description="Choose which work changes should reach you and how often summaries are prepared."
+        actions={
+          savedAt && (
+            <span className="settings-saved inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" role="status">
+              <Check size={16} /> Preferences saved
+            </span>
+          )
+        }
+      />
+      <section className={settingsCardClass}>
+        <div className="preference-list grid divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
           <SettingToggle checked={notifications.assessmentReminders} label="Assessment reminders" description="Remind me when assigned assessment work remains incomplete." onChange={(checked) => saveNotifications({ ...notifications, assessmentReminders: checked })} />
           <SettingToggle checked={notifications.correctiveActionAlerts} label="Corrective-action alerts" description="Notify me when required action details change or need attention." onChange={(checked) => saveNotifications({ ...notifications, correctiveActionAlerts: checked })} />
           <SettingToggle checked={notifications.assignmentChanges} label="Owner assignment changes" description="Notify me when Primary or Backup Owner responsibility changes." onChange={(checked) => saveNotifications({ ...notifications, assignmentChanges: checked })} />
           <SettingToggle checked={notifications.summaryEnabled} label="Work summary" description="Prepare a digest of assessment progress, gaps, and assigned actions." onChange={(checked) => saveNotifications({ ...notifications, summaryEnabled: checked })} />
           <SettingToggle checked={notifications.productGuidance} label="Product guidance" description="Show occasional guidance when important workflow capabilities change." onChange={(checked) => saveNotifications({ ...notifications, productGuidance: checked })} />
         </div>
-        <label className={cx("frequency-setting [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:12px] [background:var(--neutral-25)] [padding:0.7rem_0.85rem] [&_>_span]:[display:grid] [&_strong]:[font-size:0.75rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.64rem] [&_select]:[min-width:140px] [&_select]:[min-height:40px] [&_select]:[border:1px_solid_var(--neutral-300)] [&_select]:[border-radius:10px] [&_select]:[background:var(--surface-input)] [&_select]:[color:var(--neutral-800)] [&_select]:[padding:0.45rem_0.7rem] [&_select]:[font-size:0.74rem] max-[620px]:[align-items:stretch] max-[620px]:[flex-direction:column] max-[620px]:[&_select]:[width:100%]", !notifications.summaryEnabled && "frequency-setting--disabled [opacity:0.58]")}><span><strong>Summary frequency</strong><small>Applies when Work summary is enabled.</small></span><select value={notifications.summaryFrequency} disabled={!notifications.summaryEnabled} onChange={(event) => saveNotifications({ ...notifications, summaryFrequency: event.target.value as NotificationPreferences["summaryFrequency"] })}><option value="daily">Daily</option><option value="weekly">Weekly</option></select></label>
+        <label
+          className={cx(
+            "frequency-setting flex flex-col items-stretch justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center dark:border-slate-700 dark:bg-slate-900",
+            !notifications.summaryEnabled && "frequency-setting--disabled opacity-58",
+          )}
+        >
+          <span className="grid">
+            <strong className="text-sm text-slate-900 dark:text-slate-100">Summary frequency</strong>
+            <small className="text-xs text-slate-500 dark:text-slate-400">Applies when Work summary is enabled.</small>
+          </span>
+          <select
+            className="min-h-10 min-w-35 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 sm:w-auto dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+            value={notifications.summaryFrequency}
+            disabled={!notifications.summaryEnabled}
+            onChange={(event) => saveNotifications({ ...notifications, summaryFrequency: event.target.value as NotificationPreferences["summaryFrequency"] })}
+          >
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </label>
         <InlineMessage tone="info" title="Delivery connection">Preferences are saved now. Email and enterprise delivery begin when the organization notification service is connected.</InlineMessage>
       </section>
     </>
@@ -212,6 +408,7 @@ export function SecuritySettings() {
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [platformAuthenticator, setPlatformAuthenticator] = useState<boolean | null>(null);
   const passkeyNameRef = useRef<HTMLInputElement>(null);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const userPasskeys = passkeys.filter((item) => item.userId === user?.id);
   const passkeySupported = window.isSecureContext && "PublicKeyCredential" in window;
@@ -229,6 +426,15 @@ export function SecuritySettings() {
     const timer = window.setTimeout(() => passkeyNameRef.current?.focus(), 280);
     return () => window.clearTimeout(timer);
   }, [passkeySetupRequested]);
+
+  useEffect(() => {
+    if (searchParams.get("setup") === "password") {
+      setChangePasswordOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+    // Only reacts to the deep link that opens this dialog, not to setSearchParams changing identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function addPasskey(event: FormEvent) {
     event.preventDefault();
@@ -267,33 +473,162 @@ export function SecuritySettings() {
 
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Security" description="Manage passwordless sign-in and review the device using your current session." actions={<span className={cx(passkeySupported ? "capability [.settings-card__heading_>_&]:[margin-left:auto] [display:inline-flex] [flex:0_0_auto] [align-items:center] [gap:0.3rem] [border-radius:999px] [padding:0.3rem_0.5rem] [font-size:0.65rem] [font-weight:700] max-[620px]:[.settings-card__heading_>_&]:[margin-left:0] capability--ready [background:var(--success-surface)] [color:var(--success)]" : "capability [.settings-card__heading_>_&]:[margin-left:auto] [display:inline-flex] [flex:0_0_auto] [align-items:center] [gap:0.3rem] [border-radius:999px] [padding:0.3rem_0.5rem] [font-size:0.65rem] [font-weight:700] max-[620px]:[.settings-card__heading_>_&]:[margin-left:0] capability--unavailable [background:var(--warning-surface)] [color:var(--warning)]")}><ShieldCheck size={15} />{passkeySupported ? "Secure connection" : "Unavailable"}</span>} />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]", passkeySetupRequested && "settings-card--attention [border-color:var(--kc-500)] [box-shadow:0_0_0_3px_var(--kc-100),_var(--shadow-2)] [animation:passkey-attention_900ms_ease-out]")}>
-        {passkeySetupRequested && <InlineMessage tone={passkeySupported ? "info" : "warning"} title={passkeySupported ? "Finish setting up your passkey" : "Passkeys are unavailable here"}><div className={cx("passkey-setup-message [display:flex] [align-items:center] [justify-content:space-between] [gap:0.75rem] [&_>_span]:[color:var(--neutral-700)] [&_>_span]:[font-size:0.72rem] [&_>_span]:[line-height:1.5] max-[620px]:[align-items:flex-start] max-[620px]:[flex-direction:column]")}><span>{passkeySupported ? "Name this passkey, choose Add a passkey, and follow your device prompt. If device verification is not configured, the prompt will show other choices or guide you through setup." : "Use a supported browser on a secure connection, or continue signing in with your password."}</span><Button size="compact" variant="tertiary" onClick={() => setSearchParams({}, { replace: true })}>Maybe later</Button></div></InlineMessage>}
-        <div className={cx("security-subsection [display:grid] [gap:0.75rem] [.security-subsection_+_&]:[border-top:1px_solid_var(--neutral-200)] [.security-subsection_+_&]:[padding-top:1rem]")}><div className={cx("setting-subheading [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [&_>_div]:[display:grid] [&_strong]:[font-size:0.78rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.66rem] [&_span]:[line-height:1.4] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[line-height:1.4] max-[620px]:[flex-direction:column] max-[620px]:[gap:0.3rem]")}><div><strong>Passkeys</strong><span>Use device unlock, biometrics, a phone, or a security key.</span></div><span className={cx("device-readiness [display:inline-flex] [flex:0_0_auto] [align-items:center] [gap:0.32rem] [border-radius:999px] [padding:0.32rem_0.55rem] [font-size:0.64rem] [font-weight:700] [background:var(--kc-50)] [color:var(--kc-700)]! max-[620px]:[width:fit-content]")}><MonitorSmartphone size={16} />{platformAuthenticator === null ? "Checking this device" : platformAuthenticator ? "Built-in verification available" : "Phone or security key available"}</span></div>
-          <div className={cx("passkey-layout [display:grid] [grid-template-columns:minmax(260px,_0.72fr)_minmax(360px,_1.28fr)] [gap:0.9rem] max-[900px]:[grid-template-columns:1fr]")}>
-            <form className={cx("passkey-add [display:grid] [align-content:start] [gap:0.65rem] [border:1px_solid_var(--neutral-200)] [border-radius:14px] [background:var(--neutral-25)] [padding:0.85rem] [&_>_small]:[color:var(--neutral-500)] [&_>_small]:[font-size:0.65rem] [&_>_small]:[line-height:1.45]")} onSubmit={addPasskey}>
-              <label className={cx("auth-field [display:grid] [gap:0.38rem] [color:var(--neutral-700)] [font-size:0.74rem] [font-weight:650] [&_input]:[width:100%] [&_input]:[min-width:0] [&_input]:[min-height:44px] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:10px] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.78rem] [&_input]:[font-size:0.84rem] [&_input]:[font-weight:450] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input:focus]:[border-color:var(--kc-500)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input::placeholder]:[color:var(--neutral-400)]")}><span>Passkey name</span><input ref={passkeyNameRef} value={passkeyName} onChange={(event) => setPasskeyName(event.target.value)} maxLength={40} placeholder="For example, work laptop" required /></label>
+      <PageHeader
+        eyebrow="Personal workspace"
+        title="Security"
+        description="Manage passwordless sign-in and review the device using your current session."
+        actions={
+          <span
+            className={cx(
+              statusPillBaseClass,
+              passkeySupported ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+            )}
+          >
+            <ShieldCheck size={15} />{passkeySupported ? "Secure connection" : "Unavailable"}
+          </span>
+        }
+      />
+      <section className={cx(settingsCardClass, passkeySetupRequested && "settings-card--attention border-kc-blue-500 ring-3 ring-kc-blue-100 animate-passkey-attention dark:ring-kc-blue-900")}>
+        {passkeySetupRequested && (
+          <InlineMessage tone={passkeySupported ? "info" : "warning"} title={passkeySupported ? "Finish setting up your passkey" : "Passkeys are unavailable here"}>
+            <div className="passkey-setup-message flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+              <span className="text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                {passkeySupported
+                  ? "Name this passkey, choose Add a passkey, and follow your device prompt. If device verification is not configured, the prompt will show other choices or guide you through setup."
+                  : "Use a supported browser on a secure connection, or continue signing in with your password."}
+              </span>
+              <Button size="compact" variant="tertiary" onClick={() => setSearchParams({}, { replace: true })}>Maybe later</Button>
+            </div>
+          </InlineMessage>
+        )}
+        <div className="security-subsection grid gap-3 not-first:border-t not-first:border-slate-200 not-first:pt-4 dark:not-first:border-slate-700">
+          <div className={settingSubheadingClass}>
+            <div className="grid gap-0.5">
+              <strong className={settingSubheadingLabelClass}>Passkeys</strong>
+              <span className={settingSubheadingHintClass}>Use device unlock, biometrics, a phone, or a security key.</span>
+            </div>
+            <span className="device-readiness inline-flex w-fit flex-none items-center gap-1.5 rounded-full bg-kc-blue-50 px-2.5 py-1.5 text-xs font-bold text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300">
+              <MonitorSmartphone size={16} />
+              {platformAuthenticator === null ? "Checking this device" : platformAuthenticator ? "Built-in verification available" : "Phone or security key available"}
+            </span>
+          </div>
+          <div className="passkey-layout grid grid-cols-1 gap-3.5 lg:grid-cols-[minmax(260px,0.72fr)_minmax(360px,1.28fr)]">
+            <form className="passkey-add grid content-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900" onSubmit={addPasskey}>
+              <label className="auth-field grid gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <span>Passkey name</span>
+                <input
+                  className="w-full min-w-0 min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 transition-colors outline-none placeholder:text-slate-400 focus:border-kc-blue-500 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                  ref={passkeyNameRef}
+                  value={passkeyName}
+                  onChange={(event) => setPasskeyName(event.target.value)}
+                  maxLength={40}
+                  placeholder="For example, work laptop"
+                  required
+                />
+              </label>
               <Button type="submit" variant="primary" icon={<Plus size={18} />} disabled={pending || !passkeySupported}>{pending ? "Follow your device prompt…" : "Add a passkey"}</Button>
-              <small>Your device controls the private credential. Production verification is completed by the organization authentication service.</small>
+              <small className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Your device controls the private credential. Production verification is completed by the organization authentication service.</small>
             </form>
-            <div className={cx("passkey-list [display:grid] [align-content:start] [gap:0.5rem]")} aria-label="Registered passkeys">
-              {userPasskeys.length === 0 ? <div className={cx("passkey-empty [display:grid] [min-height:154px] [place-items:center] [align-content:center] [gap:0.3rem] [border:1px_dashed_var(--neutral-300)] [border-radius:14px] [color:var(--neutral-500)] [text-align:center] [&_svg]:[color:var(--kc-600)] [&_strong]:[color:var(--neutral-700)] [&_strong]:[font-size:0.78rem] [&_span]:[font-size:0.68rem]")}><KeyRound size={24} /><strong>No passkeys added</strong><span>Add one to enable faster sign-in on this browser.</span></div> : userPasskeys.map((item) => (
-                <article className={cx("passkey-item [display:grid] [min-width:0] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:center] [gap:0.65rem] [border:1px_solid_var(--neutral-200)] [border-radius:13px] [background:var(--surface-panel)] [padding:0.7rem] max-[620px]:[grid-template-columns:auto_minmax(0,_1fr)]")} key={item.id}>
-                  <span className={cx("passkey-item__icon [display:grid] [width:40px] [height:40px] [place-items:center] [border-radius:11px] [background:var(--kc-50)] [color:var(--kc-700)]")}><KeyRound size={19} /></span>
-                  {editingId === item.id ? <div className={cx("passkey-rename [&_input]:[width:100%] [&_input]:[min-width:0] [&_input]:[min-height:38px] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:10px] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.78rem] [&_input]:[font-size:0.84rem] [&_input]:[font-weight:450] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input:focus]:[border-color:var(--kc-500)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [display:flex] [min-width:0] [align-items:center] [gap:0.35rem] max-[620px]:[grid-column:2] max-[620px]:[flex-wrap:wrap]")}><input aria-label="New passkey name" value={editingName} onChange={(event) => setEditingName(event.target.value)} maxLength={40} autoFocus /><Button size="compact" variant="primary" icon={<Check size={16} />} onClick={() => saveRename(item.id)} disabled={!editingName.trim()}>Save</Button><IconButton label="Cancel rename" onClick={() => setEditingId(null)}><X size={17} /></IconButton></div> : <div className={cx("passkey-item__copy [display:grid] [min-width:0] [&_strong]:[font-size:0.78rem] [&_span]:[overflow:hidden] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.65rem] [&_span]:[text-overflow:ellipsis] [&_span]:[white-space:nowrap]")}><strong>{item.name}</strong><span>Added {formatDate(item.createdAt)}{item.lastUsedAt ? ` · Last used ${formatDate(item.lastUsedAt)}` : ""}</span></div>}
-                  {editingId !== item.id && <div className={cx("passkey-item__actions [display:flex] max-[620px]:[grid-column:2] max-[620px]:[justify-self:start]")}><IconButton label={`Rename ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); }}><Pencil size={17} /></IconButton><IconButton label={`Remove ${item.name}`} onClick={() => setRemovingId(item.id)}><Trash2 size={17} /></IconButton></div>}
-                </article>
-              ))}
+            <div className="passkey-list grid content-start gap-2" aria-label="Registered passkeys">
+              {userPasskeys.length === 0 ? (
+                <div className="passkey-empty grid min-h-38.5 place-items-center content-center gap-1.5 rounded-2xl border border-dashed border-slate-300 text-center text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                  <KeyRound size={24} className="text-kc-blue-600 dark:text-kc-blue-400" />
+                  <strong className="text-sm text-slate-700 dark:text-slate-300">No passkeys added</strong>
+                  <span className="text-xs">Add one to enable faster sign-in on this browser.</span>
+                </div>
+              ) : (
+                userPasskeys.map((item) => (
+                  <article className="passkey-item grid min-w-0 grid-cols-[auto_1fr] items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] dark:border-slate-700 dark:bg-slate-900" key={item.id}>
+                    <span className="passkey-item__icon grid size-10 place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300">
+                      <KeyRound size={19} />
+                    </span>
+                    {editingId === item.id ? (
+                      <div className="passkey-rename col-span-2 flex min-w-0 flex-wrap items-center gap-2 sm:col-span-1 sm:flex-nowrap">
+                        <input
+                          className="min-h-9.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 transition-colors outline-none focus:border-kc-blue-500 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                          aria-label="New passkey name"
+                          value={editingName}
+                          onChange={(event) => setEditingName(event.target.value)}
+                          maxLength={40}
+                          autoFocus
+                        />
+                        <Button size="compact" variant="primary" icon={<Check size={16} />} onClick={() => saveRename(item.id)} disabled={!editingName.trim()}>Save</Button>
+                        <IconButton label="Cancel rename" onClick={() => setEditingId(null)}><X size={17} /></IconButton>
+                      </div>
+                    ) : (
+                      <div className="passkey-item__copy grid min-w-0">
+                        <strong className="text-sm text-slate-900 dark:text-slate-100">{item.name}</strong>
+                        <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-slate-500 dark:text-slate-400">
+                          Added {formatDate(item.createdAt)}{item.lastUsedAt ? ` · Last used ${formatDate(item.lastUsedAt)}` : ""}
+                        </span>
+                      </div>
+                    )}
+                    {editingId !== item.id && (
+                      <div className="passkey-item__actions flex justify-self-start sm:col-span-1">
+                        <IconButton label={`Rename ${item.name}`} onClick={() => { setEditingId(item.id); setEditingName(item.name); }}><Pencil size={17} /></IconButton>
+                        <IconButton label={`Remove ${item.name}`} onClick={() => setRemovingId(item.id)}><Trash2 size={17} /></IconButton>
+                      </div>
+                    )}
+                  </article>
+                ))
+              )}
             </div>
           </div>
           {message && <InlineMessage tone={message.tone} title={message.title}>{message.detail}</InlineMessage>}
         </div>
-        <div className={cx("security-subsection [display:grid] [gap:0.75rem] [.security-subsection_+_&]:[border-top:1px_solid_var(--neutral-200)] [.security-subsection_+_&]:[padding-top:1rem] session-panel [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:center] [gap:0.75rem] [&_>_div:nth-child(2)]:[display:grid] [&_strong]:[font-size:0.77rem] [&_>_div:nth-child(2)_span]:[color:var(--neutral-500)] [&_>_div:nth-child(2)_span]:[font-size:0.65rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.65rem] [&_small]:[display:flex] [&_small]:[align-items:center] [&_small]:[gap:0.32rem] max-[620px]:[grid-template-columns:auto_minmax(0,_1fr)]")}><div className={cx("session-panel__icon [display:grid] [width:44px] [height:44px] [place-items:center] [border-radius:12px] [background:var(--neutral-100)] [color:var(--neutral-700)]")}><Laptop size={21} /></div><div><strong>Current session</strong><span>{deviceDescription()}</span><small><span className={cx("session-live-dot [width:7px] [height:7px] [border-radius:50%] [background:var(--success-solid)] [box-shadow:0_0_0_3px_var(--success-surface)]")} /> Active now · {window.isSecureContext ? "Secure connection" : "Connection needs attention"}</small></div><Button variant="danger" icon={<LogOut size={18} />} onClick={() => setSignOutOpen(true)}>Sign out</Button></div>
+        <div className="security-subsection flex flex-col items-start justify-between gap-3 not-first:border-t not-first:border-slate-200 not-first:pt-4 sm:flex-row sm:items-center dark:not-first:border-slate-700">
+          <div className="grid gap-0.5">
+            <strong className={settingSubheadingLabelClass}>Password</strong>
+            <span className={settingSubheadingHintClass}>Change the password used to sign in with your work email.</span>
+          </div>
+          <Button variant="secondary" icon={<KeyRound size={17} />} onClick={() => setChangePasswordOpen(true)}>Change password</Button>
+        </div>
+        <div className="security-subsection session-panel grid grid-cols-[auto_1fr] items-center gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] dark:border-slate-700">
+          <div className="session-panel__icon grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <Laptop size={21} />
+          </div>
+          <div className="grid">
+            <strong className="text-sm text-slate-900 dark:text-slate-100">Current session</strong>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{deviceDescription()}</span>
+            <small className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="size-1.75 rounded-full bg-emerald-500 ring-3 ring-emerald-50 dark:ring-emerald-950" /> Active now · {window.isSecureContext ? "Secure connection" : "Connection needs attention"}
+            </small>
+          </div>
+          <Button variant="danger" icon={<LogOut size={18} />} onClick={() => setSignOutOpen(true)}>Sign out</Button>
+        </div>
       </section>
 
-      {removingId && <ConfirmDialog eyebrow="Passkey security" title="Remove this passkey?" body="You will no longer be able to select this credential when signing in to this application." confirmLabel="Remove passkey" cancelLabel="Keep passkey" onCancel={() => setRemovingId(null)} onConfirm={confirmRemove} />}
-      {signOutOpen && <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")}><button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Cancel sign out" onClick={() => setSignOutOpen(false)} /><section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out] dialog--compact [width:min(470px,_calc(100%_-_2rem))]")} role="alertdialog" aria-modal="true" aria-labelledby="settings-signout-title"><div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Current session</p><h2 id="settings-signout-title">Sign out of this device?</h2></div><IconButton label="Cancel sign out" onClick={() => setSignOutOpen(false)}><X size={20} /></IconButton></div><p className={cx("dialog-context [margin:1rem_1.1rem_0] [border-left:3px_solid_var(--kc-500)] [color:var(--neutral-700)] [padding:0.25rem_0_0.25rem_0.75rem] [font-size:0.82rem]")}>Saved work remains available. You will need your password or passkey to return.</p><div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={() => setSignOutOpen(false)}>Stay signed in</Button><Button variant="danger" icon={<LogOut size={17} />} onClick={confirmSignOut}>Sign out</Button></div></section></div>}
+      {removingId && (
+        <ConfirmDialog
+          eyebrow="Passkey security"
+          title="Remove this passkey?"
+          body="You will no longer be able to select this credential when signing in to this application."
+          confirmLabel="Remove passkey"
+          cancelLabel="Keep passkey"
+          onCancel={() => setRemovingId(null)}
+          onConfirm={confirmRemove}
+        />
+      )}
+      {signOutOpen && (
+        <div className={dialogLayerClass}>
+          <button className={dialogBackdropClass} aria-label="Cancel sign out" onClick={() => setSignOutOpen(false)} />
+          <section className={dialogClass} role="alertdialog" aria-modal="true" aria-labelledby="settings-signout-title">
+            <div className={dialogHeaderClass}>
+              <div>
+                <p className={dialogTitleEyebrowClass}>Current session</p>
+                <h2 id="settings-signout-title" className={dialogTitleClass}>Sign out of this device?</h2>
+              </div>
+              <IconButton label="Cancel sign out" onClick={() => setSignOutOpen(false)}><X size={20} /></IconButton>
+            </div>
+            <p className={dialogContextClass}>Saved work remains available. You will need your password or passkey to return.</p>
+            <div className={dialogFooterClass}>
+              <Button variant="tertiary" onClick={() => setSignOutOpen(false)}>Stay signed in</Button>
+              <Button variant="danger" icon={<LogOut size={17} />} onClick={confirmSignOut}>Sign out</Button>
+            </div>
+          </section>
+        </div>
+      )}
+      {changePasswordOpen && <ChangePasswordDialog onClose={() => setChangePasswordOpen(false)} />}
     </>
   );
 }
@@ -309,12 +644,79 @@ export function GuidanceSettings() {
 
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Guided setup" description="Review your assigned journey, continue from saved progress, or start again." actions={<span className={cx("setup-state [display:inline-flex] [flex:0_0_auto] [align-items:center] [gap:0.32rem] [border-radius:999px] [padding:0.32rem_0.55rem] [font-size:0.64rem] [font-weight:700] [margin-left:auto] [background:var(--neutral-100)] [color:var(--neutral-600)] max-[620px]:[margin-left:0]", completed && "setup-state--complete [background:var(--success-surface)] [color:var(--success)]", skipped && "setup-state--paused [background:var(--warning-surface)] [color:var(--warning)]")}>{completed ? "Complete" : skipped ? "Paused" : progress > 0 ? "In progress" : "Not started"}</span>} />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]")}>
-        <div className={cx("setup-progress-card [display:grid] [grid-template-columns:minmax(0,_1fr)_minmax(220px,_0.65fr)] [align-items:center] [gap:1rem] [border:1px_solid_var(--kc-200)] [border-radius:14px] [background:var(--kc-50)] [padding:0.85rem] [&_>_div:first-child]:[display:flex] [&_>_div:first-child]:[align-items:flex-start] [&_>_div:first-child]:[gap:0.65rem] [&_>_div:first-child_>_div]:[display:grid] [&_strong]:[font-size:0.78rem] [&_span]:[color:var(--neutral-600)] [&_span]:[font-size:0.66rem] [&_span]:[line-height:1.4] max-[900px]:[grid-template-columns:1fr] max-[620px]:[padding:0.75rem]")}><div><span className={cx("setup-progress-card__icon [display:grid] [width:42px] [height:42px] [flex:0_0_42px] [place-items:center] [border-radius:12px] [background:var(--surface-panel)] [color:var(--kc-700)] [box-shadow:var(--shadow-1)]")}><BookOpen size={22} /></span><div><strong>{profile.label} journey</strong><span>{profile.description}</span></div></div><ProgressBar value={Math.round((progress / totalSteps) * 100)} label={`${progress} of ${totalSteps} steps`} /></div>
-        <div className={cx("setup-action-grid [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:0.65rem] [&_>_button]:[display:flex] [&_>_button]:[min-width:0] [&_>_button]:[min-height:96px] [&_>_button]:[align-items:flex-start] [&_>_button]:[gap:0.6rem] [&_>_button]:[border:1px_solid_var(--neutral-200)] [&_>_button]:[border-radius:13px] [&_>_button]:[background:var(--surface-panel)] [&_>_button]:[color:var(--neutral-700)] [&_>_button]:[padding:0.75rem] [&_>_button]:[text-align:left] [&_>_button]:[transition:border-color_130ms_ease,_background_130ms_ease,_color_130ms_ease,_transform_100ms_ease] [&_>_button:hover]:[border-color:var(--kc-300)] [&_>_button:hover]:[background:var(--kc-50)] [&_>_button:hover]:[color:var(--kc-800)] [&_>_button:hover]:[transform:translateY(-1px)] [&_>_button_>_span]:[display:grid] [&_>_button_>_span]:[width:36px] [&_>_button_>_span]:[height:36px] [&_>_button_>_span]:[flex:0_0_36px] [&_>_button_>_span]:[place-items:center] [&_>_button_>_span]:[border-radius:10px] [&_>_button_>_span]:[background:var(--kc-50)] [&_>_button_>_span]:[color:var(--kc-700)] [&_>_button_>_div]:[display:grid] [&_>_button_>_div]:[gap:0.2rem] [&_strong]:[font-size:0.73rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.64rem] [&_small]:[line-height:1.4] max-[1180px]:[grid-template-columns:1fr] max-[1180px]:[&_>_button]:[min-height:72px] max-[620px]:[grid-template-columns:1fr]")}><button type="button" onClick={() => startTour(profile.id, !skipped)}><span><PlayCircle size={20} /></span><div><strong>{skipped ? "Continue guided setup" : "Replay guided setup"}</strong><small>{skipped ? "Resume from your saved step." : "Start the role journey from step one."}</small></div></button><button type="button" onClick={openHelp}><span><CircleHelp size={20} /></span><div><strong>Open the learning center</strong><small>Review how each authorized user works.</small></div></button><button type="button" onClick={() => setResetOpen(true)}><span><RotateCcw size={20} /></span><div><strong>Reset setup progress</strong><small>Clear completion and begin the welcome experience again.</small></div></button></div>
+      <PageHeader
+        eyebrow="Personal workspace"
+        title="Guided setup"
+        description="Review your assigned journey, continue from saved progress, or start again."
+        actions={
+          <span
+            className={cx(
+              statusPillBaseClass,
+              "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+              completed && "setup-state--complete bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+              skipped && "setup-state--paused bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+            )}
+          >
+            {completed ? "Complete" : skipped ? "Paused" : progress > 0 ? "In progress" : "Not started"}
+          </span>
+        }
+      />
+      <section className={settingsCardClass}>
+        <div className="setup-progress-card grid grid-cols-1 items-center gap-4 rounded-2xl border border-kc-blue-200 bg-kc-blue-50 p-3.5 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.65fr)] dark:border-kc-blue-800 dark:bg-kc-blue-950">
+          <div className="flex items-start gap-2.5">
+            <span className="setup-progress-card__icon grid size-10.5 flex-none place-items-center rounded-xl bg-white text-kc-blue-700 shadow-sm dark:bg-slate-900 dark:text-kc-blue-300">
+              <BookOpen size={22} />
+            </span>
+            <div className="grid">
+              <strong className="text-sm text-slate-900 dark:text-slate-100">{profile.label} journey</strong>
+              <span className="text-xs leading-snug text-slate-600 dark:text-slate-300">{profile.description}</span>
+            </div>
+          </div>
+          <ProgressBar value={Math.round((progress / totalSteps) * 100)} label={`${progress} of ${totalSteps} steps`} />
+        </div>
+        <div className={actionTileGridClass}>
+          <button type="button" className={actionTileClass} onClick={() => startTour(profile.id, !skipped)}>
+            <span className={actionTileIconClass}><PlayCircle size={20} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>{skipped ? "Continue guided setup" : "Replay guided setup"}</strong>
+              <small className={actionTileHintClass}>{skipped ? "Resume from your saved step." : "Start the role journey from step one."}</small>
+            </div>
+          </button>
+          <button type="button" className={actionTileClass} onClick={openHelp}>
+            <span className={actionTileIconClass}><CircleHelp size={20} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>Open the learning center</strong>
+              <small className={actionTileHintClass}>Review how each authorized user works.</small>
+            </div>
+          </button>
+          <button type="button" className={actionTileClass} onClick={() => setResetOpen(true)}>
+            <span className={actionTileIconClass}><RotateCcw size={20} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>Reset setup progress</strong>
+              <small className={actionTileHintClass}>Clear completion and begin the welcome experience again.</small>
+            </div>
+          </button>
+        </div>
       </section>
-      {resetOpen && <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")}><button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Cancel setup reset" onClick={() => setResetOpen(false)} /><section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out] dialog--compact [width:min(470px,_calc(100%_-_2rem))]")} role="alertdialog" aria-modal="true" aria-labelledby="settings-reset-title"><div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Guided setup</p><h2 id="settings-reset-title">Reset your setup progress?</h2></div><IconButton label="Cancel setup reset" onClick={() => setResetOpen(false)}><X size={20} /></IconButton></div><p className={cx("dialog-context [margin:1rem_1.1rem_0] [border-left:3px_solid_var(--kc-500)] [color:var(--neutral-700)] [padding:0.25rem_0_0.25rem_0.75rem] [font-size:0.82rem]")}>Completion and saved step information for {profile.shortLabel.toLowerCase()} will be cleared. Your assessment data and preferences will not change.</p><div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={() => setResetOpen(false)}>Keep progress</Button><Button variant="primary" icon={<RotateCcw size={17} />} onClick={confirmSetupReset}>Reset and restart</Button></div></section></div>}
+      {resetOpen && (
+        <div className={dialogLayerClass}>
+          <button className={dialogBackdropClass} aria-label="Cancel setup reset" onClick={() => setResetOpen(false)} />
+          <section className={dialogClass} role="alertdialog" aria-modal="true" aria-labelledby="settings-reset-title">
+            <div className={dialogHeaderClass}>
+              <div>
+                <p className={dialogTitleEyebrowClass}>Guided setup</p>
+                <h2 id="settings-reset-title" className={dialogTitleClass}>Reset your setup progress?</h2>
+              </div>
+              <IconButton label="Cancel setup reset" onClick={() => setResetOpen(false)}><X size={20} /></IconButton>
+            </div>
+            <p className={dialogContextClass}>Completion and saved step information for {profile.shortLabel.toLowerCase()} will be cleared. Your assessment data and preferences will not change.</p>
+            <div className={dialogFooterClass}>
+              <Button variant="tertiary" onClick={() => setResetOpen(false)}>Keep progress</Button>
+              <Button variant="primary" icon={<RotateCcw size={17} />} onClick={confirmSetupReset}>Reset and restart</Button>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -323,10 +725,38 @@ export function SupportSettings() {
   const { openHelp } = useGuidedSetup();
   return (
     <>
-      <PageHeader eyebrow="Personal workspace" title="Help and support" description="Find workflow guidance or contact the Maitsys Assure support team." />
-      <section className={cx("settings-card [display:grid] [min-width:0] [gap:1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [padding:1.1rem] max-[620px]:[padding:0.9rem]")}>
-        <div className={cx("support-grid [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:0.65rem] [&_>_button]:[display:flex] [&_>_button]:[min-width:0] [&_>_button]:[min-height:96px] [&_>_button]:[align-items:flex-start] [&_>_button]:[gap:0.6rem] [&_>_button]:[border:1px_solid_var(--neutral-200)] [&_>_button]:[border-radius:13px] [&_>_button]:[background:var(--surface-panel)] [&_>_button]:[color:var(--neutral-700)] [&_>_button]:[padding:0.75rem] [&_>_button]:[text-align:left] [&_>_button]:[transition:border-color_130ms_ease,_background_130ms_ease,_color_130ms_ease,_transform_100ms_ease] [&_>_a]:[display:flex] [&_>_a]:[min-width:0] [&_>_a]:[min-height:96px] [&_>_a]:[align-items:flex-start] [&_>_a]:[gap:0.6rem] [&_>_a]:[border:1px_solid_var(--neutral-200)] [&_>_a]:[border-radius:13px] [&_>_a]:[background:var(--surface-panel)] [&_>_a]:[color:var(--neutral-700)] [&_>_a]:[padding:0.75rem] [&_>_a]:[text-align:left] [&_>_a]:[transition:border-color_130ms_ease,_background_130ms_ease,_color_130ms_ease,_transform_100ms_ease] [&_>_article]:[display:flex] [&_>_article]:[min-width:0] [&_>_article]:[min-height:96px] [&_>_article]:[align-items:flex-start] [&_>_article]:[gap:0.6rem] [&_>_article]:[border:1px_solid_var(--neutral-200)] [&_>_article]:[border-radius:13px] [&_>_article]:[background:var(--surface-panel)] [&_>_article]:[color:var(--neutral-700)] [&_>_article]:[padding:0.75rem] [&_>_article]:[text-align:left] [&_>_article]:[transition:border-color_130ms_ease,_background_130ms_ease,_color_130ms_ease,_transform_100ms_ease] [&_>_button:hover]:[border-color:var(--kc-300)] [&_>_button:hover]:[background:var(--kc-50)] [&_>_button:hover]:[color:var(--kc-800)] [&_>_button:hover]:[transform:translateY(-1px)] [&_>_a:hover]:[border-color:var(--kc-300)] [&_>_a:hover]:[background:var(--kc-50)] [&_>_a:hover]:[color:var(--kc-800)] [&_>_a:hover]:[transform:translateY(-1px)] [&_>_*_>_span]:[display:grid] [&_>_*_>_span]:[width:36px] [&_>_*_>_span]:[height:36px] [&_>_*_>_span]:[flex:0_0_36px] [&_>_*_>_span]:[place-items:center] [&_>_*_>_span]:[border-radius:10px] [&_>_*_>_span]:[background:var(--kc-50)] [&_>_*_>_span]:[color:var(--kc-700)] [&_>_*_>_div]:[display:grid] [&_>_*_>_div]:[gap:0.2rem] [&_strong]:[font-size:0.73rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.64rem] [&_small]:[line-height:1.4] max-[1180px]:[grid-template-columns:1fr] max-[1180px]:[&_>_button]:[min-height:72px] max-[1180px]:[&_>_a]:[min-height:72px] max-[1180px]:[&_>_article]:[min-height:72px] max-[620px]:[grid-template-columns:1fr]")}><button type="button" onClick={openHelp}><span><BookOpen size={21} /></span><div><strong>Learning center</strong><small>Open role guidance and replay a walkthrough.</small></div></button><a href="mailto:ehss-support@example.com?subject=Maitsys%20Assure%20application%20support"><span><Mail size={21} /></span><div><strong>Contact support</strong><small>Ask for access, sign-in, or workflow assistance.</small></div></a><article><span><SlidersHorizontal size={21} /></span><div><strong>Application information</strong><small>Maitsys Assure · Phase 1 review build</small></div></article></div>
-        <div className={cx("support-note [display:flex] [align-items:flex-start] [gap:0.6rem] [border-radius:12px] [background:var(--neutral-25)] [color:var(--neutral-600)] [padding:0.75rem] [&_>_svg]:[flex:0_0_auto] [&_>_svg]:[color:var(--kc-700)] [&_>_div]:[display:grid] [&_>_div]:[gap:0.12rem] [&_strong]:[color:var(--neutral-800)] [&_strong]:[font-size:0.72rem] [&_span]:[font-size:0.65rem] [&_span]:[line-height:1.45]")}><ShieldCheck size={19} /><div><strong>Your preferences stay with this browser</strong><span>In this review build, appearance, notifications, guided progress, and demo session details are stored locally. Production policies and access remain organization managed.</span></div></div>
+      <PageHeader eyebrow="Personal workspace" title="Help and support" description="Find workflow guidance or contact the EHS360 support team." />
+      <section className={settingsCardClass}>
+        <div className={actionTileGridClass}>
+          <button type="button" className={actionTileClass} onClick={openHelp}>
+            <span className={actionTileIconClass}><BookOpen size={21} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>Learning center</strong>
+              <small className={actionTileHintClass}>Open role guidance and replay a walkthrough.</small>
+            </div>
+          </button>
+          <a className={actionTileClass} href="mailto:ehss-support@example.com?subject=EHS360%20application%20support">
+            <span className={actionTileIconClass}><Mail size={21} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>Contact support</strong>
+              <small className={actionTileHintClass}>Ask for access, sign-in, or workflow assistance.</small>
+            </div>
+          </a>
+          <article className={actionTileClass}>
+            <span className={actionTileIconClass}><SlidersHorizontal size={21} /></span>
+            <div className="grid gap-0.5">
+              <strong className={actionTileTitleClass}>Application information</strong>
+              <small className={actionTileHintClass}>EHS360 · Phase 1 review build</small>
+            </div>
+          </article>
+        </div>
+        <div className="support-note flex items-start gap-2.5 rounded-xl bg-slate-50 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <ShieldCheck size={19} className="flex-none text-kc-blue-700 dark:text-kc-blue-300" />
+          <div className="grid gap-0.5">
+            <strong className="text-xs text-slate-800 dark:text-slate-200">Your preferences stay with this browser</strong>
+            <span className="text-xs leading-relaxed">In this review build, appearance, notifications, guided progress, and demo session details are stored locally. Production policies and access remain organization managed.</span>
+          </div>
+        </div>
       </section>
     </>
   );

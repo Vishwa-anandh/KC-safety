@@ -24,37 +24,209 @@ import { performanceForResponse, performanceLabel, responseLabel } from "../../.
 import { requirementRoute } from "../../../app/router/links";
 import type { AssessmentQuestion, DashboardSite, Performance, Requirement, SectionSummary } from "../../../shared/types";
 import type { AssignedSite } from "../../../data-access/contracts";
-import { Button, CompletionBadge, EmptyState, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
+import { Button, CompletionBadge, EmptyState, eyebrowClasses, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, SiteUsersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
+/* Shared page chrome — identical across every screen in this file. */
+const pageContainerClass = "page-container w-full px-4 pt-5 pb-14 sm:px-6 md:pt-6 md:pb-16 lg:px-7 lg:pt-9";
+const breadcrumbsClass = "breadcrumbs mb-4 flex flex-wrap items-center gap-1 text-xs text-slate-500 dark:text-slate-400";
+const breadcrumbLinkClass = "font-semibold text-kc-blue-700 dark:text-kc-blue-300";
+const sectionTitleRowClass = "section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between";
+const tableCardClass = "table-card mt-5 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";
+const tableCardHeaderBaseClass = "table-card__header flex flex-col justify-between gap-4 border-b border-slate-200 px-4.5 py-4 dark:border-slate-700";
+
+/*
+ * Canonical tinted pill recipe (see shared/ui/UI.tsx `pillBase`/`pillTone`). Not exported there,
+ * so it is reproduced locally — every response/publish/gap chip here composes from it directly
+ * instead of the deleted dynamicTailwindRecipes state-modifier lookup (dynamic-tailwind-recipes.ts
+ * itself still backs other, not-yet-converted screens, so it is not touched).
+ */
+const pillBase = "inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold whitespace-nowrap";
+const pillTone = {
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300",
+  neutral: "border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
+};
+const responseTone: Record<string, string> = { yes: pillTone.success, no: pillTone.danger, partial: pillTone.warning };
+function responseChipClass(response: string | null | undefined) {
+  return cx("response-chip", pillBase, responseTone[response ?? "none"] ?? pillTone.neutral);
+}
+
+/*
+ * Links styled as buttons reproduce the Button component's canonical recipe (shared/ui/UI.tsx)
+ * since <Link> cannot render <Button> itself. No disabled utilities: a link is never :disabled.
+ */
+const linkButtonBase = "button inline-flex min-w-0 items-center justify-center gap-2 rounded-lg border border-transparent text-sm font-semibold whitespace-nowrap transition-colors";
+const linkButtonVariant = {
+  primary: "bg-kc-blue-600 text-white hover:bg-kc-blue-700 active:bg-kc-blue-800",
+  tertiary: "bg-transparent text-kc-blue-700 hover:bg-kc-blue-50 hover:text-kc-blue-900 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950",
+};
+const linkButtonSize = { default: "min-h-10 px-4 py-2.5", compact: "min-h-8 px-3 text-sm" };
+
+const distributionFillTone: Record<string, string> = {
+  brand: "bg-kc-blue-600",
+  success: "bg-emerald-600 dark:bg-emerald-500",
+  warning: "bg-amber-600 dark:bg-amber-500",
+  neutral: "bg-slate-400 dark:bg-slate-500",
+};
+
 function DistributionBar({ label, value, total, tone }: { label: string; value: number; total: number; tone: string }) {
-  return <div className={cx("distribution-row [.distribution-row_+_&]:[margin-top:0.75rem]")}><div className={cx("distribution-row__label [display:flex] [justify-content:space-between] [margin-bottom:0.35rem] [color:var(--neutral-600)] [font-size:0.75rem] [&_strong]:[color:var(--neutral-900)]")}><span>{label}</span><strong>{value}</strong></div><div className={cx("distribution-track [height:8px] [overflow:hidden] [border-radius:999px] [background:var(--neutral-100)]")}><span className={cx(`distribution-fill distribution-fill--${tone}`)} style={{ width: `${total ? (value / total) * 100 : 0}%` }} /></div></div>;
+  return (
+    <div className={cx("distribution-row")}>
+      <div className={cx("distribution-row__label mb-1 flex justify-between text-sm text-slate-600 dark:text-slate-400")}>
+        <span>{label}</span>
+        <strong className={cx("text-slate-900 dark:text-slate-100")}>{value}</strong>
+      </div>
+      <div className={cx("distribution-track h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800")}>
+        <span className={cx("distribution-fill block h-full rounded-full forced-colors:bg-forced-highlight", distributionFillTone[tone])} style={{ width: `${total ? (value / total) * 100 : 0}%` }} />
+      </div>
+    </div>
+  );
 }
 
 function QuestionResponseHistory({ question }: { question: AssessmentQuestion }) {
   const [open, setOpen] = useState(false);
   const entries = [...(question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
   if (!entries.length) return null;
-  return <div className={cx("response-history [margin-top:0.9rem] [border-top:1px_solid_var(--neutral-200)] [padding-top:0.75rem]")}>
-    <button type="button" className={cx("response-history__trigger [width:100%] [min-height:42px] [display:flex] [align-items:center] [justify-content:space-between] [gap:0.75rem] [border:1px_solid_var(--neutral-200)] [border-radius:10px] [background:var(--surface-elevated)] [color:var(--neutral-800)] [padding:0.6rem_0.75rem] [cursor:pointer] [font-size:0.82rem] [font-weight:650] [&_>_span]:[display:inline-flex] [&_>_span]:[align-items:center] [&_>_span]:[gap:0.4rem] [&_>_span:last-child]:[color:var(--neutral-500)] [&_>_span:last-child]:[font-size:0.76rem] [&_>_span:last-child]:[font-weight:550] hover:[border-color:var(--kc-300)] hover:[background:var(--kc-50)] focus-visible:[outline:3px_solid_var(--kc-500)] focus-visible:[outline-offset:2px] [&_svg]:[transition:transform_160ms_ease] max-[620px]:[align-items:flex-start] max-[620px]:[flex-wrap:wrap]")} aria-expanded={open} onClick={() => setOpen((current) => !current)}><span><Clock3 size={16} /> Response history</span><span>{entries.length} {entries.length === 1 ? "entry" : "entries"}<ChevronDown size={16} className={cx(open && "response-history__chevron--open [transform:rotate(180deg)]")} /></span></button>
-    {open && <ol className={cx("response-history__timeline [position:relative] [display:grid] [gap:0.75rem] [margin:0.9rem_0_0_0.45rem] [padding:0_0_0_1.15rem] [border-left:2px_solid_var(--neutral-200)] [list-style:none] max-[620px]:[margin-left:0.25rem] max-[620px]:[padding-left:0.9rem]")}>{entries.map((entry, index) => <li key={entry.id} className={cx("response-history__entry [position:relative]")}>
-      <span className={cx("response-history__marker [position:absolute] [top:1rem] [left:-1.48rem] [width:10px] [height:10px] [border:2px_solid_var(--surface-panel)] [border-radius:50%] [background:var(--kc-600)] [box-shadow:0_0_0_1px_var(--kc-300)] max-[620px]:[left:-1.23rem]")} />
-      <div className={cx("response-history__entry-card [border:1px_solid_var(--neutral-200)] [border-radius:10px] [background:var(--neutral-25)] [padding:0.8rem]")}>
-        <div className={cx("response-history__entry-header [display:flex] [align-items:center] [justify-content:space-between] [gap:0.75rem] [&_>_div]:[display:grid] [&_>_div]:[gap:0.15rem] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.84rem] [&_div_>_span]:[color:var(--neutral-500)] [&_div_>_span]:[font-size:0.74rem] max-[620px]:[align-items:flex-start] max-[620px]:[flex-direction:column]")}><div><strong>{entry.event}</strong><span>{entry.recordedBy} · {new Date(entry.recordedAt).toLocaleString()}</span></div>{index === 0 && <span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]")}>Latest</span>}</div>
-        <div className={cx("response-history__response [display:flex] [align-items:center] [justify-content:space-between] [gap:0.75rem] [margin-top:0.65rem] [&_>_span:first-child]:[color:var(--neutral-500)] [&_>_span:first-child]:[font-size:0.76rem] [&_>_span:first-child]:[font-weight:650]")}><span>Response</span><span className={cx("response-chip [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] max-[1100px]:[.data-table_&]:[justify-self:start]", `response-chip--${entry.response ?? "none"}`)}>{responseLabel(entry.response)}</span></div>
-        {entry.action && <div className={cx("response-history__action [margin-top:0.65rem] [border-radius:8px] [background:var(--surface-panel)] [padding:0.65rem] [&_>_strong]:[font-size:0.78rem] [&_>_p]:[margin:0.25rem_0_0] [&_>_p]:[color:var(--neutral-800)] [&_>_p]:[font-size:0.8rem] [&_>_div]:[display:flex] [&_>_div]:[flex-wrap:wrap] [&_>_div]:[gap:0.3rem_0.75rem] [&_>_div]:[margin-top:0.45rem] [&_>_div]:[color:var(--neutral-500)] [&_>_div]:[font-size:0.73rem]")}><strong>Corrective action</strong><p>{entry.action.description || "No action description added."}</p><div><span>Owner · {entry.action.owner || "Not assigned"}</span><span>Status · {entry.action.status ?? "Open"}</span><span>Follow-up · {entry.action.followUp || "Not added"}</span></div></div>}
-        <div className={cx("response-history__evidence [display:flex] [align-items:center] [flex-wrap:wrap] [gap:0.35rem] [margin-top:0.65rem] [color:var(--neutral-500)] [font-size:0.74rem] [&_ul]:[flex-basis:100%] [&_ul]:[margin:0.2rem_0_0_1.3rem] [&_ul]:[padding:0]")}><Paperclip size={14} /><span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>{entry.evidence.length > 0 && <ul>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}</div>
-      </div>
-    </li>)}</ol>}
-  </div>;
+  return (
+    <div className={cx("response-history mt-3.5 border-t border-slate-200 pt-3 dark:border-slate-700")}>
+      <button
+        type="button"
+        className={cx("response-history__trigger flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:border-kc-blue-300 hover:bg-kc-blue-50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-kc-blue-500 focus-visible:outline-offset-2 sm:items-center dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-kc-blue-700 dark:hover:bg-kc-blue-950")}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className={cx("inline-flex items-center gap-1.5")}><Clock3 size={16} /> Response history</span>
+        <span className={cx("inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400")}>
+          {entries.length} {entries.length === 1 ? "entry" : "entries"}
+          <ChevronDown size={16} className={cx("transition-transform duration-150", open && "response-history__chevron--open rotate-180")} />
+        </span>
+      </button>
+      {open && (
+        <ol className={cx("response-history__timeline relative mt-3.5 ml-1 grid list-none gap-3 border-l-2 border-slate-200 py-0 pr-0 pl-4.5 sm:ml-1.5 dark:border-slate-700")}>
+          {entries.map((entry, index) => (
+            <li key={entry.id} className={cx("response-history__entry relative")}>
+              <span className={cx("response-history__marker absolute -left-5 top-4 size-2.5 rounded-full border-2 border-white bg-kc-blue-600 ring-1 ring-kc-blue-300 sm:-left-6 dark:border-slate-900 dark:ring-kc-blue-700")} />
+              <div className={cx("response-history__entry-card rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900")}>
+                <div className={cx("response-history__entry-header flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between")}>
+                  <div className={cx("grid gap-0.5")}>
+                    <strong className={cx("text-sm text-slate-900 dark:text-slate-100")}>{entry.event}</strong>
+                    <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>{entry.recordedBy} · {new Date(entry.recordedAt).toLocaleString()}</span>
+                  </div>
+                  {index === 0 && <span className={cx("publish-badge", pillBase, pillTone.success)}>Latest</span>}
+                </div>
+                <div className={cx("response-history__response mt-2.5 flex items-center justify-between gap-3")}>
+                  <span className={cx("text-sm font-semibold text-slate-500 dark:text-slate-400")}>Response</span>
+                  <span className={responseChipClass(entry.response)}>{responseLabel(entry.response)}</span>
+                </div>
+                {entry.action && (
+                  <div className={cx("response-history__action mt-2.5 rounded-lg bg-white p-2.5 dark:bg-slate-800")}>
+                    <strong className={cx("text-sm")}>Corrective action</strong>
+                    <p className={cx("mt-1 text-sm text-slate-800 dark:text-slate-200")}>{entry.action.description || "No action description added."}</p>
+                    <div className={cx("mt-1.5 flex flex-wrap gap-1 gap-x-3 text-xs text-slate-500 dark:text-slate-400")}>
+                      <span>Owner · {entry.action.owner || "Not assigned"}</span>
+                      <span>Status · {entry.action.status ?? "Open"}</span>
+                      <span>Follow-up · {entry.action.followUp || "Not added"}</span>
+                    </div>
+                  </div>
+                )}
+                <div className={cx("response-history__evidence mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400")}>
+                  <Paperclip size={14} />
+                  <span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>
+                  {entry.evidence.length > 0 && <ul className={cx("m-0 mt-1 basis-full list-disc pl-5")}>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
 }
+
+/*
+ * The sites table keeps its structural switch at exactly 1100px (`shell:`): below that width the
+ * table stops being a table and every row becomes a stacked, whole-row-clickable card, so each
+ * cell needs its own visible label. Those labels used to come from
+ * `td::before { content: attr(data-label) }`, which has no on-scale utility, so they are real
+ * spans now — hidden again from `shell:` up, where the real <thead> takes over (mirrors the
+ * SiteUsersPanel table in shared/sites/components/SitePanels.tsx).
+ */
+const dashboardTableWrapClass = "data-table-wrap w-full max-w-full";
+const dashboardTableClass = "data-table block w-full min-w-0 table-fixed border-collapse text-sm text-slate-900 dark:text-slate-100 shell:table";
+const dashboardTableHeadClass = "block sr-only shell:not-sr-only shell:table-header-group";
+const dashboardTableHeaderCellClass = "border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400";
+const dashboardTableBodyClass = "grid w-full min-w-0 grid-cols-1 gap-3 p-3.5 md:grid-cols-2 shell:table-row-group shell:p-0";
+const dashboardTableRowClass = "data-table__row--link block w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm transition-colors hover:bg-kc-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-kc-blue-950 shell:table-row shell:rounded-none shell:border-0 shell:bg-transparent shell:shadow-none shell:hover:bg-kc-blue-50 dark:shell:hover:bg-kc-blue-950";
+const dashboardTableCellClass = "flex min-h-12 w-full min-w-0 items-center gap-3 border-b border-slate-200 px-3.5 py-2.5 text-left align-middle wrap-anywhere dark:border-slate-700 shell:table-cell shell:min-h-0 shell:px-4 shell:py-3.5";
+const dashboardTableLastCellClass = "flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-2.5 text-left align-middle dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-start shell:bg-transparent shell:px-4 shell:py-3.5";
+const dashboardTableCellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
 
 function DashboardTable({ sites }: { sites: DashboardSite[] }) {
   const navigate = useNavigate();
-  return <div className={cx("data-table-wrap [max-width:100%] max-[1100px]:[width:100%] max-[1100px]:[max-width:none] max-[1100px]:[overflow:visible]")} data-tour="dashboard-sites"><table className={cx("data-table [width:100%] [table-layout:fixed] [border-collapse:collapse] [font-size:0.79rem] [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:[padding:0.8rem_1rem] [&_th]:[border-bottom:1px_solid_var(--neutral-200)] [&_th]:[text-align:left] [&_th]:[vertical-align:middle] [&_td]:[padding:0.8rem_1rem] [&_td]:[border-bottom:1px_solid_var(--neutral-200)] [&_td]:[text-align:left] [&_td]:[vertical-align:middle] [&_th]:[background:var(--neutral-50)] [&_th]:[color:var(--neutral-600)] [&_th]:[font-size:0.69rem] [&_th]:[font-weight:750] [&_th]:[letter-spacing:0.01em] [&_tr:last-child_td]:[border-bottom:0] [&_tbody_tr:hover]:[background:var(--neutral-25)] [&_td_>_strong]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[margin-top:0.18rem] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[color:var(--neutral-500)] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[font-size:0.7rem] [&_td:nth-child(3)]:[max-width:390px] max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0] max-[1100px]:[&_tbody]:[display:grid] max-[1100px]:[&_tbody]:[width:100%] max-[1100px]:[&_tbody]:[min-width:0] max-[1100px]:[&_tr]:[display:block] max-[1100px]:[&_tr]:[width:100%] max-[1100px]:[&_tr]:[min-width:0] max-[1100px]:[&_td]:[display:grid] max-[1100px]:[&_td]:[width:100%] max-[1100px]:[&_td]:[min-width:0] max-[1100px]:[&_thead]:[position:absolute] max-[1100px]:[&_thead]:[display:block] max-[1100px]:[&_thead]:[width:1px] max-[1100px]:[&_thead]:[height:1px] max-[1100px]:[&_thead]:[padding:0] max-[1100px]:[&_thead]:[margin:-1px] max-[1100px]:[&_thead]:[overflow:hidden] max-[1100px]:[&_thead]:[clip:rect(0,_0,_0,_0)] max-[1100px]:[&_thead]:[white-space:nowrap] max-[1100px]:[&_thead]:[border:0] max-[1100px]:[&_thead_tr]:[position:absolute] max-[1100px]:[&_thead_tr]:[display:block] max-[1100px]:[&_thead_tr]:[width:1px] max-[1100px]:[&_thead_tr]:[min-width:0] max-[1100px]:[&_thead_tr]:[height:1px] max-[1100px]:[&_thead_tr]:[overflow:hidden] max-[1100px]:[&_thead_tr]:[padding:0] max-[1100px]:[&_thead_tr]:[border:0] max-[1100px]:[&_thead_tr]:[clip-path:inset(50%)] max-[1100px]:[&_thead_th]:[position:absolute] max-[1100px]:[&_thead_th]:[display:block] max-[1100px]:[&_thead_th]:[width:1px] max-[1100px]:[&_thead_th]:[min-width:0] max-[1100px]:[&_thead_th]:[height:1px] max-[1100px]:[&_thead_th]:[overflow:hidden] max-[1100px]:[&_thead_th]:[padding:0] max-[1100px]:[&_thead_th]:[border:0] max-[1100px]:[&_thead_th]:[clip-path:inset(50%)] max-[1100px]:[&_tbody]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[1100px]:[&_tbody]:[gap:0.75rem] max-[1100px]:[&_tbody]:[padding:0.85rem] max-[1100px]:[&_tbody_tr]:[overflow:hidden] max-[1100px]:[&_tbody_tr]:[border:1px_solid_var(--neutral-200)] max-[1100px]:[&_tbody_tr]:[border-radius:var(--radius-lg)] max-[1100px]:[&_tbody_tr]:[background:var(--neutral-25)] max-[1100px]:[&_tbody_tr]:[box-shadow:var(--shadow-1)] max-[1100px]:[&_td]:[grid-template-columns:minmax(116px,_0.45fr)_minmax(0,_1fr)] max-[1100px]:[&_td]:[align-items:center] max-[1100px]:[&_td]:[gap:0.75rem] max-[1100px]:[&_td]:[min-height:48px] max-[1100px]:[&_td]:[padding:0.7rem_0.85rem] max-[1100px]:[&_td]:[border-bottom:1px_solid_var(--neutral-200)] max-[1100px]:[&_td::before]:[color:var(--neutral-500)] max-[1100px]:[&_td::before]:[content:attr(data-label)] max-[1100px]:[&_td::before]:[font-size:0.67rem] max-[1100px]:[&_td::before]:[font-weight:750] max-[1100px]:[&_td::before]:[letter-spacing:0.01em] max-[1100px]:[&_td:last-child]:[min-height:44px] max-[1100px]:[&_td:last-child]:[grid-template-columns:1fr] max-[1100px]:[&_td:last-child]:[justify-items:end] max-[1100px]:[&_td:last-child]:[border-bottom:0] max-[1100px]:[&_td:last-child]:[background:var(--neutral-50)] max-[1100px]:[&_td:last-child::before]:[display:none] max-[1100px]:[&_td[data-label='']::before]:[display:none] max-[1100px]:[&_td_>_strong]:[min-width:0] max-[1100px]:[&_td_>_strong]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_span]:[min-width:0] max-[1100px]:[&_td_>_span]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_div]:[min-width:0] max-[1100px]:[&_td_>_div]:[overflow-wrap:anywhere] max-[820px]:[&_tbody]:[grid-template-columns:1fr] dashboard-table max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0]")}><thead><tr><th>Site</th><th>Region / segment</th><th>Completion</th><th>Self-assessed performance</th><th>Gaps</th><th>Last updated</th><th><span className={cx("sr-only [position:absolute]! [width:1px]! [height:1px]! [padding:0]! [margin:-1px]! [overflow:hidden]! [clip:rect(0,_0,_0,_0)]! [white-space:nowrap]! [border:0]!")}>View</span></th></tr></thead><tbody>{sites.map((site) => (
-    <tr key={site.id} className={cx("data-table__row--link [cursor:pointer] hover:[background:var(--kc-50)]")} onClick={() => navigate(`/sites/${site.id}`)}><td data-label="Site"><strong>{site.name}</strong><span>{site.code}</span></td><td data-label="Region / segment"><strong>{site.region}</strong><span>{site.segment}</span></td><td data-label="Completion"><div className={cx("table-completion [display:flex] [align-items:center] [gap:0.55rem] max-[1100px]:[.data-table_&]:[flex-wrap:wrap]")}><CompletionBadge value={site.completion} /><span className={cx("table-progress [display:block]! [width:70px] [height:5px] [overflow:hidden] [border-radius:999px] [background:var(--neutral-200)] [&_span]:[display:block] [&_span]:[height:100%] [&_span]:[border-radius:inherit] [&_span]:[background:var(--kc-600)] max-[1100px]:[.data-table_&]:[width:min(140px,_100%)] [@media_(forced-colors:_active)]:[&_span]:[background:Highlight]")}><span style={{ width: `${site.completion}%` }} /></span></div></td><td data-label="Self-assessed performance"><PerformanceBadge performance={site.performance} compact /></td><td data-label="Gaps"><span className={cx("gap-count [display:inline-grid]! [min-width:30px] [height:28px] [place-items:center] [margin:0]! [border-radius:8px] [background:var(--neutral-100)] [color:var(--neutral-700)]! [font-weight:750] max-[1100px]:[.data-table_&]:[justify-self:start]", site.gaps > 20 && "gap-count--high [background:var(--danger-surface)] [color:var(--danger)]!")}>{site.gaps}</span></td><td data-label="Last updated">{site.updated}</td><td data-label=""><Link className={cx("table-action [display:inline-grid] [width:36px] [height:36px] [place-items:center] [border-radius:9px] [color:var(--kc-700)] hover:[background:var(--kc-50)]")} to={`/sites/${site.id}`} aria-label={`View ${site.name}`}><ChevronRight size={18} /></Link></td></tr>
-  ))}</tbody></table></div>;
+  return (
+    <div className={cx(dashboardTableWrapClass)} data-tour="dashboard-sites">
+      <table className={cx(dashboardTableClass)}>
+        <thead className={cx(dashboardTableHeadClass)}>
+          <tr>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/4")}>Site</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/6")}>Region / segment</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/6")}>Completion</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/6")}>Self-assessed performance</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/12")}>Gaps</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-1/12")}>Last updated</th>
+            <th className={cx(dashboardTableHeaderCellClass, "shell:w-20")}><span className={cx("sr-only")}>View</span></th>
+          </tr>
+        </thead>
+        <tbody className={cx(dashboardTableBodyClass)}>
+          {sites.map((site) => (
+            <tr key={site.id} className={cx(dashboardTableRowClass)} onClick={() => navigate(`/sites/${site.id}`)}>
+              <td className={cx(dashboardTableCellClass)} data-label="Site">
+                <span className={cx(dashboardTableCellLabelClass)}>Site</span>
+                <span className={cx("grid min-w-0 gap-0.5")}>
+                  <strong className={cx("block min-w-0 wrap-anywhere")}>{site.name}</strong>
+                  <span className={cx("block min-w-0 wrap-anywhere text-xs text-slate-500 dark:text-slate-400")}>{site.code}</span>
+                </span>
+              </td>
+              <td className={cx(dashboardTableCellClass)} data-label="Region / segment">
+                <span className={cx(dashboardTableCellLabelClass)}>Region / segment</span>
+                <span className={cx("grid min-w-0 gap-0.5")}>
+                  <strong className={cx("block min-w-0 wrap-anywhere")}>{site.region}</strong>
+                  <span className={cx("block min-w-0 wrap-anywhere text-xs text-slate-500 dark:text-slate-400")}>{site.segment}</span>
+                </span>
+              </td>
+              <td className={cx(dashboardTableCellClass, "shell:max-w-sm")} data-label="Completion">
+                <span className={cx(dashboardTableCellLabelClass)}>Completion</span>
+                <div className={cx("table-completion flex flex-wrap items-center gap-2 shell:flex-nowrap")}>
+                  <CompletionBadge value={site.completion} />
+                  <span className={cx("table-progress block h-1.25 w-full max-w-35 overflow-hidden rounded-full bg-slate-200 shell:w-17.5 shell:max-w-none dark:bg-slate-700")}>
+                    <span className={cx("block h-full rounded-full bg-kc-blue-600 forced-colors:bg-forced-highlight")} style={{ width: `${site.completion}%` }} />
+                  </span>
+                </div>
+              </td>
+              <td className={cx(dashboardTableCellClass)} data-label="Self-assessed performance">
+                <span className={cx(dashboardTableCellLabelClass)}>Self-assessed performance</span>
+                <PerformanceBadge performance={site.performance} compact />
+              </td>
+              <td className={cx(dashboardTableCellClass)} data-label="Gaps">
+                <span className={cx(dashboardTableCellLabelClass)}>Gaps</span>
+                <span className={cx("gap-count inline-grid h-7 min-w-8 place-items-center rounded-lg font-bold", site.gaps > 20 ? "gap-count--high bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300")}>{site.gaps}</span>
+              </td>
+              <td className={cx(dashboardTableCellClass)} data-label="Last updated">
+                <span className={cx(dashboardTableCellLabelClass)}>Last updated</span>
+                {site.updated}
+              </td>
+              <td className={cx(dashboardTableLastCellClass)} data-label="">
+                <Link className={cx("table-action inline-grid size-9 place-items-center rounded-lg text-kc-blue-700 hover:bg-kc-blue-50 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={`/sites/${site.id}`} aria-label={`View ${site.name}`}><ChevronRight size={18} /></Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "All assessment areas", requirements: Requirement[] = [], assignedSite?: AssignedSite) {
@@ -66,7 +238,7 @@ function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "A
     return ["Evidence", assignedSite.name, assignedSite.code, assignedSite.region, assignedSite.segment, "", "", "", focus, "", requirement.number, requirement.title, question ? `${question.number}. ${question.text}` : "", evidence.title, evidence.type, evidence.detail, evidence.uploadedBy, evidence.uploadedAt];
   })) : [];
   const csv = [columns, ...rows, ...evidenceRows].map((row) => row.map(escapeCell).join(",")).join("\r\n");
-  const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob(["﻿", csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url; link.download = fileName; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
@@ -105,26 +277,48 @@ export function DashboardScreen() {
   const activeFilters = [region !== "All regions" && region, segment !== "All segments" && segment, performance !== "All levels" && performanceLabel(performance), completion !== "all" && completion.replace("-", " "), focus !== "All assessment areas" && focus].filter(Boolean) as string[];
 
   function reset() { setRegion("All regions"); setSegment("All segments"); setPerformance("All levels"); setCompletion("all"); setFocus("All assessment areas"); setQuery(""); }
-  function exportDashboard() { downloadSiteExport(sites, `Maitsys_Assure_dashboard_${new Date().toISOString().slice(0, 10)}.csv`, focus, user?.role === "administrator" ? requirements : [], user?.role === "administrator" ? assignedSite : undefined); setExported(true); window.setTimeout(() => setExported(false), 2600); }
+  function exportDashboard() { downloadSiteExport(sites, `EHS360_dashboard_${new Date().toISOString().slice(0, 10)}.csv`, focus, user?.role === "administrator" ? requirements : [], user?.role === "administrator" ? assignedSite : undefined); setExported(true); window.setTimeout(() => setExported(false), 2600); }
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <PageHeader eyebrow="Enterprise oversight" title="Maitsys Assure dashboard" description="Track completion and self-assessed performance across the sites in your authorized scope." actions={<Button variant="primary" icon={<ArrowDownToLine size={18} />} onClick={exportDashboard} disabled={!sites.length} data-tour="dashboard-export">Export to Excel</Button>} />
-      {exported && <InlineMessage className={cx("floating-feedback [position:fixed] [z-index:80] [top:5.4rem] [right:1.5rem] [max-width:430px] [box-shadow:var(--shadow-2)] [animation:feedback-in_180ms_ease-out]")} tone="success" title="Export downloaded">The current filtered site view{user?.role === "administrator" ? " and question-level evidence register" : ""} were downloaded and can be opened in Excel.</InlineMessage>}
-      <div className={cx("dashboard-summary [display:grid] [grid-template-columns:minmax(0,_1fr)_minmax(280px,_1fr)] [align-items:stretch] [gap:1rem] [margin-top:1.25rem] max-[740px]:[grid-template-columns:1fr] max-[1120px]:[grid-template-columns:1fr]")}>
-        <div className={cx("metrics-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:1rem] [margin-top:1.25rem] max-[1500px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[740px]:[grid-template-columns:1fr] metrics-grid--2x2 [grid-template-columns:repeat(2,_minmax(0,_1fr))] [margin-top:0] max-[740px]:[grid-template-columns:1fr]")}>
+    <div className={cx(pageContainerClass)}>
+      <PageHeader eyebrow="Enterprise oversight" title="EHS360 dashboard" description="Track completion and self-assessed performance across the sites in your authorized scope." actions={<Button variant="primary" icon={<ArrowDownToLine size={18} />} onClick={exportDashboard} disabled={!sites.length} data-tour="dashboard-export">Export to Excel</Button>} />
+      {exported && (
+        <div className={cx("floating-feedback fixed top-22 right-6 z-80 max-w-108 animate-feedback-in")} style={{ boxShadow: "var(--shadow-2)" }}>
+          <InlineMessage tone="success" title="Export downloaded">
+            The current filtered site view{user?.role === "administrator" ? " and question-level evidence register" : ""} were downloaded and can be opened in Excel.
+          </InlineMessage>
+        </div>
+      )}
+      <div className={cx("dashboard-summary mt-5 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2")}>
+        <div className={cx("metrics-grid metrics-grid--2x2 mt-0 grid grid-cols-1 gap-4 md:grid-cols-2")}>
           <MetricCard label="Sites in scope" value={total} detail={`Across ${regions.length} regions`} icon={<MapPin size={21} />} tone="brand" />
           <MetricCard label="Assessment complete" value={`${Math.round((complete / total) * 100)}%`} detail={`${complete} of ${total} sites`} icon={<CheckCircle2 size={21} />} tone="success" />
           <MetricCard label="Average completion" value={`${average}%`} detail="Completion only—not performance" icon={<Target size={21} />} tone="brand" />
           <MetricCard label="Sites at Initial" value={initialSites} detail="Prioritize leadership review" icon={<CircleAlert size={21} />} tone="danger" />
         </div>
-        <div className={cx("dashboard-insights [display:grid] [grid-template-columns:1fr] [gap:1rem] [margin-top:0] max-[740px]:[grid-template-columns:1fr]")}>
-          <section className={cx("insight-card [display:flex] [flex-direction:column] [justify-content:center] [height:100%] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1rem] [box-shadow:var(--shadow-1)]")}><div className={cx("insight-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [color:var(--kc-700)] [&_h2]:[margin-top:0.2rem] [&_h2]:[color:var(--neutral-900)] [&_h2]:[font-size:1.05rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Completion</p><h2>Assessment status</h2></div><Clock3 size={21} /></div><DistributionBar label="Complete" value={complete} total={total} tone="success" /><DistributionBar label="In progress" value={inProgress} total={total} tone="brand" /><DistributionBar label="Not started" value={notStarted} total={total} tone="neutral" /></section>
+        <div className={cx("dashboard-insights grid grid-cols-1 gap-4")}>
+          <section className={cx("insight-card flex h-full flex-col justify-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900")}>
+            <div className={cx("insight-card__header mb-4 flex items-start justify-between gap-4 text-kc-blue-700 dark:text-kc-blue-300")}>
+              <div>
+                <p className={cx(eyebrowClasses)}>Completion</p>
+                <h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Assessment status</h2>
+              </div>
+              <Clock3 size={21} />
+            </div>
+            <div className={cx("grid gap-3")}>
+              <DistributionBar label="Complete" value={complete} total={total} tone="success" />
+              <DistributionBar label="In progress" value={inProgress} total={total} tone="brand" />
+              <DistributionBar label="Not started" value={notStarted} total={total} tone="neutral" />
+            </div>
+          </section>
         </div>
       </div>
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)]")}>
-        <div className={cx("dashboard-filter-bar [display:flex] [align-items:center] [gap:0.7rem] [margin-top:1.25rem] [flex-wrap:wrap] [margin:0] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] max-[1100px]:[align-items:stretch] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column] dashboard-filter-bar--expanded")} data-tour="dashboard-filters">
-          <label className={cx("search-control [display:flex] [min-width:250px] [min-height:42px] [flex:1] [align-items:center] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:var(--radius-md)] [background:var(--surface-input)] [padding:0_0.75rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[color:var(--neutral-900)] [&_input]:[font-size:0.85rem] [.dashboard-filter-bar_&]:[flex:0_1_420px] [.dashboard-filter-bar_&]:[min-width:0] [.dashboard-filter-bar--expanded_&]:[flex:0_1_420px] [.dashboard-filter-bar--expanded_&]:[min-width:0] [.filter-row_&]:[flex:0_1_420px] [.filter-row_&]:[min-width:0] [.content-toolbar_&]:[flex:0_1_420px] [.content-toolbar_&]:[min-width:0] [.requirement-main--editor_.checkbox-list__toolbar_&]:[flex:1_1_320px] [.requirement-main--editor_.checkbox-list__toolbar_&]:[min-width:0] [.checkbox-list__toolbar_&_>_input]:[min-height:0] [.checkbox-list__toolbar_&_>_input]:[border:0]! [.checkbox-list__toolbar_&_>_input]:[border-radius:0] [.checkbox-list__toolbar_&_>_input]:[box-shadow:none]! [.checkbox-list__toolbar_&_>_input]:[outline:0]! [.checkbox-list__toolbar_&_>_input]:[padding:0] [.checkbox-list__toolbar_&]:[flex:0_1_420px] [.checkbox-list__toolbar_&]:[min-width:0] max-[1100px]:[.dashboard-filter-bar_&]:[width:100%] max-[1100px]:[.dashboard-filter-bar_&]:[flex-basis:100%] max-[1100px]:[.dashboard-filter-bar_&]:[min-width:0] max-[740px]:[width:100%] max-[740px]:[max-width:none] max-[740px]:[min-width:0] max-[740px]:[flex-basis:auto]!")}><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search site name or code" /></label>
+      <section className={cx(tableCardClass)}>
+        <div className={cx("dashboard-filter-bar dashboard-filter-bar--expanded flex flex-col flex-wrap items-stretch gap-3 border-b border-slate-200 px-4 py-3.5 md:flex-row shell:items-center dark:border-slate-700")} data-tour="dashboard-filters">
+          <label className={cx("search-control flex min-h-10 w-full min-w-0 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 shell:w-105 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:focus-within:ring-kc-blue-900")}>
+            <Search size={18} />
+            <input className={cx("min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search site name or code" />
+          </label>
           <Select label="Region" value={region} onChange={setRegion} options={["All regions", ...regions].map((value) => ({ value, label: value }))} />
           <Select label="Segment" value={segment} onChange={setSegment} options={["All segments", ...segments].map((value) => ({ value, label: value }))} />
           <Select
@@ -151,7 +345,7 @@ export function DashboardScreen() {
             ]}
           />
           <Select
-            className={cx("select-control--focus [.dashboard-filter-bar--expanded_&]:[flex-basis:230px]")}
+            className={cx("select-control--focus basis-57.5")}
             label="Assessment area"
             value={focus}
             onChange={setFocus}
@@ -159,8 +353,22 @@ export function DashboardScreen() {
           />
           <Button variant="tertiary" icon={<FilterX size={17} />} onClick={reset}>Reset</Button>
         </div>
-        {activeFilters.length > 0 && <div className={cx("active-filter-row [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.55rem] [border-bottom:1px_solid_var(--neutral-200)] [background:var(--neutral-25)] [padding:0.65rem_1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_button]:[border:0] [&_button]:[background:transparent] [&_button]:[color:var(--kc-700)] [&_button]:[font-weight:700]")}><span>Active view</span>{activeFilters.map((filter) => <span className={cx("filter-chip [display:inline-flex] [align-items:center] [border-radius:999px] [padding:0.3rem_0.55rem] [font-size:0.68rem] [font-weight:680] [background:var(--kc-50)] [color:var(--kc-800)]")} key={filter}>{filter}</span>)}<button onClick={reset}>Clear all</button></div>}
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] table-card__header--results [align-items:center]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Authorized scope</p><h2>Sites</h2></div><span>Showing {sites.length} of {total} sites</span></div>
+        {activeFilters.length > 0 && (
+          <div className={cx("active-filter-row flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>
+            <span>Active view</span>
+            {activeFilters.map((filter) => (
+              <span className={cx("filter-chip inline-flex items-center gap-1 rounded-full bg-kc-blue-50 px-2 py-1 text-xs font-bold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")} key={filter}>{filter}</span>
+            ))}
+            <button className={cx("border-0 bg-transparent font-bold text-kc-blue-700 dark:text-kc-blue-300")} onClick={reset}>Clear all</button>
+          </div>
+        )}
+        <div className={cx(tableCardHeaderBaseClass, "table-card__header--results flex-row items-center")}>
+          <div>
+            <p className={cx(eyebrowClasses)}>Authorized scope</p>
+            <h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Sites</h2>
+          </div>
+          <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>Showing {sites.length} of {total} sites</span>
+        </div>
         {sites.length ? <DashboardTable sites={sites} /> : <EmptyState icon={<Search size={27} />} title="No sites match this view" description="Adjust or clear the dashboard filters to see results." action={<Button variant="secondary" icon={<FilterX size={17} />} onClick={reset}>Clear filters</Button>} />}
       </section>
     </div>
@@ -177,55 +385,69 @@ export function SiteSectionDetailScreen() {
 
   if (!section) {
     return (
-      <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-        <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><Link to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} /><span aria-current="page">Section</span></nav>
+      <div className={cx(pageContainerClass)}>
+        <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbLinkClass)} to="/dashboard">Dashboard</Link><ChevronRight size={15} /><Link className={cx(breadcrumbLinkClass)} to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} /><span aria-current="page">Section</span></nav>
         <EmptyState icon={<Search size={27} />} title="Section not found" description="This assessment section is not part of the current site's framework." />
       </div>
     );
   }
 
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb">
-        <Link to="/dashboard">Dashboard</Link><ChevronRight size={15} />
-        <Link to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} />
+    <div className={cx(pageContainerClass)}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb">
+        <Link className={cx(breadcrumbLinkClass)} to="/dashboard">Dashboard</Link><ChevronRight size={15} />
+        <Link className={cx(breadcrumbLinkClass)} to={`/sites/${site.id}`}>{site.name}</Link><ChevronRight size={15} />
         <span aria-current="page">{section.shortName}</span>
       </nav>
       <PageHeader eyebrow="Assessment detail" title={section.name} description={`${site.code} · ${section.description}`} />
       <InlineMessage tone="info" title="Read-only site record">This view is available within your enterprise scope. Only the currently assigned site can be edited.</InlineMessage>
-      <div className={cx("metrics-grid [display:grid] [grid-template-columns:repeat(4,_minmax(0,_1fr))] [gap:1rem] [margin-top:1.25rem] max-[1500px]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[740px]:[grid-template-columns:1fr]")}>
+      <div className={cx("metrics-grid mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 wide:grid-cols-4")}>
         <MetricCard label="Completion" value={`${section.completion}%`} detail="Section completion" icon={<Target size={21} />} tone="brand" />
         <MetricCard label="Performance" value={performanceLabel(section.performance)} detail="Lowest question level" icon={<BarChart3 size={21} />} tone={section.performance === "performing" ? "success" : section.performance === "emerging" ? "warning" : "danger"} />
         <MetricCard label="Questions" value={section.questions} detail="In this section" icon={<CheckCircle2 size={21} />} />
         <MetricCard label="Gaps" value={section.gaps} detail="No and Partial responses" icon={<CircleAlert size={21} />} tone="danger" />
       </div>
-      <section className={cx("page-section [margin-top:2.2rem]")} aria-labelledby="site-questions-title">
-        <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Assessment questions</p><h2 id="site-questions-title">Recorded responses</h2></div>{requirement && <span className={cx("question-count [border:1px_solid_var(--neutral-200)] [border-radius:999px] [background:var(--surface-elevated)] [padding:0.35rem_0.6rem] [font-size:0.72rem] [font-weight:650] [.history-list_article_.import-preview-questions__header_&]:[flex:none] [.history-list_article_.import-preview-questions__header_&]:[overflow:visible] [.history-list_article_.import-preview-questions__header_&]:[color:var(--neutral-700)] [.history-list_article_.import-preview-questions__header_&]:[font-size:0.72rem] [.history-list_article_.import-preview-questions__header_&]:[white-space:nowrap]")}>{requirement.questions.length} questions</span>}</div>
+      <section className={cx("page-section mt-9")} aria-labelledby="site-questions-title">
+        <div className={cx(sectionTitleRowClass)}>
+          <div>
+            <p className={cx(eyebrowClasses)}>Assessment questions</p>
+            <h2 id="site-questions-title" className={cx("mt-1")}>Recorded responses</h2>
+          </div>
+          {requirement && <span className={cx("question-count rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")}>{requirement.questions.length} questions</span>}
+        </div>
         {requirement ? (
-          <div className={cx("question-list [display:grid] [gap:1rem]")}>
+          <div className={cx("question-list grid gap-4")}>
             {requirement.questions.map((question) => (
-              <article className={cx("question-card [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1.1rem] [box-shadow:var(--shadow-1)] max-[740px]:[padding:0.9rem]")} key={question.id}>
-                <div className={cx("question-card__header [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:start] [gap:0.8rem] [&_p]:[color:var(--neutral-500)] [&_p]:[font-size:0.68rem] [&_p]:[font-weight:600] [&_h3]:[max-width:780px] [&_h3]:[margin-top:0.2rem] [&_h3]:[font-size:0.95rem] [&_h3]:[line-height:1.5] max-[740px]:[grid-template-columns:auto_minmax(0,_1fr)]")}>
-                  <span className={cx("question-number [display:grid] [width:31px] [height:31px] [place-items:center] [border-radius:9px] [background:var(--kc-50)] [color:var(--kc-800)] [font-size:0.8rem] [font-weight:750] [.history-list_article_.import-preview-question-list_&]:[overflow:visible] [.history-list_article_.import-preview-question-list_&]:[color:var(--kc-800)] [.history-list_article_.import-preview-question-list_&]:[font-size:0.8rem] [.history-list_article_.import-preview-question-list_&]:[white-space:nowrap]")}>{question.number}</span>
-                  <div><p>Question {question.number}</p><h3>{question.text}</h3></div>
+              <article className={cx("question-card rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm md:p-4.5 dark:border-slate-700 dark:bg-slate-900")} key={question.id}>
+                <div className={cx("question-card__header flex flex-wrap items-start gap-3.5")}>
+                  <span className={cx("question-number inline-grid size-8 flex-none place-items-center rounded-lg bg-kc-blue-50 text-sm font-bold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{question.number}</span>
+                  <div className={cx("min-w-0 flex-1")}>
+                    <p className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {question.number}</p>
+                    <h3 className={cx("mt-1 max-w-195 text-base leading-normal")}>{question.text}</h3>
+                  </div>
                   <PerformanceBadge performance={performanceForResponse(question.response)} compact />
                 </div>
                 {Boolean(question.expectedEvidence?.length) && (
-                  <div className={cx("question-evidence [display:grid] [gap:0.5rem] [margin:0.85rem_0_0] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-md)] [background:var(--surface-elevated)] [padding:0.75rem_0.9rem] [&_ul]:[display:grid] [&_ul]:[gap:0.3rem] [&_ul]:[margin:0] [&_ul]:[padding-left:1.1rem] [&_ul]:[color:var(--neutral-600)] [&_ul]:[font-size:0.76rem] [&_ul]:[line-height:1.5]")}>
-                    <span className={cx("question-evidence__title [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[font-weight:500] [&_small]:[text-transform:none] [&_small]:[letter-spacing:normal] [display:flex] [align-items:center] [gap:0.4rem] [color:var(--kc-700)] [font-size:0.72rem] [font-weight:700] [text-transform:uppercase] [letter-spacing:0.02em]")}><Paperclip size={14} /> Evidence required</span>
-                    <ul>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
+                  <div className={cx("question-evidence mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-slate-700 dark:bg-slate-900")}>
+                    <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300")}><Paperclip size={14} /> Evidence required</span>
+                    <ul className={cx("m-0 grid gap-1 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400")}>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
                   </div>
                 )}
-                <div className={cx("readonly-response [display:flex] [align-items:center] [gap:0.6rem] [margin-top:0.9rem] [&_>_span:first-child]:[color:var(--neutral-500)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.74rem]")}>
-                  <span>Response</span>
-                  <span className={cx("response-chip [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] max-[1100px]:[.data-table_&]:[justify-self:start]", `response-chip--${question.response ?? "none"}`)}>{responseLabel(question.response)}</span>
-                  {question.response && <small>Recorded by {question.respondedBy ?? question.action?.createdBy ?? "Site contributor"}{question.respondedAt ? ` · ${new Date(question.respondedAt).toLocaleString()}` : ""}</small>}
+                <div className={cx("readonly-response mt-3.5 flex items-center gap-2.5")}>
+                  <span className={cx("text-sm font-semibold text-slate-500 dark:text-slate-400")}>Response</span>
+                  <span className={responseChipClass(question.response)}>{responseLabel(question.response)}</span>
+                  {question.response && <small className={cx("ml-auto text-sm text-slate-500 dark:text-slate-400")}>Recorded by {question.respondedBy ?? question.action?.createdBy ?? "Site contributor"}{question.respondedAt ? ` · ${new Date(question.respondedAt).toLocaleString()}` : ""}</small>}
                 </div>
                 {question.action && (
-                  <div className={cx("readonly-action [margin-top:0.9rem] [border:1px_solid_var(--neutral-200)] [border-radius:10px] [background:var(--neutral-25)] [padding:0.75rem_0.85rem] [&_p]:[margin:0] [&_p]:[color:var(--neutral-800)] [&_p]:[font-size:0.85rem] [&_>_span]:[display:block] [&_>_span]:[margin-top:0.4rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.76rem]")}>
-                    <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Corrective action · {question.action.createdBy ?? "Site contributor"}</p>
-                    <p>{question.action.description || "No action description added yet."}</p>
-                    <div className={cx("readonly-action__details [display:flex] [flex-wrap:wrap] [gap:0.35rem_0.8rem] [margin-top:0.55rem] [color:var(--neutral-600)] [font-size:0.76rem]")}><span>Owner · {question.action.owner || "Not assigned"}</span><span>Status · {question.action.status ?? "Open"}</span><span>Follow-up · {question.action.followUp || "Not added"}</span><span>Updated by {question.action.updatedBy ?? question.action.createdBy ?? "Site contributor"}{question.action.updatedAt ? ` · ${new Date(question.action.updatedAt).toLocaleString()}` : ""}</span></div>
+                  <div className={cx("readonly-action mt-3.5 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-slate-700 dark:bg-slate-900")}>
+                    <p className={cx(eyebrowClasses, "mb-1")}>Corrective action · {question.action.createdBy ?? "Site contributor"}</p>
+                    <p className={cx("m-0 text-sm text-slate-800 dark:text-slate-200")}>{question.action.description || "No action description added yet."}</p>
+                    <div className={cx("readonly-action__details mt-2 flex flex-wrap gap-1 gap-x-3 text-sm text-slate-600 dark:text-slate-400")}>
+                      <span>Owner · {question.action.owner || "Not assigned"}</span>
+                      <span>Status · {question.action.status ?? "Open"}</span>
+                      <span>Follow-up · {question.action.followUp || "Not added"}</span>
+                      <span>Updated by {question.action.updatedBy ?? question.action.createdBy ?? "Site contributor"}{question.action.updatedAt ? ` · ${new Date(question.action.updatedAt).toLocaleString()}` : ""}</span>
+                    </div>
                   </div>
                 )}
                 <QuestionResponseHistory question={question} />
@@ -239,6 +461,10 @@ export function SiteSectionDetailScreen() {
     </div>
   );
 }
+
+const sectionFilterButtonClass = "inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg bg-transparent px-1.5 py-1.5 text-sm font-bold text-slate-600 transition-colors hover:bg-white hover:text-slate-900 md:px-2.5 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100";
+const sectionFilterButtonActiveClass = "is-active bg-white text-kc-blue-800 shadow-sm dark:bg-slate-900 dark:text-kc-blue-200";
+const sectionFilterCountClass = "inline-grid h-5.5 min-w-5.5 place-items-center rounded-full bg-slate-100 text-xs text-inherit dark:bg-slate-800";
 
 export function SiteDrilldownScreen() {
   const { siteId } = useParams();
@@ -272,65 +498,160 @@ export function SiteDrilldownScreen() {
   // site leadership in a compliance app.
   const hasRealContacts = site.id === "northstar";
   return (
-    <div className={cx("page-container [width:100%] [padding:clamp(1.5rem,_2.4vw,_2.35rem)_var(--page-gutter)_4rem] max-[740px]:[padding-top:1.25rem] max-[740px]:[padding-bottom:3.5rem]")}>
-      <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
+    <div className={cx(pageContainerClass)}>
+      <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbLinkClass)} to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
       <PageHeader
         eyebrow="Site assessment"
         title={site.name}
         description={`${site.code} · ${site.region} · ${site.segment}`}
-        actions={<>{role === "administrator" && <Link className={cx("button [display:inline-flex] [min-width:0] [align-items:center] [justify-content:center] [gap:0.5rem] [border:1px_solid_transparent] [border-radius:var(--radius-md)] [font-size:0.9rem] [font-weight:650] [line-height:1] [white-space:nowrap] [transition:background_120ms_ease,_border-color_120ms_ease,_box-shadow_120ms_ease,_color_120ms_ease,_transform_80ms_ease] disabled:[background:var(--neutral-100)] disabled:[border-color:var(--neutral-200)] disabled:[color:var(--neutral-400)] disabled:[box-shadow:none] [.question-evidence__editor_>_&]:[justify-self:start] [.question-evidence__attachments-header_>_&]:[flex:0_0_auto] [.site-assessment-area-row_>_&]:[justify-self:end] max-[900px]:[.site-assessment-area-row_>_&]:[grid-column:1_/_-1] max-[900px]:[.site-assessment-area-row_>_&]:[justify-self:stretch] max-[900px]:[.site-assessment-area-row_>_&]:[width:100%] max-[760px]:[.site-assessment-priority_&]:[width:100%] [.action-editor__header_>_&]:[margin-left:auto] max-[1500px]:[.requirement-mobile-toolbar_&:first-child]:[display:none] max-[1100px]:[.requirement-mobile-toolbar_&:first-child]:[display:inline-flex] max-[740px]:[.page-header__actions_&]:[width:100%] max-[740px]:[.overview-callout_&]:[grid-column:1_/_-1] max-[740px]:[.overview-callout_&]:[width:100%] max-[740px]:[.requirement-footer_>_&]:[width:100%] max-[740px]:[.requirement-footer_>_div_&]:[width:100%] max-[740px]:[.dialog__footer_&]:[width:100%] max-[740px]:[.section-drilldown-row_>_&]:[grid-column:1_/_-1] max-[740px]:[.section-drilldown-row_>_&]:[width:100%] max-[740px]:[.import-card__footer_&]:[width:100%] max-[740px]:[.result-state_&]:[width:100%] [.help-role-grid_&]:[width:100%] [.help-role-grid_&]:[margin-top:auto] max-[900px]:[.help-role-grid_&]:[width:auto] max-[620px]:[.setup-welcome__actions_&]:[width:100%] max-[620px]:[.tour-card__footer_&:last-child]:[flex:1] max-[620px]:[.setup-reminder_>_&]:[grid-column:2_/_-1] max-[620px]:[.setup-reminder_>_&]:[grid-row:2] max-[620px]:[.setup-reminder_>_&]:[width:100%] max-[620px]:[.help-role-grid_&]:[grid-column:1_/_-1] max-[620px]:[.help-role-grid_&]:[width:100%] max-[620px]:[.setup-complete_&]:[width:100%] [.passkey-add_&]:[width:100%] [.passkey-setup-message_&]:[flex:0_0_auto] max-[620px]:[.passkey-enrollment-choice_&]:[grid-column:2] max-[620px]:[.passkey-enrollment-choice_&]:[justify-self:start] max-[620px]:[.settings-card--split_>_&]:[width:100%] [.settings-index-empty_&]:[margin-top:0.3rem] max-[620px]:[.session-panel_&]:[grid-column:1_/_-1] max-[620px]:[.session-panel_&]:[width:100%] [.first-login-passkey__complete_&]:[margin-top:0.35rem] max-[620px]:[.first-login-passkey__actions_&]:[width:100%] button--tertiary [background:transparent] [color:var(--kc-700)] [&:hover:not(:disabled)]:[background:var(--kc-50)] [&:hover:not(:disabled)]:[color:var(--kc-900)] button--default [min-height:42px] [padding:0.68rem_1rem]")} to={`/admin/sites/${site.id}`}><UsersRound size={18} /><span>Manage site</span></Link>}<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `Maitsys_Assure_${site.code}_assessment.csv`)}>Export assessment</Button></>}
+        actions={<>{role === "administrator" && <Link className={cx(linkButtonBase, linkButtonVariant.tertiary, linkButtonSize.default)} to={`/admin/sites/${site.id}`}><UsersRound size={18} /><span>Manage site</span></Link>}<Button variant="secondary" icon={<ArrowDownToLine size={18} />} onClick={() => downloadSiteExport([site], `EHS360_${site.code}_assessment.csv`)}>Export assessment</Button></>}
       />
 
-      <section className={cx("site-assessment-hero [display:grid] [grid-template-columns:minmax(300px,_0.9fr)_minmax(480px,_1.1fr)] [gap:1.1rem] [overflow:hidden] [margin-top:1.25rem] [border:1px_solid_var(--kc-200)] [border-radius:var(--radius-lg)] [background:linear-gradient(135deg,_var(--surface-panel)_0%,_var(--kc-50)_100%)] [padding:1.2rem] [box-shadow:var(--shadow-1)] max-[1280px]:[grid-template-columns:1fr] max-[760px]:[padding:1rem]")} aria-labelledby="assessment-snapshot-title">
-        <div className={cx("site-assessment-hero__overview [display:flex] [min-width:0] [align-items:center] [gap:1rem] max-[760px]:[align-items:flex-start]")}>
-          <div className={cx("site-assessment-hero__score [display:flex] [width:92px] [height:92px] [flex:0_0_92px] [align-items:baseline] [justify-content:center] [border:8px_solid_var(--kc-100)] [border-radius:50%] [background:var(--surface-panel)] [color:var(--kc-800)] [box-shadow:inset_0_0_0_1px_var(--kc-200)] [&_strong]:[align-self:center] [&_strong]:[font-size:2rem] [&_strong]:[letter-spacing:-0.055em] [&_strong]:[line-height:1] [&_span]:[align-self:center] [&_span]:[margin:0.55rem_0_0_0.12rem] [&_span]:[font-size:0.8rem] [&_span]:[font-weight:750] max-[760px]:[width:72px] max-[760px]:[height:72px] max-[760px]:[flex-basis:72px] max-[760px]:[border-width:6px] max-[760px]:[&_strong]:[font-size:1.55rem]")} aria-label={`${site.completion}% assessment completion`}><strong>{site.completion}</strong><span>%</span></div>
-          <div className={cx("site-assessment-hero__copy [display:grid] [min-width:0] [gap:0.38rem] [&_h2]:[font-size:clamp(1.25rem,_2vw,_1.65rem)] [&_h2]:[line-height:1.15] [&_>_p:not(.eyebrow)]:[color:var(--neutral-600)] [&_>_p:not(.eyebrow)]:[font-size:0.82rem]")}>
-            <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Assessment snapshot</p>
-            <h2 id="assessment-snapshot-title">{assessmentState}</h2>
-            <p>{responsesRecorded} of {totalQuestions} assessment questions have a recorded response.</p>
+      <section className={cx("site-assessment-hero mt-5 grid grid-cols-1 gap-4.5 overflow-hidden rounded-xl border border-kc-blue-200 bg-gradient-to-br from-white to-kc-blue-50 p-4 shadow-sm lg:grid-cols-2 dark:border-kc-blue-800 dark:from-slate-900 dark:to-kc-blue-950")} aria-labelledby="assessment-snapshot-title">
+        <div className={cx("site-assessment-hero__overview flex min-w-0 items-start gap-4 sm:items-center")}>
+          <div className={cx("site-assessment-hero__score flex size-18 flex-none items-baseline justify-center rounded-full border-6 border-kc-blue-100 bg-white text-kc-blue-800 ring-1 ring-inset ring-kc-blue-200 sm:size-23 sm:border-8 dark:border-kc-blue-900 dark:bg-slate-900 dark:ring-kc-blue-800")} aria-label={`${site.completion}% assessment completion`}>
+            <strong className={cx("self-center text-2xl leading-none tracking-tight sm:text-3xl")}>{site.completion}</strong>
+            <span className={cx("self-center pt-2 pl-0.5 text-sm font-bold")}>%</span>
+          </div>
+          <div className={cx("site-assessment-hero__copy grid min-w-0 gap-1.5")}>
+            <p className={cx(eyebrowClasses)}>Assessment snapshot</p>
+            <h2 id="assessment-snapshot-title" className={cx("text-xl leading-tight text-slate-900 sm:text-2xl dark:text-slate-100")}>{assessmentState}</h2>
+            <p className={cx("text-sm text-slate-600 dark:text-slate-400")}>{responsesRecorded} of {totalQuestions} assessment questions have a recorded response.</p>
             <ProgressBar value={site.completion} />
           </div>
         </div>
-        <div className={cx("site-assessment-hero__facts [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [overflow:hidden] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-md)] [background:var(--surface-panel)] [&_>_div]:[display:flex] [&_>_div]:[min-width:0] [&_>_div]:[flex-direction:column] [&_>_div]:[align-items:flex-start] [&_>_div]:[justify-content:center] [&_>_div]:[gap:0.3rem] [&_>_div]:[padding:0.9rem] [&_>_div]:[border-right:1px_solid_var(--neutral-200)] [&_>_div:last-child]:[border-right:0] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.7rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.7rem] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:1rem] max-[760px]:[grid-template-columns:1fr] max-[760px]:[&_>_div]:[border-right:0] max-[760px]:[&_>_div]:[border-bottom:1px_solid_var(--neutral-200)] max-[760px]:[&_>_div:last-child]:[border-bottom:0]")} aria-label="Assessment summary">
-          <div><span>Self-assessed performance</span><PerformanceBadge performance={site.performance} /></div>
-          <div><span>Open gaps</span><strong className={cx(site.gaps > 0 && "text-danger [color:var(--danger)]!")}>{site.gaps}</strong><small>No and Partial responses</small></div>
-          <div><span>Last updated</span><strong>{site.updated}</strong><small>Current assessment record</small></div>
-        </div>
-        {prioritySection && <div className={cx("site-assessment-priority [display:flex] [grid-column:1_/_-1] [align-items:center] [justify-content:space-between] [gap:1rem] [border-top:1px_solid_var(--kc-200)] [padding-top:1rem] [&_>_div]:[display:flex] [&_>_div]:[min-width:0] [&_>_div]:[align-items:center] [&_>_div]:[gap:0.75rem] [&_>_div_>_div]:[display:grid] [&_>_div_>_div]:[min-width:0] [&_>_div_>_div]:[align-items:center] [&_>_div_>_div]:[gap:0.08rem] [&_>_div_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_div_>_span]:[font-size:0.75rem] max-[1280px]:[grid-column:auto] max-[760px]:[align-items:stretch] max-[760px]:[flex-direction:column]")}>
-          <div><span className={cx("site-assessment-priority__icon [display:grid] [width:40px] [height:40px] [flex:0_0_40px] [place-items:center] [border-radius:11px] [background:var(--danger-surface)] [color:var(--danger)]")}><CircleAlert size={19} /></span><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Priority review</p><strong>{prioritySection.name}</strong><span>{prioritySection.gaps} {prioritySection.gaps === 1 ? "gap" : "gaps"} · {prioritySection.completion}% complete</span></div></div>
-          <Link className={cx("button [display:inline-flex] [min-width:0] [align-items:center] [justify-content:center] [gap:0.5rem] [border:1px_solid_transparent] [border-radius:var(--radius-md)] [font-size:0.9rem] [font-weight:650] [line-height:1] [white-space:nowrap] [transition:background_120ms_ease,_border-color_120ms_ease,_box-shadow_120ms_ease,_color_120ms_ease,_transform_80ms_ease] disabled:[background:var(--neutral-100)] disabled:[border-color:var(--neutral-200)] disabled:[color:var(--neutral-400)] disabled:[box-shadow:none] [.question-evidence__editor_>_&]:[justify-self:start] [.question-evidence__attachments-header_>_&]:[flex:0_0_auto] [.site-assessment-area-row_>_&]:[justify-self:end] max-[900px]:[.site-assessment-area-row_>_&]:[grid-column:1_/_-1] max-[900px]:[.site-assessment-area-row_>_&]:[justify-self:stretch] max-[900px]:[.site-assessment-area-row_>_&]:[width:100%] max-[760px]:[.site-assessment-priority_&]:[width:100%] [.action-editor__header_>_&]:[margin-left:auto] max-[1500px]:[.requirement-mobile-toolbar_&:first-child]:[display:none] max-[1100px]:[.requirement-mobile-toolbar_&:first-child]:[display:inline-flex] max-[740px]:[.page-header__actions_&]:[width:100%] max-[740px]:[.overview-callout_&]:[grid-column:1_/_-1] max-[740px]:[.overview-callout_&]:[width:100%] max-[740px]:[.requirement-footer_>_&]:[width:100%] max-[740px]:[.requirement-footer_>_div_&]:[width:100%] max-[740px]:[.dialog__footer_&]:[width:100%] max-[740px]:[.section-drilldown-row_>_&]:[grid-column:1_/_-1] max-[740px]:[.section-drilldown-row_>_&]:[width:100%] max-[740px]:[.import-card__footer_&]:[width:100%] max-[740px]:[.result-state_&]:[width:100%] [.help-role-grid_&]:[width:100%] [.help-role-grid_&]:[margin-top:auto] max-[900px]:[.help-role-grid_&]:[width:auto] max-[620px]:[.setup-welcome__actions_&]:[width:100%] max-[620px]:[.tour-card__footer_&:last-child]:[flex:1] max-[620px]:[.setup-reminder_>_&]:[grid-column:2_/_-1] max-[620px]:[.setup-reminder_>_&]:[grid-row:2] max-[620px]:[.setup-reminder_>_&]:[width:100%] max-[620px]:[.help-role-grid_&]:[grid-column:1_/_-1] max-[620px]:[.help-role-grid_&]:[width:100%] max-[620px]:[.setup-complete_&]:[width:100%] [.passkey-add_&]:[width:100%] [.passkey-setup-message_&]:[flex:0_0_auto] max-[620px]:[.passkey-enrollment-choice_&]:[grid-column:2] max-[620px]:[.passkey-enrollment-choice_&]:[justify-self:start] max-[620px]:[.settings-card--split_>_&]:[width:100%] [.settings-index-empty_&]:[margin-top:0.3rem] max-[620px]:[.session-panel_&]:[grid-column:1_/_-1] max-[620px]:[.session-panel_&]:[width:100%] [.first-login-passkey__complete_&]:[margin-top:0.35rem] max-[620px]:[.first-login-passkey__actions_&]:[width:100%] button--primary [background:var(--brand-solid)] [border-color:var(--brand-solid)] [color:#fff] [box-shadow:0_1px_2px_rgb(12_42_62_/_0.16)] [&:hover:not(:disabled)]:[background:var(--brand-solid-hover)] [&:hover:not(:disabled)]:[border-color:var(--brand-solid-hover)] [&:active:not(:disabled)]:[background:var(--brand-solid-active)] [&:active:not(:disabled)]:[transform:translateY(1px)] button--compact [min-height:34px] [padding:0.45rem_0.7rem] [font-size:0.82rem]")} to={sectionRoute(prioritySection)}><span>Review details</span><ArrowRight size={16} /></Link>
-        </div>}
-      </section>
-
-      <section className={cx("table-card [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] site-assessment-sections [--assessment-area-columns:minmax(330px,_1.25fr)_minmax(260px,_0.85fr)_minmax(160px,_0.55fr)_minmax(125px,_0.45fr)_minmax(125px,_0.42fr)] max-[1280px]:[--assessment-area-columns:minmax(270px,_1.2fr)_minmax(190px,_0.8fr)_minmax(130px,_0.55fr)_minmax(105px,_0.45fr)_minmax(120px,_0.45fr)]")} aria-labelledby="assessment-sections-title">
-        <div className={cx("table-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:1rem_1.15rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.78rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column] site-assessment-sections__header [align-items:center] [&_>_div:first-child]:[display:grid] [&_>_div:first-child]:[gap:0.12rem] max-[760px]:[align-items:stretch]")}>
-          <div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Assessment details</p><h2 id="assessment-sections-title">Assessment areas</h2><span>Review completion, performance, and gaps before opening question-level details.</span></div>
-          <div className={cx("site-section-filters [display:inline-flex] [flex:0_0_auto] [gap:0.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:11px] [background:var(--neutral-50)] [padding:0.25rem] [&_button]:[display:inline-flex] [&_button]:[min-height:34px] [&_button]:[align-items:center] [&_button]:[gap:0.38rem] [&_button]:[border:0] [&_button]:[border-radius:8px] [&_button]:[background:transparent] [&_button]:[color:var(--neutral-600)] [&_button]:[padding:0.4rem_0.65rem] [&_button]:[font-size:0.74rem] [&_button]:[font-weight:700] [&_button]:[cursor:pointer] [&_button:hover]:[background:var(--surface-panel)] [&_button:hover]:[color:var(--neutral-900)] [&_button_span]:[display:inline-grid] [&_button_span]:[min-width:22px] [&_button_span]:[height:22px] [&_button_span]:[place-items:center] [&_button_span]:[border-radius:999px] [&_button_span]:[background:var(--neutral-100)] [&_button_span]:[color:inherit] [&_button_span]:[font-size:0.66rem] max-[760px]:[display:grid] max-[760px]:[width:100%] max-[760px]:[grid-template-columns:repeat(3,_1fr)] max-[760px]:[&_button]:[justify-content:center] max-[760px]:[&_button]:[padding-inline:0.35rem]")} role="group" aria-label="Filter assessment areas">
-            <button type="button" className={cx(sectionFilter === "all" && "is-active [.site-section-filters_button&]:[background:var(--surface-panel)] [.site-section-filters_button&]:[color:var(--kc-800)] [.site-section-filters_button&]:[box-shadow:var(--shadow-1)]")} aria-pressed={sectionFilter === "all"} onClick={() => setSectionFilter("all")}>All <span>{assessmentSections.length}</span></button>
-            <button type="button" className={cx(sectionFilter === "attention" && "is-active [.site-section-filters_button&]:[background:var(--surface-panel)] [.site-section-filters_button&]:[color:var(--kc-800)] [.site-section-filters_button&]:[box-shadow:var(--shadow-1)]")} aria-pressed={sectionFilter === "attention"} onClick={() => setSectionFilter("attention")}>Needs attention <span>{needsAttention.length}</span></button>
-            <button type="button" className={cx(sectionFilter === "complete" && "is-active [.site-section-filters_button&]:[background:var(--surface-panel)] [.site-section-filters_button&]:[color:var(--kc-800)] [.site-section-filters_button&]:[box-shadow:var(--shadow-1)]")} aria-pressed={sectionFilter === "complete"} onClick={() => setSectionFilter("complete")}>Complete <span>{completeSections.length}</span></button>
+        <div className={cx("site-assessment-hero__facts grid grid-cols-1 overflow-hidden rounded-lg border border-slate-200 bg-white sm:grid-cols-3 dark:border-slate-700 dark:bg-slate-900")} aria-label="Assessment summary">
+          <div className={cx("flex min-w-0 flex-col items-start justify-center gap-1 border-b border-slate-200 p-3.5 sm:border-r sm:border-b-0 dark:border-slate-700")}>
+            <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Self-assessed performance</span>
+            <PerformanceBadge performance={site.performance} />
+          </div>
+          <div className={cx("flex min-w-0 flex-col items-start justify-center gap-1 border-b border-slate-200 p-3.5 sm:border-r sm:border-b-0 dark:border-slate-700")}>
+            <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Open gaps</span>
+            <strong className={cx("text-base text-slate-900 dark:text-slate-100", site.gaps > 0 && "text-danger text-red-700 dark:text-red-300")}>{site.gaps}</strong>
+            <small className={cx("text-xs text-slate-500 dark:text-slate-400")}>No and Partial responses</small>
+          </div>
+          <div className={cx("flex min-w-0 flex-col items-start justify-center gap-1 p-3.5")}>
+            <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Last updated</span>
+            <strong className={cx("text-base text-slate-900 dark:text-slate-100")}>{site.updated}</strong>
+            <small className={cx("text-xs text-slate-500 dark:text-slate-400")}>Current assessment record</small>
           </div>
         </div>
-        {visibleSections.length ? <><div className={cx("site-assessment-area-columns [display:grid] [grid-template-columns:var(--assessment-area-columns)] [gap:1.5rem] [border-bottom:1px_solid_var(--neutral-200)] [background:var(--neutral-25)] [padding:0.55rem_1rem] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.65rem] [&_span]:[font-weight:700] [&_span]:[letter-spacing:0.025em] [&_span]:[text-transform:uppercase] [&_span:last-child]:[justify-self:end] max-[1280px]:[gap:1rem] max-[900px]:[display:none]")} aria-hidden="true"><span>Assessment area</span><span>Completion</span><span>Performance</span><span>Open gaps</span><span>Action</span></div><div className={cx("site-assessment-area-list [display:grid]")} data-tour="drilldown-sections">{visibleSections.map((section) => {
-          const sectionNumber = assessmentSections.findIndex((item) => item.id === section.id) + 1;
-          return <article key={section.id} className={cx("site-assessment-area-row [display:grid] [grid-template-columns:var(--assessment-area-columns)] [align-items:center] [gap:1.5rem] [padding:0.8rem_1rem] [border-bottom:1px_solid_var(--neutral-200)] [&:last-child]:[border-bottom:0] hover:[background:var(--neutral-50)] max-[1280px]:[gap:1rem] max-[900px]:[grid-template-columns:1fr_1fr] max-[900px]:[gap:0.85rem_1.1rem] max-[900px]:[padding:1rem]")}>
-            <div className={cx("site-assessment-area-row__identity [display:flex] [min-width:0] [align-items:center] [gap:0.75rem] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_>_div]:[gap:0.08rem] [&_strong]:[overflow:hidden] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.84rem] [&_strong]:[text-overflow:ellipsis] [&_strong]:[white-space:nowrap] [&_>_div_>_span:last-child]:[color:var(--neutral-500)] [&_>_div_>_span:last-child]:[font-size:0.67rem] max-[900px]:[grid-column:1_/_-1] max-[900px]:[&_strong]:[white-space:normal]")}><span className={cx("section-index [display:grid] [width:36px] [height:36px] [flex:0_0_36px] [place-items:center] [border-radius:10px] [background:var(--kc-50)] [color:var(--kc-800)] [font-size:0.68rem] [font-weight:750] [.site-assessment-area-row__identity_&]:[width:38px] [.site-assessment-area-row__identity_&]:[height:38px] [.site-assessment-area-row__identity_&]:[flex-basis:38px] [.site-assessment-area-row__identity_&]:[font-size:0.7rem] [.site-assessment-area-row__identity_&]:[text-align:center]")} aria-hidden="true">{String(sectionNumber).padStart(2, "0")}</span><div><span className={cx("site-assessment-area-row__kind [color:var(--kc-700)] [font-size:0.67rem] [font-weight:700]")}>{section.kind === "operating-system" ? "Operating System" : "Performance Standard"}</span><strong>{section.name}</strong><span>{section.questions} assessment questions</span></div></div>
-            <div className={cx("site-assessment-area-row__completion [display:grid] [min-width:0] [gap:0.4rem] max-[900px]:[grid-column:1_/_-1]")}>
-              <span className={cx("site-assessment-area-row__label [display:none] [color:var(--neutral-500)] [font-size:0.68rem] [.site-assessment-area-row__gaps_>_&]:[grid-column:1_/_-1] max-[900px]:[display:block]")}>Completion</span>
-              <div className={cx("site-assessment-area-row__meter [display:flex] [align-items:center] [gap:0.55rem] [&_strong]:[min-width:36px] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.72rem] [&_strong]:[text-align:right]")}><span className={cx("site-assessment-area-row__track [display:block] [flex:0_1_220px] [width:100%] [max-width:220px] [height:6px] [overflow:hidden] [border:1px_solid_var(--kc-200)] [border-radius:999px] [background:var(--kc-50)] [box-shadow:inset_0_1px_2px_rgb(15_23_42_/_0.06)] [&_>_span]:[display:block] [&_>_span]:[height:100%] [&_>_span]:[border-radius:inherit] [&_>_span]:[background:var(--kc-700)] max-[900px]:[flex:1] max-[900px]:[max-width:none]")} role="progressbar" aria-label={`${section.name} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={section.completion}><span style={{ width: `${section.completion}%` }} /></span><strong>{section.completion}%</strong></div>
+        {prioritySection && (
+          <div className={cx("site-assessment-priority flex flex-col items-stretch gap-4 border-t border-kc-blue-200 pt-4 sm:flex-row sm:items-center sm:justify-between lg:col-span-2 dark:border-kc-blue-800")}>
+            <div className={cx("flex min-w-0 items-center gap-3")}>
+              <span className={cx("site-assessment-priority__icon grid size-10 flex-none place-items-center rounded-xl bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300")}><CircleAlert size={19} /></span>
+              <div className={cx("grid min-w-0 items-center gap-0.5")}>
+                <p className={cx(eyebrowClasses)}>Priority review</p>
+                <strong className={cx("text-slate-900 dark:text-slate-100")}>{prioritySection.name}</strong>
+                <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>{prioritySection.gaps} {prioritySection.gaps === 1 ? "gap" : "gaps"} · {prioritySection.completion}% complete</span>
+              </div>
             </div>
-            <div className={cx("site-assessment-area-row__result [display:grid] [justify-items:start] [gap:0.32rem] [&_>_strong]:[color:var(--neutral-800)] [&_>_strong]:[font-size:0.88rem]")}><span className={cx("site-assessment-area-row__label [display:none] [color:var(--neutral-500)] [font-size:0.68rem] [.site-assessment-area-row__gaps_>_&]:[grid-column:1_/_-1] max-[900px]:[display:block]")}>Performance</span><PerformanceBadge performance={section.performance} compact /></div>
-            <div className={cx("site-assessment-area-row__result [display:grid] [justify-items:start] [gap:0.32rem] [&_>_strong]:[color:var(--neutral-800)] [&_>_strong]:[font-size:0.88rem] site-assessment-area-row__gaps [grid-template-columns:auto_1fr] [align-items:baseline] [column-gap:0.45rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.65rem] [&_small]:[white-space:nowrap]")}><span className={cx("site-assessment-area-row__label [display:none] [color:var(--neutral-500)] [font-size:0.68rem] [.site-assessment-area-row__gaps_>_&]:[grid-column:1_/_-1] max-[900px]:[display:block]")}>Open gaps</span><strong className={cx(section.gaps > 0 && "text-danger [color:var(--danger)]!")}>{section.gaps}</strong><small>{section.gaps > 0 ? "Needs attention" : section.completion === 100 ? "Complete" : "No gaps recorded"}</small></div>
-            <Link className={cx("button [display:inline-flex] [min-width:0] [align-items:center] [justify-content:center] [gap:0.5rem] [border:1px_solid_transparent] [border-radius:var(--radius-md)] [font-size:0.9rem] [font-weight:650] [line-height:1] [white-space:nowrap] [transition:background_120ms_ease,_border-color_120ms_ease,_box-shadow_120ms_ease,_color_120ms_ease,_transform_80ms_ease] disabled:[background:var(--neutral-100)] disabled:[border-color:var(--neutral-200)] disabled:[color:var(--neutral-400)] disabled:[box-shadow:none] [.question-evidence__editor_>_&]:[justify-self:start] [.question-evidence__attachments-header_>_&]:[flex:0_0_auto] [.site-assessment-area-row_>_&]:[justify-self:end] max-[900px]:[.site-assessment-area-row_>_&]:[grid-column:1_/_-1] max-[900px]:[.site-assessment-area-row_>_&]:[justify-self:stretch] max-[900px]:[.site-assessment-area-row_>_&]:[width:100%] max-[760px]:[.site-assessment-priority_&]:[width:100%] [.action-editor__header_>_&]:[margin-left:auto] max-[1500px]:[.requirement-mobile-toolbar_&:first-child]:[display:none] max-[1100px]:[.requirement-mobile-toolbar_&:first-child]:[display:inline-flex] max-[740px]:[.page-header__actions_&]:[width:100%] max-[740px]:[.overview-callout_&]:[grid-column:1_/_-1] max-[740px]:[.overview-callout_&]:[width:100%] max-[740px]:[.requirement-footer_>_&]:[width:100%] max-[740px]:[.requirement-footer_>_div_&]:[width:100%] max-[740px]:[.dialog__footer_&]:[width:100%] max-[740px]:[.section-drilldown-row_>_&]:[grid-column:1_/_-1] max-[740px]:[.section-drilldown-row_>_&]:[width:100%] max-[740px]:[.import-card__footer_&]:[width:100%] max-[740px]:[.result-state_&]:[width:100%] [.help-role-grid_&]:[width:100%] [.help-role-grid_&]:[margin-top:auto] max-[900px]:[.help-role-grid_&]:[width:auto] max-[620px]:[.setup-welcome__actions_&]:[width:100%] max-[620px]:[.tour-card__footer_&:last-child]:[flex:1] max-[620px]:[.setup-reminder_>_&]:[grid-column:2_/_-1] max-[620px]:[.setup-reminder_>_&]:[grid-row:2] max-[620px]:[.setup-reminder_>_&]:[width:100%] max-[620px]:[.help-role-grid_&]:[grid-column:1_/_-1] max-[620px]:[.help-role-grid_&]:[width:100%] max-[620px]:[.setup-complete_&]:[width:100%] [.passkey-add_&]:[width:100%] [.passkey-setup-message_&]:[flex:0_0_auto] max-[620px]:[.passkey-enrollment-choice_&]:[grid-column:2] max-[620px]:[.passkey-enrollment-choice_&]:[justify-self:start] max-[620px]:[.settings-card--split_>_&]:[width:100%] [.settings-index-empty_&]:[margin-top:0.3rem] max-[620px]:[.session-panel_&]:[grid-column:1_/_-1] max-[620px]:[.session-panel_&]:[width:100%] [.first-login-passkey__complete_&]:[margin-top:0.35rem] max-[620px]:[.first-login-passkey__actions_&]:[width:100%] button--tertiary [background:transparent] [color:var(--kc-700)] [&:hover:not(:disabled)]:[background:var(--kc-50)] [&:hover:not(:disabled)]:[color:var(--kc-900)] button--compact [min-height:34px] [padding:0.45rem_0.7rem] [font-size:0.82rem]")} to={sectionRoute(section)}><span>{canEditAssignedSite ? "Open assessment" : "Review details"}</span><ArrowRight size={16} /></Link>
-          </article>;
-        })}</div></> : <EmptyState icon={<CheckCircle2 size={27} />} title="No assessment areas in this view" description="Choose another filter to review the site's assessment areas." />}
+            <Link className={cx(linkButtonBase, linkButtonVariant.primary, linkButtonSize.compact)} to={sectionRoute(prioritySection)}><span>Review details</span><ArrowRight size={16} /></Link>
+          </div>
+        )}
       </section>
 
-      <details className={cx("site-support-details [margin-top:1.25rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [box-shadow:var(--shadow-1)] [&_>_summary]:[display:flex] [&_>_summary]:[min-height:66px] [&_>_summary]:[align-items:center] [&_>_summary]:[justify-content:space-between] [&_>_summary]:[gap:1rem] [&_>_summary]:[padding:0.9rem_1rem] [&_>_summary]:[cursor:pointer] [&_>_summary]:[list-style:none] [&_>_summary::-webkit-details-marker]:[display:none] [&_>_summary_>_span]:[display:flex] [&_>_summary_>_span]:[align-items:center] [&_>_summary_>_span]:[gap:0.75rem] [&_>_summary_>_span_>_svg]:[color:var(--kc-700)] [&_>_summary_>_span_>_span]:[display:grid] [&_>_summary_>_span_>_span]:[gap:0.08rem] [&_>_summary_small]:[color:var(--neutral-500)] [&_>_summary_small]:[font-size:0.72rem] [&_>_summary_>_svg]:[color:var(--neutral-500)] [&_>_summary_>_svg]:[transition:transform_180ms_ease] [&[open]_>_summary_>_svg]:[transform:rotate(180deg)]")}>
-        <summary><span><UsersRound size={20} /><span><strong>Site people and contacts</strong><small>Secondary site context · {assignedUsers.length} assigned {assignedUsers.length === 1 ? "user" : "users"}</small></span></span><ChevronDown size={19} /></summary>
-        <div className={cx("site-support-details__content [display:grid] [gap:2rem] [border-top:1px_solid_var(--neutral-200)] [padding:1.1rem]")}>
-          <section aria-labelledby="site-users-title"><div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Read-only</p><h2 id="site-users-title">Assigned users</h2></div><span>{assignedUsers.length} assigned</span></div><SiteUsersPanel users={assignedUsers} /></section>
-          <section aria-labelledby="site-contacts-title"><div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Read-only</p><h2 id="site-contacts-title">Site contacts</h2></div></div><ContactsPanel contacts={hasRealContacts ? siteContacts : null} /></section>
+      <section className={cx(tableCardClass, "site-assessment-sections")} aria-labelledby="assessment-sections-title">
+        <style>{`
+          .site-assessment-sections { --assessment-area-columns: minmax(330px, 1.25fr) minmax(260px, 0.85fr) minmax(160px, 0.55fr) minmax(125px, 0.45fr) minmax(125px, 0.42fr); }
+          @media (max-width: 1280px) {
+            .site-assessment-sections { --assessment-area-columns: minmax(270px, 1.2fr) minmax(190px, 0.8fr) minmax(130px, 0.55fr) minmax(105px, 0.45fr) minmax(120px, 0.45fr); }
+          }
+          @media (min-width: 1024px) {
+            .site-assessment-area-row { grid-template-columns: var(--assessment-area-columns); }
+          }
+        `}</style>
+        <div className={cx(tableCardHeaderBaseClass, "site-assessment-sections__header flex-col items-stretch md:flex-row md:items-center")}>
+          <div className={cx("grid gap-0.5")}>
+            <p className={cx(eyebrowClasses)}>Assessment details</p>
+            <h2 id="assessment-sections-title" className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Assessment areas</h2>
+            <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>Review completion, performance, and gaps before opening question-level details.</span>
+          </div>
+          <div className={cx("site-section-filters grid w-full grid-cols-3 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 md:inline-flex md:w-auto md:flex-none dark:border-slate-700 dark:bg-slate-900")} role="group" aria-label="Filter assessment areas">
+            <button type="button" className={cx(sectionFilterButtonClass, sectionFilter === "all" && sectionFilterButtonActiveClass)} aria-pressed={sectionFilter === "all"} onClick={() => setSectionFilter("all")}>All <span className={cx(sectionFilterCountClass)}>{assessmentSections.length}</span></button>
+            <button type="button" className={cx(sectionFilterButtonClass, sectionFilter === "attention" && sectionFilterButtonActiveClass)} aria-pressed={sectionFilter === "attention"} onClick={() => setSectionFilter("attention")}>Needs attention <span className={cx(sectionFilterCountClass)}>{needsAttention.length}</span></button>
+            <button type="button" className={cx(sectionFilterButtonClass, sectionFilter === "complete" && sectionFilterButtonActiveClass)} aria-pressed={sectionFilter === "complete"} onClick={() => setSectionFilter("complete")}>Complete <span className={cx(sectionFilterCountClass)}>{completeSections.length}</span></button>
+          </div>
+        </div>
+        {visibleSections.length ? (
+          <>
+            <div className={cx("site-assessment-area-columns hidden gap-6 border-b border-slate-200 bg-slate-50 px-4 py-2 lg:grid dark:border-slate-700 dark:bg-slate-900")} style={{ gridTemplateColumns: "var(--assessment-area-columns)" }} aria-hidden="true">
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Assessment area</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Completion</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Performance</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Open gaps</span>
+              <span className={cx("justify-self-end text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Action</span>
+            </div>
+            <div className={cx("site-assessment-area-list grid")} data-tour="drilldown-sections">
+              {visibleSections.map((section) => {
+                const sectionNumber = assessmentSections.findIndex((item) => item.id === section.id) + 1;
+                return (
+                  <article
+                    key={section.id}
+                    className={cx("site-assessment-area-row grid grid-cols-2 items-center gap-3.5 border-b border-slate-200 p-4 last:border-b-0 hover:bg-slate-50 lg:gap-6 lg:px-4 lg:py-3.5 dark:border-slate-700 dark:hover:bg-slate-800")}
+                  >
+                    <div className={cx("site-assessment-area-row__identity col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1")}>
+                      <span className={cx("section-index grid size-9.5 flex-none place-items-center rounded-lg bg-kc-blue-50 text-center text-xs font-bold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")} aria-hidden="true">{String(sectionNumber).padStart(2, "0")}</span>
+                      <div className={cx("grid min-w-0 gap-0.5")}>
+                        <span className={cx("site-assessment-area-row__kind text-xs font-bold text-kc-blue-700 dark:text-kc-blue-300")}>{section.kind === "operating-system" ? "Operating System" : "Performance Standard"}</span>
+                        <strong className={cx("overflow-hidden text-sm text-ellipsis whitespace-nowrap text-slate-900 lg:whitespace-normal dark:text-slate-100")}>{section.name}</strong>
+                        <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{section.questions} assessment questions</span>
+                      </div>
+                    </div>
+                    <div className={cx("site-assessment-area-row__completion col-span-2 grid min-w-0 gap-1.5 lg:col-span-1")}>
+                      <span className={cx("site-assessment-area-row__label block text-xs text-slate-500 lg:hidden dark:text-slate-400")}>Completion</span>
+                      <div className={cx("site-assessment-area-row__meter flex items-center gap-2")}>
+                        <span className={cx("site-assessment-area-row__track block h-1.5 w-full flex-1 overflow-hidden rounded-full border border-kc-blue-200 bg-kc-blue-50 shadow-inner lg:max-w-55 lg:flex-none dark:border-kc-blue-800 dark:bg-kc-blue-950")} role="progressbar" aria-label={`${section.name} completion`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={section.completion}>
+                          <span className={cx("block h-full rounded-full bg-kc-blue-700")} style={{ width: `${section.completion}%` }} />
+                        </span>
+                        <strong className={cx("min-w-9 text-right text-xs text-slate-900 dark:text-slate-100")}>{section.completion}%</strong>
+                      </div>
+                    </div>
+                    <div className={cx("site-assessment-area-row__result grid justify-items-start gap-1")}>
+                      <span className={cx("site-assessment-area-row__label block text-xs text-slate-500 lg:hidden dark:text-slate-400")}>Performance</span>
+                      <PerformanceBadge performance={section.performance} compact />
+                    </div>
+                    <div className={cx("site-assessment-area-row__result site-assessment-area-row__gaps flex flex-wrap items-baseline gap-x-1.5 gap-y-1")}>
+                      <span className={cx("site-assessment-area-row__label basis-full text-xs text-slate-500 lg:hidden dark:text-slate-400")}>Open gaps</span>
+                      <strong className={cx("text-sm text-slate-800 dark:text-slate-200", section.gaps > 0 && "text-danger text-red-700 dark:text-red-300")}>{section.gaps}</strong>
+                      <small className={cx("text-xs whitespace-nowrap text-slate-500 dark:text-slate-400")}>{section.gaps > 0 ? "Needs attention" : section.completion === 100 ? "Complete" : "No gaps recorded"}</small>
+                    </div>
+                    <Link className={cx(linkButtonBase, linkButtonVariant.tertiary, linkButtonSize.compact, "col-span-2 justify-self-stretch lg:col-span-1 lg:justify-self-end")} to={sectionRoute(section)}><span>{canEditAssignedSite ? "Open assessment" : "Review details"}</span><ArrowRight size={16} /></Link>
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <EmptyState icon={<CheckCircle2 size={27} />} title="No assessment areas in this view" description="Choose another filter to review the site's assessment areas." />
+        )}
+      </section>
+
+      <details className={cx("site-support-details group mt-5 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900")}>
+        <summary className={cx("flex min-h-16.5 cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5")}>
+          <span className={cx("flex items-center gap-3")}>
+            <UsersRound size={20} className={cx("text-kc-blue-700 dark:text-kc-blue-300")} />
+            <span className={cx("grid gap-0.5")}>
+              <strong className={cx("text-slate-900 dark:text-slate-100")}>Site people and contacts</strong>
+              <small className={cx("text-xs text-slate-500 dark:text-slate-400")}>Secondary site context · {assignedUsers.length} assigned {assignedUsers.length === 1 ? "user" : "users"}</small>
+            </span>
+          </span>
+          <ChevronDown size={19} className={cx("text-slate-500 transition-transform duration-180 group-open:rotate-180 dark:text-slate-400")} />
+        </summary>
+        <div className={cx("site-support-details__content grid gap-8 border-t border-slate-200 p-4.5 dark:border-slate-700")}>
+          <section aria-labelledby="site-users-title">
+            <div className={cx(sectionTitleRowClass)}>
+              <div><p className={cx(eyebrowClasses)}>Read-only</p><h2 id="site-users-title" className={cx("mt-1")}>Assigned users</h2></div>
+              <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>{assignedUsers.length} assigned</span>
+            </div>
+            <SiteUsersPanel users={assignedUsers} />
+          </section>
+          <section aria-labelledby="site-contacts-title">
+            <div className={cx(sectionTitleRowClass)}>
+              <div><p className={cx(eyebrowClasses)}>Read-only</p><h2 id="site-contacts-title" className={cx("mt-1")}>Site contacts</h2></div>
+            </div>
+            <ContactsPanel contacts={hasRealContacts ? siteContacts : null} />
+          </section>
         </div>
       </details>
     </div>

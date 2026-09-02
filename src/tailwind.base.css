@@ -67,6 +67,11 @@
   --neutral-900: #0f172a;
   --neutral-950: #07111f;
 
+  /* The page canvas is one of the few colours that still swaps by theme rather than being
+     expressed as a utility, because html/body sit outside the component tree. */
+  --page-canvas: #f8fafc;
+  --page-canvas-glow: rgb(var(--accent-soft-rgb) / 0.08);
+
   --success: #067647;
   --success-surface: #ecfdf3;
   --success-border: #abefc6;
@@ -119,10 +124,9 @@
   --scrollbar-thumb-hover: rgb(71 85 105 / 0.66);
   --scrollbar-thumb-active: var(--brand-solid);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  /* The legacy --radius-* tokens are removed: those names live in Tailwind's own theme namespace,
+     so defining them here silently repointed `rounded-lg` at 14px instead of its canonical 8px.
+     Components use the canonical rounded-* scale now. */
   --shadow-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 4px rgb(15 23 42 / 0.05);
   --shadow-2: 0 10px 30px rgb(15 23 42 / 0.12);
   --shadow-3: 0 22px 60px rgb(15 23 42 / 0.2);
@@ -138,49 +142,21 @@
   --content-offset: 0px;
 }
 
+/*
+ * Dark mode is expressed in components as Tailwind `dark:` variants, so the colour ramps
+ * (--kc-*, --neutral-*, status colours, surfaces, borders) deliberately do NOT swap here:
+ * a utility like `text-kc-blue-700 dark:text-kc-blue-300` already selects the dark value by
+ * picking a different step, and repainting the ramp underneath it would invert twice.
+ *
+ * What remains below is only what utilities cannot express — the layered nav gradients, custom
+ * shadow ramps, scrollbar colours, and the page canvas — plus `color-scheme` for native controls.
+ */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --kc-50: #0e2a3d;
-  --kc-100: #13374d;
-  --kc-200: #21506a;
-  --kc-300: #72c0df;
-  --kc-400: #78c8e6;
-  --kc-500: #58b3dc;
-  --kc-600: #68bce0;
-  --kc-700: #7bc8e6;
-  --kc-800: #9bd7ed;
-  --kc-900: #c1e8f5;
+  --page-canvas: #0f172a;
+  --page-canvas-glow: rgb(var(--accent-dark-glow-rgb) / 0.1);
 
-  --neutral-0: #091521;
-  --neutral-25: #0b1825;
-  --neutral-50: #08131f;
-  --neutral-100: #132434;
-  --neutral-200: #23384b;
-  --neutral-300: #365168;
-  --neutral-400: #768b9d;
-  --neutral-500: #9bacbb;
-  --neutral-600: #bac7d2;
-  --neutral-700: #d5dee6;
-  --neutral-800: #e8eef3;
-  --neutral-900: #f7f9fb;
-  --neutral-950: #ffffff;
-
-  --success: #6fe0ad;
-  --success-surface: #0f2d24;
-  --success-border: #286a54;
-  --warning: #ffc170;
-  --warning-surface: #332614;
-  --warning-border: #765321;
-  --danger: #ff948d;
-  --danger-surface: #351a1b;
-  --danger-border: #7c3a3a;
-  --provisional: #c9b0ff;
-  --provisional-surface: #291f3d;
-
-  --surface-panel: #101e2c;
-  --surface-elevated: #142536;
-  --surface-input: #0d1a27;
   --surface-translucent: rgb(16 30 44 / 0.92);
   --surface-topbar: rgb(9 21 33 / 0.9);
   --surface-mobile-bar: rgb(11 24 37 / 0.94);
@@ -225,6 +201,19 @@
   scrollbar-width: thin;
 }
 
+/*
+ * Preflight is excluded, so Tailwind's own border reset is missing. Tailwind's width utilities
+ * (`border`, `border-b`, ...) only set a width and rely on this to supply the style; without it
+ * the initial `border-style: none` wins and no border paints at all.
+ */
+*,
+*::before,
+*::after {
+  border-width: 0;
+  border-style: solid;
+  border-color: currentcolor;
+}
+
 *::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -266,7 +255,7 @@
 html {
   min-width: 0;
   overflow-x: clip;
-  background: var(--neutral-50);
+  background: var(--page-canvas);
   scroll-behavior: smooth;
 }
 
@@ -276,8 +265,8 @@ body {
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 72% -10%, rgb(var(--accent-soft-rgb) / 0.08), transparent 32rem),
-    var(--neutral-50);
+    radial-gradient(circle at 72% -10%, var(--page-canvas-glow), transparent 32rem),
+    var(--page-canvas);
   color: var(--neutral-900);
   font-family: var(--font-sans);
   font-optical-sizing: auto;
@@ -533,8 +522,13 @@ h3 {
 }
 
 @media (max-width: 740px) {
+  /* `--neutral-*` no longer theme-swaps (components use `dark:` variants instead — see the note
+     above the dark-mode block), but this rule predates that change and still assumed it would.
+     Left as-is, it silently pinned the whole mobile canvas to the light neutral-50 regardless of
+     theme, so every eyebrow/link colour tuned for the dark page-canvas read at ~1.6:1 on mobile
+     dark mode. `--page-canvas` is the token that still swaps, so it belongs here instead. */
   body {
-    background: var(--neutral-50);
+    background: var(--page-canvas);
   }
 }
 
@@ -657,18 +651,5 @@ h3 {
   --brand-deepest: #001c45;
 }
 
-/* Dark mode needs the ramp inverted for contrast, mirroring how the default
-   palette lightens 300-900 under [data-theme="dark"]. */
-:root[data-theme="dark"][data-accent="kc-brand"] {
-  --kc-950: #041534;
-  --kc-50: #0f1f3d;
-  --kc-100: #14284d;
-  --kc-200: #1f3a6b;
-  --kc-300: #7ea6f8;
-  --kc-400: #8fb3f9;
-  --kc-500: #7aa4f7;
-  --kc-600: #8ab0f9;
-  --kc-700: #a3c2fb;
-  --kc-800: #c0d7fc;
-  --kc-900: #dbe8fe;
-}
+/* No dark-mode ramp inversion: the accent ramp tracks [data-accent] only, and components pick a
+   lighter step under `dark:` (kc-blue-700 -> kc-blue-300) to get dark-mode contrast. */

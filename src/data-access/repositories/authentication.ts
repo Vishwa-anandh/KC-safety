@@ -1,6 +1,6 @@
 import { demoAuthenticationEnabled } from "../../app/config/environment";
 import { demoAccounts } from "../../demo/fixtures/auth";
-import { demoAuthenticationRepository, publicAccount } from "../../demo/repositories/auth";
+import { beginDemoPasswordChange, confirmDemoPasswordChange, demoAuthenticationRepository, publicAccount } from "../../demo/repositories/auth";
 import type { AuthUser, UserRole } from "../../shared/types";
 import type { DataSourceKind } from "../contracts";
 import { RestClient } from "../rest/client";
@@ -17,6 +17,13 @@ export interface AuthenticationGateway {
   findAccount(userId: string): AuthUser | undefined;
   findAccountByRole(role: UserRole): AuthUser | undefined;
   signOut(): Promise<void>;
+  /** Always resolves — success never confirms whether the address has an account. */
+  requestPasswordReset(email: string): Promise<void>;
+  /** `email` identifies the signed-in account; the demo gateway has no server session to infer
+   *  it from the way the API gateway does. Validates `currentPassword` and issues an emailed
+   *  verification code the caller must pass to confirmPasswordChange. */
+  requestPasswordChangeCode(email: string, currentPassword: string): Promise<{ maskedEmail: string; devCode?: string }>;
+  confirmPasswordChange(email: string, code: string, newPassword: string): Promise<void>;
 }
 
 function isAuthUser(value: unknown): value is AuthUser {
@@ -47,6 +54,22 @@ const demoGateway: AuthenticationGateway = {
   async signOut() {
     await demoAuthenticationRepository.signOut?.();
   },
+  async requestPasswordReset(email) {
+    if (!demoAuthenticationEnabled) throw new Error("Password reset is not available in this environment.");
+    await demoAuthenticationRepository.requestPasswordReset?.(email);
+  },
+  async requestPasswordChangeCode(email, currentPassword) {
+    if (!demoAuthenticationEnabled) throw new Error("Password changes are not available in this environment.");
+    const account = Object.values(demoAccounts).find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
+    if (!account) throw new Error("Your account could not be found.");
+    return beginDemoPasswordChange(account.id, account.password, currentPassword, account.email);
+  },
+  async confirmPasswordChange(email, code, newPassword) {
+    if (!demoAuthenticationEnabled) throw new Error("Password changes are not available in this environment.");
+    const account = Object.values(demoAccounts).find((item) => item.email.toLowerCase() === email.trim().toLowerCase());
+    if (!account) throw new Error("Your account could not be found.");
+    confirmDemoPasswordChange(account.id, code, newPassword);
+  },
 };
 
 function createApiGateway(): AuthenticationGateway {
@@ -76,6 +99,17 @@ function createApiGateway(): AuthenticationGateway {
       } finally {
         sessionTokenStore.clear();
       }
+    },
+    async requestPasswordReset(email) {
+      await repository.requestPasswordReset?.(email);
+    },
+    async requestPasswordChangeCode(_email, currentPassword) {
+      const result = await repository.requestPasswordChangeCode?.(currentPassword);
+      if (!result) throw new Error("Password changes are not available in this environment.");
+      return result;
+    },
+    async confirmPasswordChange(_email, code, newPassword) {
+      await repository.confirmPasswordChange?.(code, newPassword);
     },
   };
 }

@@ -5,6 +5,21 @@ import { cx } from "../../../shared/utils";
 
 const initialsOf = (name: string) => name.split(" ").filter(Boolean).map((part) => part[0]).join("");
 
+/* Owner / contact cards. The card chrome is the canonical card recipe; the person rows and
+   avatars are shared verbatim by both panels below. */
+const ownerGridClass = "owner-grid mt-4 grid grid-cols-1 gap-4 md:grid-cols-2";
+const ownerCardClass = "owner-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900";
+const ownerCardHeaderClass = "owner-card__header mb-3 flex items-start justify-between gap-4";
+const ownerCardEyebrowClass = "text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300";
+const ownerCardTitleClass = "mt-0.5 text-slate-900 dark:text-slate-100";
+const ownerPersonClass = "owner-person flex items-center gap-3 border-t border-slate-100 py-3 dark:border-slate-800";
+/* The avatar must stay square, so both dimensions come from a single `size-*` step. */
+const avatarClass = "avatar avatar--soft inline-grid size-9 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200";
+const personTextClass = "grid min-w-0";
+const personRoleClass = "text-xs text-slate-500 dark:text-slate-400";
+const personNameClass = "text-sm text-slate-900 dark:text-slate-100";
+const personEmailClass = "overflow-hidden text-xs text-ellipsis text-slate-500 hover:text-kc-blue-700 dark:text-slate-400 dark:hover:text-kc-blue-300";
+
 /**
  * Read-only site contacts, shared by the enterprise site drill-down and the admin site detail
  * page. `siteContacts` is still a single global record rather than per-site, so callers pass
@@ -13,15 +28,15 @@ const initialsOf = (name: string) => name.split(" ").filter(Boolean).map((part) 
 export function ContactsPanel({ contacts }: { contacts: SiteContacts | null }) {
   if (!contacts) return <EmptyState icon={<Mail size={26} />} title="Contact details not yet provided" description="Site contacts have not been recorded for this site yet." />;
   const group = (title: string, rows: Array<[string, string, string]>) => (
-    <article className={cx("owner-card [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1rem] [box-shadow:var(--shadow-1)]")} key={title}>
-      <div className={cx("owner-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [margin-bottom:0.8rem] [&_p]:[color:var(--kc-700)] [&_p]:[font-size:0.7rem] [&_p]:[font-weight:700] [&_p]:[letter-spacing:0.015em] [&_h3]:[margin-top:0.18rem]")}><div><p>Read-only</p><h3>{title}</h3></div></div>
+    <article className={cx(ownerCardClass)} key={title}>
+      <div className={cx(ownerCardHeaderClass)}><div><p className={cx(ownerCardEyebrowClass)}>Read-only</p><h3 className={cx(ownerCardTitleClass)}>{title}</h3></div></div>
       {rows.map(([label, name, email]) => (
-        <div className={cx("owner-person [display:flex] [align-items:center] [gap:0.7rem] [border-top:1px_solid_var(--neutral-100)] [padding:0.75rem_0] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.72rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem] [&_strong]:[font-size:0.86rem] [&_a]:[overflow:hidden] [&_a]:[color:var(--neutral-500)] [&_a]:[font-size:0.72rem] [&_a]:[text-overflow:ellipsis] [&_a:hover]:[color:var(--kc-700)]")} key={label}><span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px] avatar--soft [width:36px]! [height:36px]! [flex-basis:36px] [background:var(--kc-50)]")}>{initialsOf(name)}</span><div><small>{label}</small><strong>{name}</strong><a href={`mailto:${email}`}>{email}</a></div></div>
+        <div className={cx(ownerPersonClass)} key={label}><span className={cx(avatarClass)}>{initialsOf(name)}</span><div className={cx(personTextClass)}><small className={cx(personRoleClass)}>{label}</small><strong className={cx(personNameClass)}>{name}</strong><a className={cx(personEmailClass)} href={`mailto:${email}`}>{email}</a></div></div>
       ))}
     </article>
   );
   return (
-    <div className={cx("owner-grid [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:1rem] [margin-top:1rem] max-[740px]:[grid-template-columns:1fr]")}>
+    <div className={cx(ownerGridClass)}>
       {group("Local leadership", [
         ["Site / Location Manager", contacts.siteManager, contacts.siteManagerEmail],
         ["Site Environmental Leader", contacts.environmentalLeader, contacts.environmentalLeaderEmail],
@@ -41,12 +56,12 @@ export function ContactsPanel({ contacts }: { contacts: SiteContacts | null }) {
 export function OwnersPanel({ owners }: { owners: OwnerRecord[] | null }) {
   if (!owners?.length) return <EmptyState icon={<Mail size={26} />} title="Owners not yet assigned" description="Program and standard owners have not been recorded for this site yet." />;
   return (
-    <div className={cx("owner-grid [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:1rem] [margin-top:1rem] max-[740px]:[grid-template-columns:1fr]")}>
+    <div className={cx(ownerGridClass)}>
       {owners.map((owner) => (
-        <article className={cx("owner-card [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1rem] [box-shadow:var(--shadow-1)]")} key={owner.id}>
-          <div className={cx("owner-card__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [margin-bottom:0.8rem] [&_p]:[color:var(--kc-700)] [&_p]:[font-size:0.7rem] [&_p]:[font-weight:700] [&_p]:[letter-spacing:0.015em] [&_h3]:[margin-top:0.18rem]")}><div><p>{owner.category}</p><h3>{owner.program}</h3></div></div>
-          <div className={cx("owner-person [display:flex] [align-items:center] [gap:0.7rem] [border-top:1px_solid_var(--neutral-100)] [padding:0.75rem_0] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.72rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem] [&_strong]:[font-size:0.86rem] [&_a]:[overflow:hidden] [&_a]:[color:var(--neutral-500)] [&_a]:[font-size:0.72rem] [&_a]:[text-overflow:ellipsis] [&_a:hover]:[color:var(--kc-700)]")}><span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px] avatar--soft [width:36px]! [height:36px]! [flex-basis:36px] [background:var(--kc-50)]")}>{initialsOf(owner.primaryName)}</span><div><small>Primary Owner</small><strong>{owner.primaryName}</strong><a href={`mailto:${owner.primaryEmail}`}>{owner.primaryEmail}</a></div></div>
-          <div className={cx("owner-person [display:flex] [align-items:center] [gap:0.7rem] [border-top:1px_solid_var(--neutral-100)] [padding:0.75rem_0] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.72rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem] [&_strong]:[font-size:0.86rem] [&_a]:[overflow:hidden] [&_a]:[color:var(--neutral-500)] [&_a]:[font-size:0.72rem] [&_a]:[text-overflow:ellipsis] [&_a:hover]:[color:var(--kc-700)]")}><span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px] avatar--soft [width:36px]! [height:36px]! [flex-basis:36px] [background:var(--kc-50)]")}>{initialsOf(owner.backupName)}</span><div><small>Backup Owner</small><strong>{owner.backupName}</strong><a href={`mailto:${owner.backupEmail}`}>{owner.backupEmail}</a></div></div>
+        <article className={cx(ownerCardClass)} key={owner.id}>
+          <div className={cx(ownerCardHeaderClass)}><div><p className={cx(ownerCardEyebrowClass)}>{owner.category}</p><h3 className={cx(ownerCardTitleClass)}>{owner.program}</h3></div></div>
+          <div className={cx(ownerPersonClass)}><span className={cx(avatarClass)}>{initialsOf(owner.primaryName)}</span><div className={cx(personTextClass)}><small className={cx(personRoleClass)}>Primary Owner</small><strong className={cx(personNameClass)}>{owner.primaryName}</strong><a className={cx(personEmailClass)} href={`mailto:${owner.primaryEmail}`}>{owner.primaryEmail}</a></div></div>
+          <div className={cx(ownerPersonClass)}><span className={cx(avatarClass)}>{initialsOf(owner.backupName)}</span><div className={cx(personTextClass)}><small className={cx(personRoleClass)}>Backup Owner</small><strong className={cx(personNameClass)}>{owner.backupName}</strong><a className={cx(personEmailClass)} href={`mailto:${owner.backupEmail}`}>{owner.backupEmail}</a></div></div>
         </article>
       ))}
     </div>
@@ -55,25 +70,50 @@ export function OwnersPanel({ owners }: { owners: OwnerRecord[] | null }) {
 
 const siteUserRoleLabels: Record<SiteUserRole, string> = {
   "site-contributor": "Site contributor",
-  "enterprise-viewer": "Regional / enterprise viewer",
   administrator: "Administrator",
 };
+
+/*
+ * The users table keeps its structural switch at exactly 1100px (`shell:`): below that width the
+ * table stops being a table and every row becomes a stacked label/value card, so each cell needs
+ * its own visible label. Those labels used to come from `td::before { content: attr(data-label) }`,
+ * which has no on-scale utility, so they are real spans now — hidden again from `shell:` up, where
+ * the real <thead> takes over. `data-label` stays on every cell for the tests that query it.
+ */
+const dataTableWrapClass = "data-table-wrap w-full max-w-full";
+const dataTableClass = "data-table block w-full min-w-0 table-fixed border-collapse text-sm text-slate-900 dark:text-slate-100 shell:table";
+const dataTableHeadClass = "block sr-only shell:not-sr-only shell:table-header-group";
+const dataTableHeaderCellClass = "border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400";
+const dataTableBodyClass = "grid w-full min-w-0 grid-cols-1 gap-3 p-3.5 md:grid-cols-2 shell:table-row-group shell:p-0";
+const dataTableRowClass = "block w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-900 shell:table-row shell:rounded-none shell:border-0 shell:bg-transparent shell:shadow-none";
+const dataTableCellClass = "flex min-h-12 w-full min-w-0 items-center gap-3 border-b border-slate-200 px-3.5 py-3 text-left align-middle wrap-anywhere dark:border-slate-700 shell:table-cell shell:min-h-0 shell:px-4";
+/* Last cell of each stacked card: no label, no divider, and its own footer tint. */
+const dataTableLastCellClass = "flex min-h-11 w-full min-w-0 items-center bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere border-slate-200 dark:border-slate-700 dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:bg-transparent shell:px-4";
+const dataTableCellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
+const publishBadgeClass = "publish-badge inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold";
+const publishBadgeActiveClass = "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
+const publishBadgeDraftClass = "publish-badge--draft border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300";
 
 /** Read-only list of the people assigned to a site, shared by oversight screens. */
 export function SiteUsersPanel({ users }: { users: SiteUser[] }) {
   if (!users.length) return <EmptyState icon={<UsersRound size={26} />} title="No users assigned" description="No one has been given access to this site yet." />;
   return (
-    <div className={cx("data-table-wrap [max-width:100%] max-[1100px]:[width:100%] max-[1100px]:[max-width:none] max-[1100px]:[overflow:visible]")}>
-      <table className={cx("data-table [width:100%] [table-layout:fixed] [border-collapse:collapse] [font-size:0.79rem] [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:[padding:0.8rem_1rem] [&_th]:[border-bottom:1px_solid_var(--neutral-200)] [&_th]:[text-align:left] [&_th]:[vertical-align:middle] [&_td]:[padding:0.8rem_1rem] [&_td]:[border-bottom:1px_solid_var(--neutral-200)] [&_td]:[text-align:left] [&_td]:[vertical-align:middle] [&_th]:[background:var(--neutral-50)] [&_th]:[color:var(--neutral-600)] [&_th]:[font-size:0.69rem] [&_th]:[font-weight:750] [&_th]:[letter-spacing:0.01em] [&_tr:last-child_td]:[border-bottom:0] [&_tbody_tr:hover]:[background:var(--neutral-25)] [&_td_>_strong]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[display:block] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[margin-top:0.18rem] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[color:var(--neutral-500)] [&_td_>_span:not(.status-badge):not(.completion-badge):not(.publish-badge):not(.response-chip):not(.gap-count):not(.detail-status)]:[font-size:0.7rem] [&_td:nth-child(3)]:[max-width:390px] max-[1100px]:[display:block] max-[1100px]:[width:100%] max-[1100px]:[min-width:0] max-[1100px]:[&_tbody]:[display:grid] max-[1100px]:[&_tbody]:[width:100%] max-[1100px]:[&_tbody]:[min-width:0] max-[1100px]:[&_tr]:[display:block] max-[1100px]:[&_tr]:[width:100%] max-[1100px]:[&_tr]:[min-width:0] max-[1100px]:[&_td]:[display:grid] max-[1100px]:[&_td]:[width:100%] max-[1100px]:[&_td]:[min-width:0] max-[1100px]:[&_thead]:[position:absolute] max-[1100px]:[&_thead]:[display:block] max-[1100px]:[&_thead]:[width:1px] max-[1100px]:[&_thead]:[height:1px] max-[1100px]:[&_thead]:[padding:0] max-[1100px]:[&_thead]:[margin:-1px] max-[1100px]:[&_thead]:[overflow:hidden] max-[1100px]:[&_thead]:[clip:rect(0,_0,_0,_0)] max-[1100px]:[&_thead]:[white-space:nowrap] max-[1100px]:[&_thead]:[border:0] max-[1100px]:[&_thead_tr]:[position:absolute] max-[1100px]:[&_thead_tr]:[display:block] max-[1100px]:[&_thead_tr]:[width:1px] max-[1100px]:[&_thead_tr]:[min-width:0] max-[1100px]:[&_thead_tr]:[height:1px] max-[1100px]:[&_thead_tr]:[overflow:hidden] max-[1100px]:[&_thead_tr]:[padding:0] max-[1100px]:[&_thead_tr]:[border:0] max-[1100px]:[&_thead_tr]:[clip-path:inset(50%)] max-[1100px]:[&_thead_th]:[position:absolute] max-[1100px]:[&_thead_th]:[display:block] max-[1100px]:[&_thead_th]:[width:1px] max-[1100px]:[&_thead_th]:[min-width:0] max-[1100px]:[&_thead_th]:[height:1px] max-[1100px]:[&_thead_th]:[overflow:hidden] max-[1100px]:[&_thead_th]:[padding:0] max-[1100px]:[&_thead_th]:[border:0] max-[1100px]:[&_thead_th]:[clip-path:inset(50%)] max-[1100px]:[&_tbody]:[grid-template-columns:repeat(2,_minmax(0,_1fr))] max-[1100px]:[&_tbody]:[gap:0.75rem] max-[1100px]:[&_tbody]:[padding:0.85rem] max-[1100px]:[&_tbody_tr]:[overflow:hidden] max-[1100px]:[&_tbody_tr]:[border:1px_solid_var(--neutral-200)] max-[1100px]:[&_tbody_tr]:[border-radius:var(--radius-lg)] max-[1100px]:[&_tbody_tr]:[background:var(--neutral-25)] max-[1100px]:[&_tbody_tr]:[box-shadow:var(--shadow-1)] max-[1100px]:[&_td]:[grid-template-columns:minmax(116px,_0.45fr)_minmax(0,_1fr)] max-[1100px]:[&_td]:[align-items:center] max-[1100px]:[&_td]:[gap:0.75rem] max-[1100px]:[&_td]:[min-height:48px] max-[1100px]:[&_td]:[padding:0.7rem_0.85rem] max-[1100px]:[&_td]:[border-bottom:1px_solid_var(--neutral-200)] max-[1100px]:[&_td::before]:[color:var(--neutral-500)] max-[1100px]:[&_td::before]:[content:attr(data-label)] max-[1100px]:[&_td::before]:[font-size:0.67rem] max-[1100px]:[&_td::before]:[font-weight:750] max-[1100px]:[&_td::before]:[letter-spacing:0.01em] max-[1100px]:[&_td:last-child]:[min-height:44px] max-[1100px]:[&_td:last-child]:[grid-template-columns:1fr] max-[1100px]:[&_td:last-child]:[justify-items:end] max-[1100px]:[&_td:last-child]:[border-bottom:0] max-[1100px]:[&_td:last-child]:[background:var(--neutral-50)] max-[1100px]:[&_td:last-child::before]:[display:none] max-[1100px]:[&_td[data-label='']::before]:[display:none] max-[1100px]:[&_td_>_strong]:[min-width:0] max-[1100px]:[&_td_>_strong]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_span]:[min-width:0] max-[1100px]:[&_td_>_span]:[overflow-wrap:anywhere] max-[1100px]:[&_td_>_div]:[min-width:0] max-[1100px]:[&_td_>_div]:[overflow-wrap:anywhere] max-[820px]:[&_tbody]:[grid-template-columns:1fr]")}>
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
-        <tbody>{users.map((user) => (
-          <tr key={user.id}>
-            <td data-label="Name"><strong>{user.name}</strong></td>
-            <td data-label="Email">{user.email}</td>
-            <td data-label="Role">{siteUserRoleLabels[user.role]}</td>
-            <td data-label="Status"><span className={cx("publish-badge [display:inline-flex]! [width:fit-content] [border:1px_solid] [border-radius:999px] [padding:0.25rem_0.5rem] [font-size:0.7rem]! [font-weight:700] [border-color:var(--success-border)]! [background:var(--success-surface)] [color:var(--success)]! max-[1100px]:[.data-table_&]:[justify-self:start] max-[720px]:[.import-preview-requirement__summary_>_&]:[grid-column:2] max-[720px]:[.import-preview-requirement__summary_>_&]:[justify-self:start]", user.status === "Inactive" && "publish-badge--draft [border-color:#d6bbfb]! [background:var(--provisional-surface)] [color:var(--provisional)]!")}>{user.status}</span></td>
-          </tr>
-        ))}</tbody>
+    <div className={cx(dataTableWrapClass)}>
+      <table className={cx(dataTableClass)}>
+        <thead className={cx(dataTableHeadClass)}><tr><th className={cx(dataTableHeaderCellClass)}>Name</th><th className={cx(dataTableHeaderCellClass)}>Email</th><th className={cx(dataTableHeaderCellClass)}>Role</th><th className={cx(dataTableHeaderCellClass)}>Status</th></tr></thead>
+        <tbody className={cx(dataTableBodyClass)}>{users.map((user, index) => {
+          // The last table row drops its cell dividers on desktop; on mobile every card keeps them.
+          const cellClass = cx(dataTableCellClass, index === users.length - 1 && "shell:border-b-0");
+          const lastCellClass = cx(dataTableLastCellClass, index !== users.length - 1 && "shell:border-b");
+          return (
+            <tr className={cx(dataTableRowClass)} key={user.id}>
+              <td className={cellClass} data-label="Name"><span className={cx(dataTableCellLabelClass)}>Name</span><strong className={cx("block min-w-0")}>{user.name}</strong></td>
+              <td className={cellClass} data-label="Email"><span className={cx(dataTableCellLabelClass)}>Email</span>{user.email}</td>
+              <td className={cellClass} data-label="Role"><span className={cx(dataTableCellLabelClass)}>Role</span>{siteUserRoleLabels[user.role]}</td>
+              <td className={lastCellClass} data-label="Status"><span className={cx(publishBadgeClass, user.status === "Inactive" ? publishBadgeDraftClass : publishBadgeActiveClass)}>{user.status}</span></td>
+            </tr>
+          );
+        })}</tbody>
       </table>
     </div>
   );

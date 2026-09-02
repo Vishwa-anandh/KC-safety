@@ -18,6 +18,9 @@ interface AuthContextValue {
   signInDemo: (role: UserRole) => Promise<AuthUser>;
   signInWithPasskey: () => Promise<AuthUser>;
   signOut: () => void;
+  requestPasswordReset: (email: string) => Promise<void>;
+  requestPasswordChangeCode: (currentPassword: string) => Promise<{ maskedEmail: string; devCode?: string }>;
+  confirmPasswordChange: (code: string, newPassword: string) => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
   registerPasskey: (name: string) => Promise<PasskeyRecord>;
   renamePasskey: (id: string, name: string) => void;
@@ -35,6 +38,10 @@ function readSession(source: "demo" | "api"): AuthUser | null {
   try {
     const saved = JSON.parse(window.localStorage.getItem(SESSION_KEY) ?? "null") as AuthUser | null;
     if (!saved?.id || !saved?.role) return null;
+    if (saved.role !== "site-contributor" && saved.role !== "administrator") {
+      window.localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
     if (source === "api" && saved.id.startsWith("demo-")) return null;
     return saved;
   } catch {
@@ -160,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge: randomChallenge(),
-          rp: { name: "Maitsys Assure" },
+          rp: { name: "EHS360" },
           user: { id: encodeText(user.id), name: user.email, displayName: user.name },
           pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
           authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
@@ -236,6 +243,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void authenticationGateway.signOut();
   }
 
+  async function requestPasswordReset(email: string) {
+    await authenticationGateway.requestPasswordReset(email);
+  }
+
+  async function requestPasswordChangeCode(currentPassword: string) {
+    if (!user) throw new Error("Sign in before changing your password.");
+    return authenticationGateway.requestPasswordChangeCode(user.email, currentPassword);
+  }
+
+  async function confirmPasswordChange(code: string, newPassword: string) {
+    if (!user) throw new Error("Sign in before changing your password.");
+    await authenticationGateway.confirmPasswordChange(user.email, code, newPassword);
+  }
+
   const value = useMemo<AuthContextValue>(() => ({
     user,
     demoEnabled,
@@ -254,6 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removePasskey,
     dismissPasskeyPrompt,
     finishPasskeyPrompt,
+    requestPasswordReset,
+    requestPasswordChangeCode,
+    confirmPasswordChange,
   // Functions intentionally close over the latest local session and passkey state.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [authenticationGateway, demoEnabled, passkeyPromptOpen, passkeys, user]);

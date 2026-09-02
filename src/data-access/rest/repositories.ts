@@ -2,7 +2,8 @@ import type {
   AdministrationRepository,
   AssessmentRepository,
   AuthenticationRepository,
-  ImportHistoryRecord,
+  RequirementImportPreview,
+  RequirementImportValidationResult,
   NotificationRepository,
   SiteRepository,
   UserPreferences,
@@ -39,7 +40,9 @@ export class RestAdministrationRepository implements AdministrationRepository {
   createSiteUser(siteId: string, input: Omit<SiteUser, "id">) { return this.client.request<SiteUser>(`/sites/${siteId}/users`, { method: "POST", body: JSON.stringify(input) }); }
   updateSiteUser(siteId: string, user: SiteUser) { return this.client.request<SiteUser>(`/sites/${siteId}/users/${user.id}`, { method: "PUT", body: JSON.stringify(user) }); }
   removeSiteUser(siteId: string, userId: string) { return this.client.request<void>(`/sites/${siteId}/users/${userId}`, { method: "DELETE" }); }
-  importRequirements(input: FormData) { return this.client.request<ImportHistoryRecord>("/imports/requirements", { method: "POST", body: input }); }
+  validateRequirementImport(input: FormData) { return this.client.request<RequirementImportValidationResult>("/imports/requirements/validate", { method: "POST", body: input }); }
+  stageRequirementImport(input: FormData) { return this.client.request<RequirementImportPreview>("/imports/requirements", { method: "POST", body: input }); }
+  getRequirementImportPreview(batchId: string) { return this.client.request<RequirementImportPreview>(`/imports/${batchId}`, { method: "GET" }); }
   publishImport(batchId: string) { return this.client.request<void>(`/imports/${batchId}/publish`, { method: "POST" }); }
 }
 
@@ -69,4 +72,7 @@ export class RestAuthenticationRepository implements AuthenticationRepository<Re
   constructor(private readonly client: RestClient) {}
   signInWithPassword(email: string, password: string) { return this.client.request<RestSession>("/auth/session", { method: "POST", body: JSON.stringify({ email, password }) }); }
   signOut() { return this.client.request<void>("/auth/session", { method: "DELETE" }); }
+  requestPasswordReset(email: string) { return this.client.request<void>("/auth/password-reset", { method: "POST", body: JSON.stringify({ email }) }); }
+  requestPasswordChangeCode(currentPassword: string) { return this.client.request<{ maskedEmail: string }>("/auth/password/change-code", { method: "POST", body: JSON.stringify({ currentPassword }) }); }
+  confirmPasswordChange(code: string, newPassword: string) { return this.client.request<void>("/auth/password/change-confirm", { method: "POST", body: JSON.stringify({ code, newPassword }) }); }
 }

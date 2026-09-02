@@ -30,8 +30,57 @@ import { useAuth } from "../../auth";
 import { actionComplete, performanceForResponse, rollupPerformance } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
 import type { ActionItem, AssessmentQuestion, EvidenceItem, Requirement, ResponseValue } from "../../../shared/types";
-import { Button, ConfirmDialog, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
+import { Button, ConfirmDialog, eyebrowClasses, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
+
+// ---------------------------------------------------------------------------------------------
+// Canonical class recipes shared across this file's components. Each mirrors a pattern duplicated
+// verbatim elsewhere (see src/features/admin/pages/AdminScreens.tsx for the same requirement-page
+// chrome, and src/shared/ui/UI.tsx for the field/dialog primitives) — every occurrence uses the
+// same constant so the screens don't drift apart.
+// ---------------------------------------------------------------------------------------------
+
+const breadcrumbsClass = "breadcrumbs mb-4 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400";
+const breadcrumbsLinkClass = "font-semibold text-kc-blue-700 dark:text-kc-blue-300";
+
+const sectionTitleRowClass = "section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between";
+const sectionTitleHeadingClass = "mt-1 text-lg font-bold text-slate-900 dark:text-slate-100";
+const sectionTitleCountClass = "text-sm text-slate-500 dark:text-slate-400";
+
+/** Canonical form-field wrapper: label row, an input/textarea styled directly (Select renders its
+ * own trigger so it never needs this), and an inline error — see AdminScreens.tsx fieldClass. */
+const fieldClass = "field grid min-w-0 gap-1.5";
+const fieldWideWrapClass = "field field--wide grid min-w-0 gap-1.5 md:col-span-2";
+const fieldLabelRowClass = "flex items-center justify-between text-sm font-semibold text-slate-700 dark:text-slate-300";
+const fieldRequiredMarkClass = "text-xs font-bold tracking-wide text-red-700 dark:text-red-300";
+const fieldInputClass = "w-full min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900";
+const fieldInvalidClass = "border-red-600! ring-3 ring-red-100 dark:border-red-400! dark:ring-red-950";
+const fieldErrorClass = "field-error mt-1.5 block text-xs font-semibold text-red-700 dark:text-red-300";
+
+const dialogLayerClass = "dialog-layer fixed inset-0 z-100 grid place-items-center p-4";
+const dialogBackdropClass = "dialog-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm";
+const dialogClass = "dialog relative max-h-full w-full max-w-md overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900";
+const dialogHeaderClass = "dialog__header flex items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-slate-700";
+const dialogHeaderTitleClass = "mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100";
+const dialogFormClass = "dialog-form grid gap-4 p-4.5";
+const dialogFooterClass = "dialog__footer flex flex-col-reverse items-stretch gap-4 border-t border-slate-200 p-4 max-md:items-stretch md:flex-row md:items-center md:justify-end dark:border-slate-700";
+
+/** Off-canvas "sheet" overlay (mobile requirement navigator / guidance). Mirrors ConfirmDialog's
+ * layer recipe: a fixed backdrop plus a panel, anchored to an edge instead of centered. */
+const sheetLayerClass = "sheet-layer fixed inset-0 z-100 grid place-items-center wide:hidden";
+const sheetBackdropClass = "sheet-backdrop absolute inset-0 border-0 bg-slate-950/50 backdrop-blur-sm";
+const sheetClass = "sheet absolute inset-y-0 max-w-97.5 w-full overflow-x-hidden overflow-y-auto bg-white shadow-2xl dark:bg-slate-900";
+
+const requirementMobileToolbarClass = "requirement-mobile-toolbar sticky z-8 flex justify-between gap-2.5 border-b border-slate-200 p-2.5 backdrop-blur-md wide:hidden shell:justify-end dark:border-slate-700";
+const requirementNavigatorWrapClass = "requirement-layout__navigator hidden shell:sticky shell:block shell:w-100 shell:flex-none shell:self-start";
+
+const questionEvidenceTitleClass = "question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300";
+const questionEvidenceNoticeClass = "question-evidence grid gap-2 mt-3.5 rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800";
+const questionNumberClass = "question-number grid size-8 flex-none place-items-center rounded-lg bg-kc-blue-50 text-sm font-extrabold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200";
+const questionCountClass = "question-count flex-none rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300";
+
+const dropzoneClass = "dropzone grid min-h-42 place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
+const dropzoneIconClass = "dropzone__icon grid size-12 place-items-center rounded-xl bg-white text-kc-blue-700 shadow-sm dark:bg-slate-800 dark:text-kc-blue-300";
 
 function requirementState(requirement: Requirement, currentId: string) {
   if (requirement.id === currentId) return "current";
@@ -41,10 +90,10 @@ function requirementState(requirement: Requirement, currentId: string) {
 }
 
 function NavigatorState({ state }: { state: string }) {
-  if (state === "complete") return <CheckCircle2 size={17} className={cx("nav-state [flex:0_0_auto] nav-state--complete [color:var(--success)]")} />;
-  if (state === "gap") return <AlertTriangle size={17} className={cx("nav-state [flex:0_0_auto] nav-state--gap [color:var(--warning)]")} />;
-  if (state === "current") return <span className={cx("nav-state [flex:0_0_auto] nav-state--current [display:grid] [width:19px] [height:19px] [place-items:center] [border-radius:50%] [background:var(--kc-600)] [color:#fff] [box-shadow:0_0_0_3px_var(--kc-200)]")}><Circle size={12} fill="currentColor" /></span>;
-  return <Circle size={16} className={cx("nav-state [flex:0_0_auto] nav-state--incomplete [color:var(--neutral-400)]")} />;
+  if (state === "complete") return <CheckCircle2 size={17} className="nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300" />;
+  if (state === "gap") return <AlertTriangle size={17} className="nav-state nav-state--gap flex-none text-amber-700 dark:text-amber-300" />;
+  if (state === "current") return <span className="nav-state nav-state--current grid size-5 flex-none place-items-center rounded-full bg-kc-blue-600 text-white ring-3 ring-kc-blue-200 dark:ring-kc-blue-800"><Circle size={12} fill="currentColor" /></span>;
+  return <Circle size={16} className="nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500" />;
 }
 
 function AssessmentNavigator({
@@ -67,47 +116,80 @@ function AssessmentNavigator({
   const currentIndex = requirements.findIndex((requirement) => requirement.id === current.id);
   const ordered = [...requirements.slice(currentIndex + 1), ...requirements.slice(0, currentIndex + 1)];
   const nextIncomplete = ordered.find((requirement) => requirement.id !== current.id && isIncomplete(requirement));
+  // Rendered both as the sticky desktop rail (no onClose) and inside the mobile sheet (onClose
+  // supplied) — the sheet already draws its own edge, so the rail-only border is dropped there.
+  const inSheet = Boolean(onClose);
 
   return (
-    <aside className={cx("assessment-navigator [display:flex] [height:100%] [flex-direction:column] [overflow-y:auto] [border-right:1px_solid_var(--neutral-200)] [background:var(--surface-panel)] [padding:1rem] [.sheet_&]:[border:0]")} aria-label="Assessment navigator">
-      <div className={cx("assessment-navigator__header [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:0.75rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1rem]")}>
+    <aside className={cx("assessment-navigator flex h-full flex-col overflow-x-hidden overflow-y-auto bg-white p-4 dark:bg-slate-900", !inSheet && "border-r border-slate-200 dark:border-slate-700")} aria-label="Assessment navigator">
+      <div className="assessment-navigator__header mb-4 flex items-start justify-between gap-3">
         <div>
-          <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Current section</p>
-          <h2>{current.sectionName}</h2>
+          <p className={eyebrowClasses}>Current section</p>
+          <h2 className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">{current.sectionName}</h2>
         </div>
         {onClose && <IconButton label="Close assessment navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
       <ProgressBar value={Math.round((completed / requirements.length) * 100)} label="Requirements complete" />
-      <label className={cx("navigator-search [display:flex] [min-height:40px] [align-items:center] [gap:0.45rem] [margin:1rem_0] [border:1px_solid_var(--neutral-300)] [border-radius:9px] [padding:0_0.65rem] [color:var(--neutral-500)] [&:focus-within]:[border-color:var(--kc-600)] [&:focus-within]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_input]:[min-width:0] [&_input]:[flex:1] [&_input]:[border:0] [&_input]:[outline:0] [&_input]:[background:transparent] [&_input]:[font-size:0.8rem]")}>
+      <label className="navigator-search my-4 flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-2.5 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:text-slate-400 dark:focus-within:ring-kc-blue-900">
         <Search size={17} />
-        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
+        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
       </label>
-      <div className={cx("navigator-group [flex:1]")}>
-        <div className={cx("navigator-group__trigger [display:flex] [width:100%] [align-items:center] [border:0] [text-align:left] [gap:0.45rem] [background:transparent] [color:var(--neutral-700)] [padding:0.45rem_0.35rem] [font-size:0.74rem] [font-weight:700] [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-weight:500]")} aria-expanded="true">
+      <div className="navigator-group flex-1">
+        <div className="navigator-group__trigger flex w-full items-center gap-2 border-0 bg-transparent px-1.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-300" aria-expanded="true">
           <ChevronDown size={17} />
           <span>Assessment requirements</span>
-          <small>{completed} of {requirements.length}</small>
+          <small className="ml-auto font-medium text-slate-500 dark:text-slate-400">{completed} of {requirements.length}</small>
         </div>
-        <div className={cx("navigator-items [display:grid] [gap:0.15rem] [margin-top:0.25rem]")}>
+        <div className="navigator-items mt-1 grid gap-0.5">
           {filtered.map((requirement) => {
             const state = requirementState(requirement, current.id);
             return (
-              <button key={requirement.id} className={cx("navigator-item [display:flex] [width:100%] [align-items:center] [border:0] [text-align:left] [min-height:51px] [gap:0.6rem] [border-radius:9px] [background:transparent] [padding:0.45rem_0.5rem] [color:var(--neutral-700)] hover:[background:var(--neutral-50)] [&_>_span:nth-child(2)]:[display:grid] [&_>_span:nth-child(2)]:[min-width:0] [&_>_span:nth-child(2)]:[flex:1] [&_>_span:nth-child(2)]:[font-size:0.76rem] [&_>_span:nth-child(2)]:[font-weight:600] [&_>_span:nth-child(2)]:[line-height:1.25] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.64rem] [&_small]:[font-weight:600] [&_>_svg:last-child]:[color:var(--neutral-400)]", state === "current" && "navigator-item--current [background:var(--kc-100)] [border:1px_solid_var(--kc-200)] [color:var(--kc-900)] [font-weight:700] [box-shadow:inset_5px_0_0_var(--kc-600)]")} onClick={() => onNavigate(requirement)}>
+              <button
+                key={requirement.id}
+                className={cx(
+                  "navigator-item flex min-h-13 w-full items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
+                  state === "current" && "navigator-item--current border-kc-blue-200 border-l-4 border-l-kc-blue-600 bg-kc-blue-100 pl-1.5 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:border-l-kc-blue-500 dark:bg-kc-blue-900 dark:text-kc-blue-100",
+                )}
+                onClick={() => onNavigate(requirement)}
+              >
                 <NavigatorState state={state} />
-                <span><small>{requirement.number} · {requirement.sectionName}</small>{requirement.title}</span>
-                <ChevronRight size={16} />
+                <span className="grid min-w-0 flex-1 gap-0.5 text-sm font-semibold leading-tight">
+                  <small className="text-xs font-semibold text-slate-500 dark:text-slate-400">{requirement.number} · {requirement.sectionName}</small>
+                  {requirement.title}
+                </span>
+                <ChevronRight size={16} className="flex-none text-slate-400 dark:text-slate-500" />
               </button>
             );
           })}
-          {!filtered.length && <p className={cx("navigator-empty [margin:0] [padding:1rem_0.75rem] [color:var(--neutral-500)] [font-size:0.76rem] [text-align:center]")}>No requirements match your search.</p>}
+          {!filtered.length && <p className="navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400">No requirements match your search.</p>}
         </div>
       </div>
-      <Button className={cx("next-incomplete [width:100%] [margin-top:1rem]")} variant="secondary" icon={<ListChecks size={18} />} disabled={!nextIncomplete} onClick={() => nextIncomplete && onNavigate(nextIncomplete)}>
+      <Button className="next-incomplete mt-4 w-full" variant="secondary" icon={<ListChecks size={18} />} disabled={!nextIncomplete} onClick={() => nextIncomplete && onNavigate(nextIncomplete)}>
         Next incomplete
       </Button>
     </aside>
   );
 }
+
+/** Selection tone per response value — border/background for the selected card, and the same
+ * tone as a solid fill for the small radio control inside it. */
+const responseToneClasses: Record<Exclude<ResponseValue, null>, { selected: string; control: string }> = {
+  no: {
+    selected: "border-red-600 bg-red-50 dark:border-red-500 dark:bg-red-950",
+    control: "border-red-600 bg-red-600 text-white dark:border-red-500 dark:bg-red-500",
+  },
+  partial: {
+    selected: "border-amber-600 bg-amber-50 dark:border-amber-500 dark:bg-amber-950",
+    control: "border-amber-600 bg-amber-600 text-white dark:border-amber-500 dark:bg-amber-500",
+  },
+  yes: {
+    selected: "border-emerald-600 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950",
+    control: "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500",
+  },
+};
+
+const responseOptionBaseClass = "response-option flex min-w-0 min-h-22 items-start gap-2.5 rounded-xl border border-slate-300 bg-white p-3 cursor-pointer transition-colors hover:border-slate-400 hover:bg-slate-50 max-md:min-h-0 forced-colors:border-2 forced-colors:border-current dark:border-slate-600 dark:bg-slate-800 dark:hover:border-slate-500 dark:hover:bg-slate-900";
+const responseOptionControlClass = "response-option__control grid size-6 flex-none place-items-center rounded-full border border-slate-300 text-slate-400 transition-colors peer-focus-visible:outline-3 peer-focus-visible:outline-kc-blue-500 peer-focus-visible:outline-offset-2 dark:border-slate-600 dark:text-slate-500";
 
 function ResponseSelector({ value, onChange, questionId }: { value: ResponseValue; onChange: (value: ResponseValue) => void; questionId: string }) {
   const options: Array<{ value: Exclude<ResponseValue, null>; label: string; performance: string; description: string }> = [
@@ -116,18 +198,39 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
     { value: "yes", label: "Yes", performance: "Performing", description: "The requirement is fully in place." },
   ];
   return (
-    <fieldset className={cx("response-fieldset [min-width:0] [margin:1rem_0_0] [border:0] [padding:0] [&_legend]:[margin-bottom:0.5rem] [&_legend]:[color:var(--neutral-700)] [&_legend]:[font-size:0.75rem] [&_legend]:[font-weight:700] [&_legend_span]:[margin-left:0.35rem] [&_legend_span]:[color:var(--neutral-400)] [&_legend_span]:[font-weight:500]")}>
-      <legend>Response <span>Choose one if assessed</span></legend>
-      <div className={cx("response-options [display:grid] [grid-template-columns:repeat(3,_minmax(0,_1fr))] [gap:0.65rem] max-[740px]:[grid-template-columns:1fr]")}>
-        {options.map((option) => (
-          <label key={option.value} className={cx("response-option [display:grid] [min-width:0] [min-height:86px] [grid-template-columns:auto_minmax(0,_1fr)] [align-items:start] [gap:0.55rem] [border:1px_solid_var(--neutral-300)] [border-radius:12px] [background:var(--surface-elevated)] [padding:0.7rem] [cursor:pointer] [transition:border-color_120ms_ease,_background_120ms_ease,_box-shadow_120ms_ease] hover:[border-color:var(--neutral-400)] hover:[background:var(--neutral-25)] [&_input]:[position:absolute] [&_input]:[width:1px] [&_input]:[height:1px] [&_input]:[opacity:0] [&:has(input:focus-visible)]:[outline:3px_solid_var(--kc-500)] [&:has(input:focus-visible)]:[outline-offset:3px] max-[740px]:[min-height:0]", `response-option--${option.value}`, value === option.value && "response-option--selected [.response-option--no&]:[border-color:var(--danger)] [.response-option--no&]:[background:var(--danger-surface)] [.response-option--no&]:[box-shadow:0_0_0_1px_var(--danger)] [.response-option--partial&]:[border-color:var(--warning)] [.response-option--partial&]:[background:var(--warning-surface)] [.response-option--partial&]:[box-shadow:0_0_0_1px_var(--warning)] [.response-option--yes&]:[border-color:var(--success)] [.response-option--yes&]:[background:var(--success-surface)] [.response-option--yes&]:[box-shadow:0_0_0_1px_var(--success)] [@media_(forced-colors:_active)]:[border:2px_solid_currentColor]")}>
-            <input type="radio" name={`response-${questionId}`} value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} />
-            <span className={cx("response-option__control [display:grid] [width:24px] [height:24px] [place-items:center] [border:1px_solid_var(--neutral-300)] [border-radius:50%] [color:var(--neutral-400)] [.response-option--no.response-option--selected_&]:[border-color:var(--danger-solid)] [.response-option--no.response-option--selected_&]:[background:var(--danger-solid)] [.response-option--no.response-option--selected_&]:[color:#fff] [.response-option--partial.response-option--selected_&]:[border-color:var(--warning-solid)] [.response-option--partial.response-option--selected_&]:[background:var(--warning-solid)] [.response-option--partial.response-option--selected_&]:[color:#fff] [.response-option--yes.response-option--selected_&]:[border-color:var(--success-solid)] [.response-option--yes.response-option--selected_&]:[background:var(--success-solid)] [.response-option--yes.response-option--selected_&]:[color:#fff]")}>{value === option.value ? <Check size={15} /> : <Circle size={14} />}</span>
-            <span className={cx("response-option__copy [display:grid] [min-width:0] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.82rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.68rem] [&_small]:[font-weight:600] [&_em]:[margin-top:0.25rem] [&_em]:[color:var(--neutral-500)] [&_em]:[font-size:0.67rem] [&_em]:[font-style:normal] [&_em]:[line-height:1.35] max-[740px]:[&_em]:[display:none]")}><strong>{option.label}</strong><small>{option.performance}</small><em>{option.description}</em></span>
-          </label>
-        ))}
+    <fieldset className="response-fieldset mt-4 min-w-0 border-0 p-0">
+      <legend className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+        Response <span className="ml-1.5 font-medium text-slate-400 dark:text-slate-500">Choose one if assessed</span>
+      </legend>
+      <div className="response-options grid grid-cols-1 gap-2.5 md:grid-cols-3">
+        {options.map((option) => {
+          const selected = value === option.value;
+          const tone = responseToneClasses[option.value];
+          return (
+            <label key={option.value} className={cx(responseOptionBaseClass, `response-option--${option.value}`, selected && cx("response-option--selected", tone.selected))}>
+              <input className="peer sr-only" type="radio" name={`response-${questionId}`} value={option.value} checked={selected} onChange={() => onChange(option.value)} />
+              <span className={cx(responseOptionControlClass, selected && tone.control)}>{selected ? <Check size={15} /> : <Circle size={14} />}</span>
+              <span className="response-option__copy grid min-w-0 gap-0.5">
+                <strong className="text-sm text-slate-900 dark:text-slate-100">{option.label}</strong>
+                <small className="text-xs font-semibold text-slate-500 dark:text-slate-400">{option.performance}</small>
+                <em className="mt-1 text-xs leading-snug font-normal text-slate-500 not-italic max-md:hidden dark:text-slate-400">{option.description}</em>
+              </span>
+            </label>
+          );
+        })}
       </div>
-      {value && <button type="button" className={cx("response-clear [margin-top:0.65rem] [border:0] [background:transparent] [padding:0] [color:var(--kc-700)] [font-size:0.76rem] [font-weight:650] [cursor:pointer] hover:[color:var(--kc-900)] hover:[text-decoration:underline]")} onClick={() => onChange(null)}>Clear response</button>}
+      {/* The "Clear response" link and the action-editor below are the site of the earlier
+          black-stroke / inherited-colour bug reports — every colour here is explicit with a
+          dark: counterpart rather than relying on cascade. */}
+      {value && (
+        <button
+          type="button"
+          className="response-clear mt-2.5 border-0 bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:text-kc-blue-900 hover:underline dark:text-kc-blue-300 dark:hover:text-kc-blue-100"
+          onClick={() => onChange(null)}
+        >
+          Clear response
+        </button>
+      )}
     </fieldset>
   );
 }
@@ -135,7 +238,13 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
 function ActionEditor({ action, response, onChange, onRemove }: { action?: ActionItem; response: ResponseValue; onChange: (action: ActionItem) => void; onRemove: () => void }) {
   if (!response) return null;
   const requiredByResponse = response === "no" || response === "partial";
-  if (!action) return <Button className={cx("action-editor-add [margin-top:1rem]")} variant="tertiary" icon={<Plus size={17} />} onClick={() => onChange({ description: "", owner: "", status: "Open", followUp: "" })}>Add corrective action <span>(optional)</span></Button>;
+  if (!action) {
+    return (
+      <Button className="action-editor-add mt-4" variant="tertiary" icon={<Plus size={17} />} onClick={() => onChange({ description: "", owner: "", status: "Open", followUp: "" })}>
+        Add corrective action <span className="text-slate-500 dark:text-slate-400">(optional)</span>
+      </Button>
+    );
+  }
   const update = (change: Partial<ActionItem>) => onChange({
     description: action.description,
     owner: action.owner,
@@ -144,34 +253,34 @@ function ActionEditor({ action, response, onChange, onRemove }: { action?: Actio
     ...change,
   });
   return (
-    <div className={cx("action-editor [margin-top:1rem] [border:1px_solid] [border-radius:var(--radius-lg)] [padding:0.9rem] action-editor--optional [border-color:var(--neutral-200)]! [background:var(--neutral-50)]")}>
-      <div className={cx("action-editor__header [display:flex] [gap:0.6rem] [&_strong]:[font-size:0.8rem] [&_p]:[margin-top:0.12rem] [&_p]:[color:var(--neutral-600)] [&_p]:[font-size:0.72rem]")}>
-        <div className={cx("action-editor__icon [color:var(--warning)]")}><AlertTriangle size={18} /></div>
+    <div className="action-editor mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900">
+      <div className="action-editor__header flex gap-2.5">
+        <div className="action-editor__icon text-amber-700 dark:text-amber-300"><AlertTriangle size={18} /></div>
         <div>
-          <strong>Corrective action</strong>
-          <p>{requiredByResponse ? "Created automatically from this assessment gap and tracked in Actions summary." : "Optional supporting action for this assessment response."}</p>
+          <strong className="text-sm font-bold text-slate-900 dark:text-slate-100">Corrective action</strong>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{requiredByResponse ? "Created automatically from this assessment gap and tracked in Actions summary." : "Optional supporting action for this assessment response."}</p>
         </div>
         {!requiredByResponse && <Button variant="tertiary" onClick={onRemove}>Remove action</Button>}
       </div>
-      <div className={cx("form-grid [display:grid] [grid-template-columns:repeat(2,_minmax(0,_1fr))] [gap:1rem_1.15rem] [padding:1.2rem] max-[740px]:[grid-template-columns:1fr] form-grid--action [grid-template-columns:1.6fr_1fr] [padding:0.9rem_0_0] max-[740px]:[grid-template-columns:1fr]")}>
-        <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]")}>
-          <span>Action description</span>
-          <textarea rows={3} value={action.description} placeholder="Describe the specific action needed to close this gap" onChange={(event) => update({ description: event.target.value })} />
+      <div className="form-grid grid grid-cols-1 gap-4 pt-3.5 md:grid-cols-2">
+        <label className={fieldWideWrapClass}>
+          <span className={fieldLabelRowClass}>Action description</span>
+          <textarea className={cx(fieldInputClass, "resize-y leading-relaxed")} rows={3} value={action.description} placeholder="Describe the specific action needed to close this gap" onChange={(event) => update({ description: event.target.value })} />
         </label>
-        <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]")}>
-          <span>Action owner</span>
-          <span className={cx("field-control-with-icon [position:relative] [display:flex] [align-items:center] [&_>_svg]:[position:absolute] [&_>_svg]:[left:0.75rem] [&_>_svg]:[color:var(--neutral-500)] [&_input]:[padding-left:2.25rem]")}>
-            <UserRound size={17} />
-            <input type="text" value={action.owner} placeholder="Search or enter owner" onChange={(event) => update({ owner: event.target.value })} />
+        <label className={fieldClass}>
+          <span className={fieldLabelRowClass}>Action owner</span>
+          <span className="field-control-with-icon relative flex items-center">
+            <UserRound size={17} className="pointer-events-none absolute left-3 text-slate-500 dark:text-slate-400" />
+            <input className={cx(fieldInputClass, "pl-9")} type="text" value={action.owner} placeholder="Search or enter owner" onChange={(event) => update({ owner: event.target.value })} />
           </span>
         </label>
-        <div className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]")}>
-          <span>Action status</span>
+        <div className={fieldClass}>
+          <span className={fieldLabelRowClass}>Action status</span>
           <Select label="Action status" value={action.status ?? "Open"} onChange={(value) => update({ status: value as ActionItem["status"] })} options={[{ value: "Open", label: "Open" }, { value: "In progress", label: "In progress" }, { value: "Complete", label: "Complete" }]} />
         </div>
-        <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", "field--wide [grid-column:1_/_-1]")}>
-          <span>Follow-up</span>
-          <textarea rows={2} value={action.followUp ?? ""} placeholder="Add the next step, due-date note, or follow-up update" onChange={(event) => update({ followUp: event.target.value })} />
+        <label className={fieldWideWrapClass}>
+          <span className={fieldLabelRowClass}>Follow-up</span>
+          <textarea className={cx(fieldInputClass, "resize-y leading-relaxed")} rows={2} value={action.followUp ?? ""} placeholder="Add the next step, due-date note, or follow-up update" onChange={(event) => update({ followUp: event.target.value })} />
         </label>
       </div>
     </div>
@@ -182,20 +291,30 @@ function ActionEditor({ action, response, onChange, onRemove }: { action?: Actio
 // question-scoped and does not invoke this legacy requirement-level panel.
 export function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence: EvidenceItem[]; onAdd: () => void; onView: (item: EvidenceItem) => void; onEdit: (item: EvidenceItem) => void; onDelete: (item: EvidenceItem) => void }) {
   return (
-    <section className={cx("evidence-card [margin-top:1.5rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1rem] [box-shadow:var(--shadow-1)]")}>
-      <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}>
-        <div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Supporting material</p><h2>Attached evidence</h2><span>{evidence.length} items connected to this requirement</span></div>
+    <section className="evidence-card mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className={sectionTitleRowClass}>
+        <div>
+          <p className={eyebrowClasses}>Supporting material</p>
+          <h2 className={sectionTitleHeadingClass}>Attached evidence</h2>
+          <span className={sectionTitleCountClass}>{evidence.length} items connected to this requirement</span>
+        </div>
         <Button variant="secondary" icon={<Plus size={17} />} onClick={onAdd}>Add evidence</Button>
       </div>
       {evidence.length ? (
-        <div className={cx("evidence-list [display:grid] [gap:0.55rem]")}>
+        <div className="evidence-list grid gap-2">
           {evidence.map((item) => (
-            <article className={cx("evidence-item [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:center] [gap:0.7rem] [border:1px_solid_var(--neutral-200)] [border-radius:11px] [background:var(--neutral-25)] [padding:0.7rem] max-[740px]:[grid-template-columns:auto_minmax(0,_1fr)] max-[720px]:[grid-template-columns:auto_minmax(0,_1fr)]")} key={item.id}>
-              <div className={cx("evidence-item__icon [display:grid] [width:39px] [height:39px] [place-items:center] [border-radius:10px]", `evidence-item__icon--${item.type}`)}>{item.type === "file" ? <FileText size={20} /> : <Link2 size={20} />}</div>
-              <button className={cx("evidence-item__copy [display:grid] [min-width:0] [&_strong]:[font-size:0.8rem] [&_span]:[overflow:hidden] [&_span]:[color:var(--neutral-500)] [&_span]:[font-size:0.68rem] [&_span]:[text-overflow:ellipsis] [&_span]:[white-space:nowrap] [&_small]:[overflow:hidden] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.68rem] [&_small]:[text-overflow:ellipsis] [&_small]:[white-space:nowrap] evidence-item__copy--button [min-width:0] [border:0] [outline:0] [background:transparent] [color:inherit] [padding:0] [text-align:left] [&:hover_strong]:[color:var(--kc-700)] [&:focus-visible_strong]:[color:var(--kc-700)]")} onClick={() => onView(item)}>
-                <strong>{item.title}</strong><span>{item.detail}</span><small>Added by {item.uploadedBy} · {item.uploadedAt}</small>
-              </button>
-              <div className={cx("evidence-item__actions [display:flex] [align-items:center] [gap:0.15rem] max-[720px]:[grid-column:2] max-[720px]:[justify-self:start]")}>
+            <article className="evidence-item flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900" key={item.id}>
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <div className={cx("evidence-item__icon grid size-10 flex-none place-items-center rounded-lg", item.type === "file" ? "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" : "bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}>
+                  {item.type === "file" ? <FileText size={20} /> : <Link2 size={20} />}
+                </div>
+                <button className="evidence-item__copy grid min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-slate-800 dark:text-slate-200" onClick={() => onView(item)}>
+                  <strong className="truncate text-sm text-slate-900 dark:text-slate-100">{item.title}</strong>
+                  <span className="truncate text-xs text-slate-500 dark:text-slate-400">{item.detail}</span>
+                  <small className="truncate text-xs text-slate-500 dark:text-slate-400">Added by {item.uploadedBy} · {item.uploadedAt}</small>
+                </button>
+              </div>
+              <div className="evidence-item__actions flex flex-none items-center gap-0.5 max-sm:w-full max-sm:justify-end">
                 <IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={17} /></IconButton>
                 <IconButton label={`Delete ${item.title}`} onClick={() => onDelete(item)}><Trash2 size={17} /></IconButton>
                 <IconButton label={`View ${item.title}`} onClick={() => onView(item)}><ExternalLink size={18} /></IconButton>
@@ -204,7 +323,11 @@ export function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { e
           ))}
         </div>
       ) : (
-        <div className={cx("evidence-empty [display:grid] [min-height:150px] [place-items:center] [align-content:center] [gap:0.35rem] [border:1px_dashed_var(--neutral-300)] [border-radius:var(--radius-lg)] [background:var(--neutral-25)] [color:var(--neutral-500)] [text-align:center] [&_svg]:[color:var(--kc-600)] [&_strong]:[color:var(--neutral-800)] [&_strong]:[font-size:0.86rem] [&_span]:[font-size:0.74rem]")}><Paperclip size={22} /><strong>No evidence attached yet</strong><span>Add a file or secure link to support this requirement.</span></div>
+        <div className="evidence-empty grid min-h-38 place-items-center place-content-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400">
+          <Paperclip size={22} className="text-kc-blue-600 dark:text-kc-blue-400" />
+          <strong className="text-sm text-slate-800 dark:text-slate-200">No evidence attached yet</strong>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Add a file or secure link to support this requirement.</span>
+        </div>
       )}
     </section>
   );
@@ -226,32 +349,65 @@ function QuestionEvidenceAttachments({
   onDelete: (item: EvidenceItem) => void;
 }) {
   return (
-    <div className={cx("question-evidence [display:grid] [gap:0.5rem] [margin:0.85rem_0_0] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-md)] [background:var(--surface-elevated)] [padding:0.75rem_0.9rem] [&_ul]:[display:grid] [&_ul]:[gap:0.3rem] [&_ul]:[margin:0] [&_ul]:[padding-left:1.1rem] [&_ul]:[color:var(--neutral-600)] [&_ul]:[font-size:0.76rem] [&_ul]:[line-height:1.5] question-evidence--attachments [background:var(--kc-50)]")}>
-      <div className={cx("question-evidence__attachments-header [display:flex] [flex-wrap:wrap] [align-items:center] [justify-content:space-between] [gap:0.65rem]")}>
-        <span className={cx("question-evidence__title [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[font-weight:500] [&_small]:[text-transform:none] [&_small]:[letter-spacing:normal] [display:flex] [align-items:center] [gap:0.4rem] [color:var(--kc-700)] [font-size:0.72rem] [font-weight:700] [text-transform:uppercase] [letter-spacing:0.02em]")}><Paperclip size={14} /> Evidence attached to Question {questionNumber}</span>
+    <div className="question-evidence question-evidence--attachments grid gap-2 mt-3.5 rounded-md border border-slate-200 bg-kc-blue-50 p-3 px-3.5 dark:border-slate-700 dark:bg-kc-blue-950">
+      <div className="question-evidence__attachments-header flex flex-wrap items-center justify-between gap-2.5">
+        <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence attached to Question {questionNumber}</span>
         <Button variant="tertiary" icon={<Plus size={15} />} onClick={onAdd}>Add evidence</Button>
       </div>
-      {evidence.length ? <div className={cx("question-evidence__attachments-list [display:grid] [gap:0.35rem]")}>{evidence.map((item) => (
-        <div className={cx("question-evidence__attachment [display:flex] [align-items:center] [gap:0.6rem] [border:1px_solid_var(--neutral-200)] [border-radius:9px] [background:var(--surface-panel)] [padding:0.45rem_0.55rem]")} key={item.id}>
-          <button type="button" className={cx("question-evidence__attachment-copy [display:grid] [min-width:0] [flex:1] [border:0] [background:transparent] [padding:0] [color:var(--neutral-800)] [text-align:left] [cursor:pointer] [&_strong]:[overflow:hidden] [&_strong]:[text-overflow:ellipsis] [&_strong]:[white-space:nowrap] [&_small]:[overflow:hidden] [&_small]:[text-overflow:ellipsis] [&_small]:[white-space:nowrap] [&_strong]:[font-size:0.76rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.68rem]")} onClick={() => onView(item)}><strong>{item.title}</strong><small>{item.detail}</small></button>
-          <span className={cx("question-evidence__attachment-actions [display:flex] [flex:0_0_auto] [gap:0.15rem]")}><IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={15} /></IconButton><IconButton label={`Delete ${item.title}`} onClick={() => onDelete(item)}><Trash2 size={15} /></IconButton></span>
+      {evidence.length ? (
+        <div className="question-evidence__attachments-list grid gap-1.5">
+          {evidence.map((item) => (
+            <div className="question-evidence__attachment flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white p-2 px-2.5 dark:border-slate-700 dark:bg-slate-800" key={item.id}>
+              <button type="button" className="question-evidence__attachment-copy grid min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left text-slate-800 dark:text-slate-200" onClick={() => onView(item)}>
+                <strong className="truncate text-sm text-slate-900 dark:text-slate-100">{item.title}</strong>
+                <small className="truncate text-xs text-slate-500 dark:text-slate-400">{item.detail}</small>
+              </button>
+              <span className="question-evidence__attachment-actions flex flex-none gap-0.5">
+                <IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={15} /></IconButton>
+                <IconButton label={`Delete ${item.title}`} onClick={() => onDelete(item)}><Trash2 size={15} /></IconButton>
+              </span>
+            </div>
+          ))}
         </div>
-      ))}</div> : <p className={cx("question-evidence__attachment-empty [margin:0] [color:var(--neutral-500)] [font-size:0.74rem]")}>No evidence attached yet. Add a file or secure link for this question.</p>}
+      ) : (
+        <p className="question-evidence__attachment-empty m-0 text-sm text-slate-500 dark:text-slate-400">No evidence attached yet. Add a file or secure link for this question.</p>
+      )}
     </div>
   );
 }
 
 function GuidancePanel({ requirement, onCollapse }: { requirement: Requirement; onCollapse?: () => void }) {
+  // Rendered both as the collapsible desktop rail (onCollapse supplied) and inside the mobile
+  // sheet (no onCollapse) — the sheet already draws its own edge and close control.
+  const isRail = Boolean(onCollapse);
   return (
-    <aside className={cx("guidance-panel [height:100%] [overflow-y:auto] [border-left:1px_solid_var(--neutral-200)] [background:linear-gradient(180deg,_var(--kc-50),_var(--surface-panel)_14rem)] [padding:1.15rem] [.sheet_&]:[border:0]")}>
-      <div className={cx("guidance-panel__top [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:0.7rem] [margin-bottom:1rem] [color:var(--kc-700)] [&_h2]:[margin-top:0.15rem] [&_h2]:[color:var(--neutral-900)] [&_h2]:[font-size:1.05rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Read-only master content</p><h2>How to meet</h2></div><div className={cx("guidance-panel__top-actions [display:flex] [align-items:center] [gap:0.35rem]")}><BookOpen size={20} />{onCollapse && <IconButton label="Minimize guidance panel" onClick={onCollapse}><ChevronRight size={18} /></IconButton>}</div></div>
-      <ul className={cx("guidance-list [display:grid] [gap:0.75rem] [margin:1rem_0_0] [padding-left:1.1rem] [color:var(--neutral-700)] [font-size:0.79rem] [line-height:1.55] [&_li::marker]:[color:var(--kc-600)]")}>{requirement.guidance.map((item) => <li key={item}>{item}</li>)}</ul>
-      <div className={cx("expected-evidence [&_ul]:[display:grid] [&_ul]:[gap:0.55rem] [&_ul]:[margin:1rem_0_0] [&_ul]:[padding-left:1.1rem] [&_ul]:[color:var(--neutral-700)] [&_ul]:[font-size:0.75rem] [&_ul]:[line-height:1.55] [margin-top:1.4rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-elevated)] [padding:0.9rem] [box-shadow:var(--shadow-1)] [&_h3]:[color:var(--neutral-800)] [&_h3]:[font-size:0.88rem] [&_ul]:[margin-top:0.7rem]")}>
-        <div className={cx("expected-evidence__title [display:flex] [align-items:center] [gap:0.5rem] [color:var(--kc-700)]")}><Paperclip size={18} /><h3>Expected evidence</h3></div>
-        <ul>{requirement.expectedEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
+    <aside className={cx("guidance-panel h-full overflow-x-hidden overflow-y-auto bg-linear-to-b from-kc-blue-50 to-white p-4.5 dark:from-kc-blue-950 dark:to-slate-900", isRail && "border-l border-slate-200 dark:border-slate-700")}>
+      <div className="guidance-panel__top flex items-start justify-between gap-2.5 mb-4 text-kc-blue-700 dark:text-kc-blue-300">
+        <div>
+          <p className={eyebrowClasses}>Read-only master content</p>
+          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">How to meet</h2>
+        </div>
+        <div className="guidance-panel__top-actions flex items-center gap-1.5">
+          <BookOpen size={20} />
+          {onCollapse && <IconButton label="Minimize guidance panel" onClick={onCollapse}><ChevronRight size={18} /></IconButton>}
+        </div>
       </div>
-      <div className={cx("master-protection-note [display:flex] [align-items:center] [gap:0.4rem] [margin-top:1rem] [color:var(--neutral-500)] [font-size:0.7rem]")}><ShieldCheck size={17} /><span>Managed by KC administrators</span></div>
-      <InlineMessage tone="info" title="How this result is calculated">The requirement result is the lowest response below. No maps to Initial, Partial to Emerging, and Yes to Performing.</InlineMessage>
+      <ul className="guidance-list mt-4 grid gap-3 pl-4.5 text-sm leading-relaxed text-slate-700 marker:text-kc-blue-600 dark:text-slate-300 dark:marker:text-kc-blue-400">
+        {requirement.guidance.map((item) => <li key={item}>{item}</li>)}
+      </ul>
+      <div className="expected-evidence mt-5.5 rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="expected-evidence__title flex items-center gap-2 text-kc-blue-700 dark:text-kc-blue-300">
+          <Paperclip size={18} />
+          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Expected evidence</h3>
+        </div>
+        <ul className="mt-3 grid gap-2 pl-4.5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          {requirement.expectedEvidence.map((item) => <li key={item}>{item}</li>)}
+        </ul>
+      </div>
+      <div className="master-protection-note flex items-center gap-1.5 mt-4 text-xs text-slate-500 dark:text-slate-400">
+        <ShieldCheck size={17} /><span>Managed by KC administrators</span>
+      </div>
+      <InlineMessage className="mt-4" tone="info" title="How this result is calculated">The requirement result is the lowest response below. No maps to Initial, Partial to Emerging, and Yes to Performing.</InlineMessage>
     </aside>
   );
 }
@@ -267,42 +423,65 @@ function EvidenceDialog({ item, onClose, onSave }: { item?: EvidenceItem; onClos
   const valid = Boolean(title.trim() && validUrl && (type === "link" || file || item?.type === "file"));
 
   return (
-    <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")} role="presentation">
-      <button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} onClick={onClose} aria-label="Close evidence dialog" />
-      <section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out]")} role="dialog" aria-modal="true" aria-labelledby="evidence-dialog-title">
-        <div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}>
-          <div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Supporting material</p><h2 id="evidence-dialog-title">{item ? "Edit evidence" : "Add evidence"}</h2></div>
+    <div className={dialogLayerClass} role="presentation">
+      <button className={dialogBackdropClass} onClick={onClose} aria-label="Close evidence dialog" />
+      <section className={dialogClass} role="dialog" aria-modal="true" aria-labelledby="evidence-dialog-title">
+        <div className={dialogHeaderClass}>
+          <div>
+            <p className={eyebrowClasses}>Supporting material</p>
+            <h2 id="evidence-dialog-title" className={dialogHeaderTitleClass}>{item ? "Edit evidence" : "Add evidence"}</h2>
+          </div>
           <IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton>
         </div>
-        <div className={cx("evidence-type-tabs [display:grid] [grid-template-columns:1fr_1fr] [margin:1rem_1.1rem_0] [border:1px_solid_var(--neutral-200)] [border-radius:11px] [background:var(--neutral-100)] [padding:0.2rem] [&_button]:[display:flex] [&_button]:[min-height:40px] [&_button]:[align-items:center] [&_button]:[justify-content:center] [&_button]:[gap:0.45rem] [&_button]:[border:0] [&_button]:[border-radius:8px] [&_button]:[background:transparent] [&_button]:[color:var(--neutral-600)] [&_button]:[font-size:0.82rem] [&_button]:[font-weight:650] [&_button[aria-selected='true']]:[background:var(--surface-elevated)] [&_button[aria-selected='true']]:[color:var(--kc-800)] [&_button[aria-selected='true']]:[box-shadow:var(--shadow-1)]")} role="tablist" aria-label="Evidence type">
-          <button role="tab" aria-selected={type === "file"} onClick={() => setType("file")}><Upload size={18} /> Upload file</button>
-          <button role="tab" aria-selected={type === "link"} onClick={() => setType("link")}><Link2 size={18} /> Add link</button>
+        <div className="evidence-type-tabs mx-4.5 mt-4 grid grid-cols-2 gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800" role="tablist" aria-label="Evidence type">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={type === "file"}
+            className={cx("flex min-h-10 items-center justify-center gap-1.5 rounded-md border-0 bg-transparent text-sm font-semibold text-slate-600 dark:text-slate-400", type === "file" && "bg-white text-kc-blue-800 shadow-sm dark:bg-slate-900 dark:text-kc-blue-200")}
+            onClick={() => setType("file")}
+          >
+            <Upload size={18} /> Upload file
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={type === "link"}
+            className={cx("flex min-h-10 items-center justify-center gap-1.5 rounded-md border-0 bg-transparent text-sm font-semibold text-slate-600 dark:text-slate-400", type === "link" && "bg-white text-kc-blue-800 shadow-sm dark:bg-slate-900 dark:text-kc-blue-200")}
+            onClick={() => setType("link")}
+          >
+            <Link2 size={18} /> Add link
+          </button>
         </div>
-        <div className={cx("dialog-form [display:grid] [gap:1rem] [padding:1.1rem]")}>
-          <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", submitted && !title.trim() && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-            <span>Evidence title <b>Required</b></span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="For example, August review minutes" aria-invalid={submitted && !title.trim()} />
-            {submitted && !title.trim() && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter a clear evidence title.</small>}
+        <div className={dialogFormClass}>
+          <label className={fieldClass}>
+            <span className={fieldLabelRowClass}>Evidence title <b className={fieldRequiredMarkClass}>Required</b></span>
+            <input className={cx(fieldInputClass, submitted && !title.trim() && fieldInvalidClass)} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="For example, August review minutes" aria-invalid={submitted && !title.trim()} />
+            {submitted && !title.trim() && <small className={fieldErrorClass}>Enter a clear evidence title.</small>}
           </label>
           {type === "file" ? (
             <>
-              <input ref={fileInput} className={cx("visually-hidden [position:absolute]! [width:1px]! [height:1px]! [padding:0]! [margin:-1px]! [overflow:hidden]! [clip:rect(0,_0,_0,_0)]! [white-space:nowrap]! [border:0]!")} type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-              <button type="button" className={cx("dropzone [display:grid] [width:calc(100%_-_2.2rem)] [min-height:170px] [place-items:center] [align-content:center] [gap:0.45rem] [margin:1rem_1.1rem] [border:1.5px_dashed_var(--kc-300)] [border-radius:var(--radius-lg)] [background:var(--kc-50)] [color:var(--neutral-700)] [padding:1rem] hover:[border-color:var(--kc-600)] hover:[background:var(--kc-100)] [&_strong]:[font-size:0.9rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.72rem]", submitted && !file && item?.type !== "file" && "dropzone--invalid [border-color:var(--danger)]! [box-shadow:0_0_0_3px_var(--danger-surface)]")} onClick={() => fileInput.current?.click()}>
-                <span className={cx("dropzone__icon [display:grid] [width:48px] [height:48px] [place-items:center] [border-radius:14px] [background:var(--surface-elevated)] [color:var(--kc-700)] [box-shadow:var(--shadow-1)]")}><Upload size={23} /></span>
-                <strong>{file?.name ?? (item?.type === "file" ? item.detail.split(" · ")[0] : "Choose a file")}</strong>
-                <span>{file ? `${Math.max(1, Math.round(file.size / 1024))} KB selected` : "PDF, Word, Excel, image, or other approved record"}</span>
+              <input ref={fileInput} className="sr-only" type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+              <button
+                type="button"
+                className={cx(dropzoneClass, submitted && !file && item?.type !== "file" && "dropzone--invalid border-red-600 ring-3 ring-red-100 dark:border-red-400 dark:ring-red-950")}
+                onClick={() => fileInput.current?.click()}
+              >
+                <span className={dropzoneIconClass}><Upload size={23} /></span>
+                <strong className="text-base text-slate-900 dark:text-slate-100">{file?.name ?? (item?.type === "file" ? item.detail.split(" · ")[0] : "Choose a file")}</strong>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{file ? `${Math.max(1, Math.round(file.size / 1024))} KB selected` : "PDF, Word, Excel, image, or other approved record"}</span>
               </button>
-              {submitted && !file && item?.type !== "file" && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Choose a file to upload.</small>}
+              {submitted && !file && item?.type !== "file" && <small className={fieldErrorClass}>Choose a file to upload.</small>}
             </>
           ) : (
-            <label className={cx("field [display:grid] [min-width:0] [gap:0.4rem] [&_>_span:first-child]:[display:flex] [&_>_span:first-child]:[align-items:center] [&_>_span:first-child]:[justify-content:space-between] [&_>_span:first-child]:[color:var(--neutral-700)] [&_>_span:first-child]:[font-size:0.78rem] [&_>_span:first-child]:[font-weight:650] [&_b]:[color:var(--danger)] [&_b]:[font-size:0.64rem] [&_b]:[letter-spacing:0.01em] [&_input]:[width:100%] [&_input]:[border:1px_solid_var(--neutral-300)] [&_input]:[border-radius:var(--radius-md)] [&_input]:[outline:0] [&_input]:[background:var(--surface-input)] [&_input]:[color:var(--neutral-900)] [&_input]:[padding:0.68rem_0.75rem] [&_input]:[font-size:0.86rem] [&_input]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_textarea]:[width:100%] [&_textarea]:[border:1px_solid_var(--neutral-300)] [&_textarea]:[border-radius:var(--radius-md)] [&_textarea]:[outline:0] [&_textarea]:[background:var(--surface-input)] [&_textarea]:[color:var(--neutral-900)] [&_textarea]:[padding:0.68rem_0.75rem] [&_textarea]:[font-size:0.86rem] [&_textarea]:[transition:border-color_120ms_ease,_box-shadow_120ms_ease] [&_input]:[min-height:42px] [&_textarea]:[resize:vertical] [&_textarea]:[line-height:1.5] [&_input:focus]:[border-color:var(--kc-600)] [&_input:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [&_textarea:focus]:[border-color:var(--kc-600)] [&_textarea:focus]:[box-shadow:0_0_0_3px_var(--kc-100)] [.requirement-header_>_&]:[margin-top:1rem]", submitted && !validUrl && "field--invalid [&_input]:[border-color:var(--danger)]! [&_input]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_textarea]:[border-color:var(--danger)]! [&_textarea]:[box-shadow:0_0_0_3px_var(--danger-surface)] [&_select]:[border-color:var(--danger)]! [&_select]:[box-shadow:0_0_0_3px_var(--danger-surface)]")}>
-              <span>Secure link <b>Required</b></span>
-              <input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://" aria-invalid={submitted && !validUrl} />
-              {submitted && !validUrl && <small className={cx("field-error [display:block] [margin-top:0.35rem] [color:var(--danger)] [font-size:0.7rem] [font-weight:620]")}>Enter a complete link beginning with http:// or https://.</small>}
+            <label className={fieldClass}>
+              <span className={fieldLabelRowClass}>Secure link <b className={fieldRequiredMarkClass}>Required</b></span>
+              <input className={cx(fieldInputClass, submitted && !validUrl && fieldInvalidClass)} type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://" aria-invalid={submitted && !validUrl} />
+              {submitted && !validUrl && <small className={fieldErrorClass}>Enter a complete link beginning with http:// or https://.</small>}
             </label>
           )}
         </div>
-        <div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}>
+        <div className={dialogFooterClass}>
           <Button variant="tertiary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" icon={<Check size={17} />} onClick={() => {
             setSubmitted(true);
@@ -321,12 +500,25 @@ function EvidenceDialog({ item, onClose, onSave }: { item?: EvidenceItem; onClos
 function EvidenceViewer({ item, onClose }: { item: EvidenceItem; onClose: () => void }) {
   const isLink = item.type === "link";
   return (
-    <div className={cx("dialog-layer [position:fixed] [z-index:100] [inset:0] [display:grid] [place-items:center]")} role="presentation">
-      <button className={cx("dialog-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} onClick={onClose} aria-label="Close evidence details" />
-      <section className={cx("dialog [position:relative] [width:min(560px,_calc(100%_-_2rem))] [max-height:calc(100vh_-_2rem)] [overflow-y:auto] [border:1px_solid_var(--border-glass)] [border-radius:var(--radius-xl)] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [animation:dialog-in_180ms_ease-out] dialog--compact [width:min(470px,_calc(100%_-_2rem))]")} role="dialog" aria-modal="true" aria-labelledby="evidence-view-title">
-        <div className={cx("dialog__header [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [padding:1rem_1.1rem] [border-bottom:1px_solid_var(--neutral-200)] [&_h2]:[margin-top:0.2rem] [&_h2]:[font-size:1.2rem]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Evidence details</p><h2 id="evidence-view-title">{item.title}</h2></div><IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton></div>
-        <div className={cx("evidence-preview [display:grid] [justify-items:center] [gap:0.5rem] [margin:1.1rem] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--neutral-50)] [padding:1.5rem] [text-align:center] [&_>_span]:[display:grid] [&_>_span]:[width:58px] [&_>_span]:[height:58px] [&_>_span]:[place-items:center] [&_>_span]:[border-radius:16px] [&_>_span]:[background:var(--kc-50)] [&_>_span]:[color:var(--kc-700)] [&_strong]:[max-width:100%] [&_strong]:[overflow-wrap:anywhere] [&_small]:[color:var(--neutral-500)]")}><span>{isLink ? <Link2 size={28} /> : <FileText size={28} />}</span><strong>{item.detail}</strong><small>Added by {item.uploadedBy} on {item.uploadedAt}</small></div>
-        <div className={cx("dialog__footer [display:flex] [align-items:center] [justify-content:flex-end] [gap:1rem] [padding:1rem_1.1rem] [border-top:1px_solid_var(--neutral-200)] max-[740px]:[align-items:stretch] max-[740px]:[flex-direction:column-reverse]")}><Button variant="tertiary" onClick={onClose}>Close</Button>{isLink && <Button variant="primary" icon={<ExternalLink size={17} />} onClick={() => window.open(item.detail, "_blank", "noopener,noreferrer")}>Open secure link</Button>}</div>
+    <div className={dialogLayerClass} role="presentation">
+      <button className={dialogBackdropClass} onClick={onClose} aria-label="Close evidence details" />
+      <section className={cx(dialogClass, "dialog--compact max-w-sm")} role="dialog" aria-modal="true" aria-labelledby="evidence-view-title">
+        <div className={dialogHeaderClass}>
+          <div>
+            <p className={eyebrowClasses}>Evidence details</p>
+            <h2 id="evidence-view-title" className={dialogHeaderTitleClass}>{item.title}</h2>
+          </div>
+          <IconButton label="Close dialog" onClick={onClose}><X size={20} /></IconButton>
+        </div>
+        <div className="evidence-preview grid justify-items-center gap-2 m-4.5 rounded-lg border border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-900">
+          <span className="grid size-14 place-items-center rounded-2xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300">{isLink ? <Link2 size={28} /> : <FileText size={28} />}</span>
+          <strong className="max-w-full font-bold break-words text-slate-900 dark:text-slate-100">{item.detail}</strong>
+          <small className="text-slate-500 dark:text-slate-400">Added by {item.uploadedBy} on {item.uploadedAt}</small>
+        </div>
+        <div className={dialogFooterClass}>
+          <Button variant="tertiary" onClick={onClose}>Close</Button>
+          {isLink && <Button variant="primary" icon={<ExternalLink size={17} />} onClick={() => window.open(item.detail, "_blank", "noopener,noreferrer")}>Open secure link</Button>}
+        </div>
       </section>
     </div>
   );
@@ -378,32 +570,69 @@ export default function RequirementWorkspace() {
   const next = requirements[currentIndex + 1];
 
   return (
-    <div className={cx("requirement-page [min-width:0]")}>
-      <div className={cx("requirement-mobile-toolbar [display:none] max-[1500px]:[position:sticky] max-[1500px]:[z-index:8] max-[1500px]:[top:var(--content-offset)] max-[1500px]:[display:flex] max-[1500px]:[justify-content:flex-end] max-[1500px]:[gap:0.55rem] max-[1500px]:[border-bottom:1px_solid_var(--neutral-200)] max-[1500px]:[background:var(--surface-mobile-bar)] max-[1500px]:[padding:0.55rem_1rem] max-[1500px]:[backdrop-filter:blur(15px)] max-[1100px]:[top:var(--content-offset)] max-[1100px]:[justify-content:space-between]")}>
+    <div className="requirement-page min-w-0">
+      <div className={requirementMobileToolbarClass} style={{ top: "var(--content-offset)", background: "var(--surface-mobile-bar)" }}>
         <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
         <Button variant="secondary" icon={<BookOpen size={18} />} onClick={() => setGuidanceOpen(true)}>Guidance</Button>
       </div>
-      <div className={cx("requirement-layout [display:grid] [width:100%] [min-width:0] [min-height:calc(100vh_-_var(--content-offset))] [grid-template-columns:400px_minmax(500px,_1fr)_320px] max-[1500px]:[grid-template-columns:320px_minmax(500px,_1fr)] max-[1100px]:[display:block]", guidanceMinimized && "requirement-layout--guidance-minimized [grid-template-columns:400px_minmax(500px,_1fr)_54px]!")}>
-        <div className={cx("requirement-layout__navigator [position:sticky] [top:var(--content-offset)] [height:calc(100vh_-_var(--content-offset))] [align-self:start] max-[1500px]:[top:calc(var(--content-offset)_+_55px)] max-[1500px]:[height:calc(100vh_-_var(--content-offset)_-_55px)] max-[1100px]:[display:none]")}><AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} /></div>
-        <div className={cx("requirement-main [min-width:0] [padding:1.5rem_var(--page-gutter)_4rem] max-[740px]:[padding:1rem_0.85rem_3rem]")}>
-          <nav className={cx("breadcrumbs [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.35rem] [margin-bottom:1rem] [color:var(--neutral-500)] [font-size:0.72rem] [&_a]:[color:var(--kc-700)] [&_a]:[font-weight:600]")} aria-label="Breadcrumb"><Link to="/assessment">Self-assessment</Link><ChevronRight size={15} /><span>{requirement.sectionName}</span><ChevronRight size={15} /><span aria-current="page">{requirement.number}</span></nav>
-          <header className={cx("requirement-header [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-xl)] [background:radial-gradient(circle_at_95%_0%,_rgb(var(--accent-soft-rgb)_/_0.12),_transparent_15rem),_var(--surface-panel)] [padding:1.2rem_1.25rem] [box-shadow:var(--shadow-1)] max-[740px]:[padding:1rem]")}>
-            <div className={cx("requirement-header__meta [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.6rem] [color:var(--neutral-500)] [font-size:0.72rem]")}><span className={cx("requirement-id [border:1px_solid_var(--kc-200)] [border-radius:999px] [background:var(--kc-50)] [color:var(--kc-800)] [padding:0.22rem_0.5rem] [font-weight:750]")}>{requirement.number}</span><span>{requirement.subsection}</span></div>
-            <div className={cx("requirement-header__title [display:flex] [align-items:flex-start] [justify-content:space-between] [gap:1rem] [margin-top:0.8rem] [&_>_div:first-child]:[flex:1] [&_>_div:first-child]:[min-width:0] [&_h1]:[max-width:720px] [&_h1]:[margin-top:0.2rem] [&_h1]:[font-size:clamp(1.45rem,_2.6vw,_1.9rem)] max-[740px]:[display:grid]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Requirement</p><h1>{requirement.title}</h1></div><PerformanceBadge performance={performance} /></div>
-            <p className={cx("requirement-text [max-width:820px] [margin-top:0.9rem] [color:var(--neutral-700)] [font-size:0.92rem] [line-height:1.65]")}>{requirement.requirementText}</p>
-            <div className={cx("requirement-header__footer [display:flex] [flex-wrap:wrap] [align-items:center] [gap:0.6rem] [margin-top:1rem] [border-top:1px_solid_var(--neutral-100)] [padding-top:0.75rem] [color:var(--neutral-500)] [font-size:0.72rem]")}><span>{answered} of {requirement.questions.length} questions answered</span><span className={cx("divider-dot [width:3px] [height:3px] [border-radius:50%] [background:var(--neutral-400)] max-[740px]:[display:none]")} /><span>Result uses the lowest question level</span><span className={cx("requirement-save [margin-left:auto] max-[740px]:[display:none]")}><SaveStatus state={saveState} /></span></div>
+      <div className="requirement-layout min-w-0 w-full shell:flex shell:items-stretch" style={{ minHeight: "calc(100vh - var(--content-offset))" }}>
+        <div className={requirementNavigatorWrapClass} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
+          <AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} />
+        </div>
+        <div className="requirement-main min-w-0 pt-4 pb-12 shell:flex-1 md:pt-6 md:pb-16" style={{ paddingInline: "var(--page-gutter)" }}>
+          <nav className={breadcrumbsClass} aria-label="Breadcrumb">
+            <Link className={breadcrumbsLinkClass} to="/assessment">Self-assessment</Link>
+            <ChevronRight size={15} />
+            <span>{requirement.sectionName}</span>
+            <ChevronRight size={15} />
+            <span aria-current="page">{requirement.number}</span>
+          </nav>
+          <header className="requirement-header rounded-xl border border-slate-200 bg-white p-5 shadow-sm max-md:p-4 dark:border-slate-700 dark:bg-slate-900">
+            <div className="requirement-header__meta flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="requirement-id rounded-full border border-kc-blue-200 bg-kc-blue-50 px-2 py-1 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">{requirement.number}</span>
+              <span>{requirement.subsection}</span>
+            </div>
+            <div className="requirement-header__title mt-3 flex items-start justify-between gap-4 max-md:grid">
+              <div className="min-w-0 flex-1">
+                <p className={eyebrowClasses}>Requirement</p>
+                <h1 className="mt-1 max-w-180 text-2xl font-extrabold text-slate-900 sm:text-3xl dark:text-slate-100">{requirement.title}</h1>
+              </div>
+              <PerformanceBadge performance={performance} />
+            </div>
+            <p className="requirement-text mt-3.5 max-w-205 text-base leading-relaxed text-slate-700 dark:text-slate-300">{requirement.requirementText}</p>
+            <div className="requirement-header__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+              <span className="text-slate-500 dark:text-slate-400">{answered} of {requirement.questions.length} questions answered</span>
+              <span className="divider-dot size-1 rounded-full bg-slate-400 max-md:hidden dark:bg-slate-500" />
+              <span className="text-slate-500 dark:text-slate-400">Result uses the lowest question level</span>
+              <span className="requirement-save ml-auto max-md:hidden"><SaveStatus state={saveState} /></span>
+            </div>
           </header>
-          <section className={cx("questions-section [margin-top:1.5rem]")} aria-labelledby="questions-title">
-            <div className={cx("section-title-row [display:flex] [align-items:flex-end] [justify-content:space-between] [gap:1rem] [margin-bottom:1rem] [&_h2]:[margin-top:0.25rem] [&_>_div_>_span]:[color:var(--neutral-500)] [&_>_div_>_span]:[font-size:0.85rem] [&_>_span]:[color:var(--neutral-500)] [&_>_span]:[font-size:0.85rem] [.site-support-details__content_&]:[margin-bottom:1rem] max-[740px]:[align-items:flex-start] max-[740px]:[flex-direction:column]")}><div><p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Assessment questions</p><h2 id="questions-title">Evaluate this requirement</h2></div><span className={cx("question-count [border:1px_solid_var(--neutral-200)] [border-radius:999px] [background:var(--surface-elevated)] [padding:0.35rem_0.6rem] [font-size:0.72rem] [font-weight:650] [.history-list_article_.import-preview-questions__header_&]:[flex:none] [.history-list_article_.import-preview-questions__header_&]:[overflow:visible] [.history-list_article_.import-preview-questions__header_&]:[color:var(--neutral-700)] [.history-list_article_.import-preview-questions__header_&]:[font-size:0.72rem] [.history-list_article_.import-preview-questions__header_&]:[white-space:nowrap]")}>{requirement.questions.length} questions</span></div>
-            <div className={cx("question-list [display:grid] [gap:1rem]")}>
+          <section className="questions-section mt-6" aria-labelledby="questions-title">
+            <div className={sectionTitleRowClass}>
+              <div>
+                <p className={eyebrowClasses}>Assessment questions</p>
+                <h2 className={sectionTitleHeadingClass} id="questions-title">Evaluate this requirement</h2>
+              </div>
+              <span className={questionCountClass}>{requirement.questions.length} questions</span>
+            </div>
+            <div className="question-list grid gap-4">
               {requirement.questions.map((question) => (
-                <article className={cx("question-card [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-lg)] [background:var(--surface-panel)] [padding:1.1rem] [box-shadow:var(--shadow-1)] max-[740px]:[padding:0.9rem]")} key={question.id} id={`question-${question.id}`}>
-                  <div className={cx("question-card__header [display:grid] [grid-template-columns:auto_minmax(0,_1fr)_auto] [align-items:start] [gap:0.8rem] [&_p]:[color:var(--neutral-500)] [&_p]:[font-size:0.68rem] [&_p]:[font-weight:600] [&_h3]:[max-width:780px] [&_h3]:[margin-top:0.2rem] [&_h3]:[font-size:0.95rem] [&_h3]:[line-height:1.5] max-[740px]:[grid-template-columns:auto_minmax(0,_1fr)]")}><span className={cx("question-number [display:grid] [width:31px] [height:31px] [place-items:center] [border-radius:9px] [background:var(--kc-50)] [color:var(--kc-800)] [font-size:0.8rem] [font-weight:750] [.history-list_article_.import-preview-question-list_&]:[overflow:visible] [.history-list_article_.import-preview-question-list_&]:[color:var(--kc-800)] [.history-list_article_.import-preview-question-list_&]:[font-size:0.8rem] [.history-list_article_.import-preview-question-list_&]:[white-space:nowrap]")}>{question.number}</span><div><p>Question {question.number}</p><h3>{question.text}</h3></div><PerformanceBadge performance={performanceForResponse(question.response)} compact /></div>
+                <article className="question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm max-md:p-3.5 dark:border-slate-700 dark:bg-slate-900" key={question.id} id={`question-${question.id}`}>
+                  <div className="question-card__header flex flex-wrap items-start gap-3">
+                    <span className={questionNumberClass}>{question.number}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Question {question.number}</p>
+                      <h3 className="mt-1 max-w-195 text-base leading-relaxed text-slate-900 dark:text-slate-100">{question.text}</h3>
+                    </div>
+                    <PerformanceBadge performance={performanceForResponse(question.response)} compact />
+                  </div>
                   {Boolean(question.evidenceRequired ?? question.expectedEvidence?.length) && (
                     <>
-                      <div className={cx("question-evidence [display:grid] [gap:0.5rem] [margin:0.85rem_0_0] [border:1px_solid_var(--neutral-200)] [border-radius:var(--radius-md)] [background:var(--surface-elevated)] [padding:0.75rem_0.9rem] [&_ul]:[display:grid] [&_ul]:[gap:0.3rem] [&_ul]:[margin:0] [&_ul]:[padding-left:1.1rem] [&_ul]:[color:var(--neutral-600)] [&_ul]:[font-size:0.76rem] [&_ul]:[line-height:1.5]")}>
-                        <span className={cx("question-evidence__title [&_small]:[margin-left:auto] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.66rem] [&_small]:[font-weight:500] [&_small]:[text-transform:none] [&_small]:[letter-spacing:normal] [display:flex] [align-items:center] [gap:0.4rem] [color:var(--kc-700)] [font-size:0.72rem] [font-weight:700] [text-transform:uppercase] [letter-spacing:0.02em]")}><Paperclip size={14} /> Evidence required <small>Attach evidence even when the response is Yes, if it is available.</small></span>
-                        <ul>{(question.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}</ul>
+                      <div className={questionEvidenceNoticeClass}>
+                        <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence required <small className="ml-auto text-xs font-medium text-slate-500 normal-case tracking-normal dark:text-slate-400">Attach evidence even when the response is Yes, if it is available.</small></span>
+                        <ul className="m-0 mt-2 grid gap-1.5 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                          {(question.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}
+                        </ul>
                       </div>
                       <QuestionEvidenceAttachments evidence={requirement.evidence.filter((item) => item.questionId === question.id)} questionNumber={question.number} onAdd={() => setEvidenceEditor({ mode: "new", questionId: question.id })} onView={setEvidenceViewer} onEdit={(item) => setEvidenceEditor({ mode: "edit", item })} onDelete={setEvidenceRemoving} />
                     </>
@@ -414,19 +643,63 @@ export default function RequirementWorkspace() {
               ))}
             </div>
           </section>
-          <footer className={cx("requirement-footer [position:sticky] [z-index:5] [bottom:0.75rem] [display:flex] [align-items:center] [justify-content:space-between] [gap:1rem] [margin-top:1.5rem] [border:1px_solid_var(--border-translucent)] [border-radius:var(--radius-lg)] [background:var(--surface-translucent)] [padding:0.65rem] [box-shadow:0_12px_34px_rgb(15_23_42_/_0.12)] [backdrop-filter:blur(18px)] [&_>_div]:[display:flex] [&_>_div]:[align-items:center] [&_>_div]:[gap:0.85rem] max-[1100px]:[bottom:calc(82px_+_env(safe-area-inset-bottom))] max-[740px]:[bottom:calc(72px_+_env(safe-area-inset-bottom))] max-[740px]:[display:grid] max-[740px]:[grid-template-columns:1fr_1fr] max-[740px]:[gap:0.55rem] max-[740px]:[padding:0.5rem] max-[740px]:[&_>_div]:[width:100%]")}>
+          <footer
+            className="requirement-footer sticky bottom-18 z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-2.5 shell:bottom-3 shell:flex shell:justify-between shell:gap-3.5"
+            style={{
+              borderColor: "var(--border-translucent)",
+              background: "var(--surface-translucent)",
+              boxShadow: "0 12px 34px rgb(15 23 42 / 0.12)",
+              backdropFilter: "blur(18px)",
+              // env() has no Tailwind scale token; kept as inline padding (rather than folded
+              // into the sticky `bottom` offset) specifically so the shell: breakpoint above can
+              // still override the position with a plain class — an inline style always wins over
+              // a class, so an arbitrary-value bottom offset could never be overridden responsively.
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
             <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
-            <div><SaveStatus state={saveState} /><Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button></div>
+            <div className="flex items-center gap-3.5 max-md:w-full">
+              <SaveStatus state={saveState} />
+              <Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button>
+            </div>
           </footer>
         </div>
-        <div className={cx("requirement-layout__guidance [position:sticky] [top:var(--content-offset)] [height:calc(100vh_-_var(--content-offset))] [align-self:start] max-[1500px]:[display:none]", guidanceMinimized && "requirement-layout__guidance--minimized")}>
-          {guidanceMinimized
-            ? <button type="button" className={cx("guidance-panel-restore [display:flex] [width:100%] [height:100%] [align-items:center] [flex-direction:column] [gap:0.65rem] [border:0] [border-left:1px_solid_var(--neutral-200)] [background:linear-gradient(180deg,_var(--kc-50),_var(--surface-panel)_14rem)] [color:var(--kc-700)] [padding:1rem_0] [cursor:pointer] [font:inherit] [&_span]:[color:var(--neutral-700)] [&_span]:[font-size:0.72rem] [&_span]:[font-weight:700] [&_span]:[letter-spacing:0.04em] [&_span]:[writing-mode:vertical-rl] [&_>_svg:last-child]:[transform:rotate(180deg)] hover:[background:var(--kc-100)] hover:[color:var(--kc-800)] focus-visible:[position:relative] focus-visible:[z-index:1] focus-visible:[outline:3px_solid_rgb(2_132_199_/_0.25)] focus-visible:[outline-offset:-3px]")} onClick={() => setGuidanceMinimized(false)} aria-label="Expand guidance panel"><BookOpen size={19} /><span>Guidance</span><ChevronRight size={17} /></button>
-            : <GuidancePanel requirement={requirement} onCollapse={() => setGuidanceMinimized(true)} />}
+        <div className={cx("requirement-layout__guidance hidden wide:sticky wide:block wide:flex-none wide:self-start", guidanceMinimized ? "wide:w-14" : "wide:w-80")} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
+          {guidanceMinimized ? (
+            <button
+              type="button"
+              className="guidance-panel-restore flex h-full w-full cursor-pointer flex-col items-center gap-2.5 border-0 border-l border-slate-200 bg-linear-to-b from-kc-blue-50 to-white px-0 py-4 text-kc-blue-700 hover:bg-kc-blue-100 hover:text-kc-blue-800 focus-visible:relative focus-visible:z-1 focus-visible:outline-3 focus-visible:outline-sky-600/25 focus-visible:-outline-offset-3 dark:border-slate-700 dark:from-kc-blue-950 dark:to-slate-900 dark:text-kc-blue-300 dark:hover:text-kc-blue-200"
+              onClick={() => setGuidanceMinimized(false)}
+              aria-label="Expand guidance panel"
+            >
+              <BookOpen size={19} />
+              <span className="text-xs font-bold tracking-widest text-slate-700 dark:text-slate-300" style={{ writingMode: "vertical-rl" }}>Guidance</span>
+              <ChevronRight size={17} className="rotate-180" />
+            </button>
+          ) : (
+            <GuidancePanel requirement={requirement} onCollapse={() => setGuidanceMinimized(true)} />
+          )}
         </div>
       </div>
-      {navigatorOpen && <div className={cx("sheet-layer [position:fixed] [z-index:100] [inset:0] [display:none] [place-items:center] max-[1500px]:[display:block]")}><button className={cx("sheet-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} /><div className={cx("sheet [position:absolute] [top:0] [bottom:0] [width:min(390px,_calc(100%_-_2rem))] [overflow-y:auto] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] sheet--left [left:0]")}><AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} /></div></div>}
-      {guidanceOpen && <div className={cx("sheet-layer [position:fixed] [z-index:100] [inset:0] [display:none] [place-items:center] max-[1500px]:[display:block]")}><button className={cx("sheet-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close guidance" onClick={() => setGuidanceOpen(false)} /><div className={cx("sheet [position:absolute] [top:0] [bottom:0] [width:min(390px,_calc(100%_-_2rem))] [overflow-y:auto] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] sheet--right [right:0]")}><div className={cx("sheet__close [display:flex] [justify-content:flex-end] [padding:0.5rem]")}><IconButton label="Close guidance" onClick={() => setGuidanceOpen(false)}><X size={20} /></IconButton></div><GuidancePanel requirement={requirement} /></div></div>}
+      {navigatorOpen && (
+        <div className={sheetLayerClass}>
+          <button className={sheetBackdropClass} aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} />
+          <div className={cx(sheetClass, "sheet--left left-0 right-8")}>
+            <AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} />
+          </div>
+        </div>
+      )}
+      {guidanceOpen && (
+        <div className={sheetLayerClass}>
+          <button className={sheetBackdropClass} aria-label="Close guidance" onClick={() => setGuidanceOpen(false)} />
+          <div className={cx(sheetClass, "sheet--right right-0 left-8")}>
+            <div className="sheet__close flex justify-end p-2">
+              <IconButton label="Close guidance" onClick={() => setGuidanceOpen(false)}><X size={20} /></IconButton>
+            </div>
+            <GuidancePanel requirement={requirement} />
+          </div>
+        </div>
+      )}
       {evidenceEditor && <EvidenceDialog item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item} onClose={() => setEvidenceEditor(null)} onSave={(item) => {
         if (evidenceEditor.mode === "new") addEvidence(requirement.id, { ...item, questionId: evidenceEditor.questionId }, user?.name); else updateEvidence(requirement.id, item, user?.name);
         setEvidenceEditor(null);

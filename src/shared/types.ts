@@ -2,7 +2,7 @@ export type Performance = "initial" | "emerging" | "performing" | "not-assessed"
 export type ResponseValue = "no" | "partial" | "yes" | null;
 export type CompletionState = "not-started" | "in-progress" | "complete";
 export type AssessmentPeriod = "2026 Q1" | "2026 Q2" | "2026 Q3";
-export type UserRole = "site-contributor" | "enterprise-viewer" | "administrator";
+export type UserRole = "site-contributor" | "administrator";
 
 export interface AuthUser {
   id: string;

@@ -471,6 +471,13 @@ export const dashboardSites: DashboardSite[] = [
   },
 ];
 
+/**
+ * Admin-curated Region/Segment dropdown values for the site form (Config screen). Seeded with
+ * the values already used by `dashboardSites` above so the dropdowns look unchanged on first load.
+ */
+export const regions: string[] = ["Asia Pacific", "EMEA", "Latin America", "North America"];
+export const segments: string[] = ["Family Care", "Personal Care", "Professional"];
+
 export const masterRequirements: MasterRequirement[] = [
   {
     id: "OS 1.2.1", title: "Leadership commitment and accountability", section: "Leadership & Engagement", status: "Published", siteIds: [],
@@ -542,11 +549,11 @@ export const siteUsers: SiteUser[] = [
   { id: "su-1", name: "Maya Patel", email: "maya.patel@example.com", role: "site-contributor", siteId: "northstar", status: "Active" },
   { id: "su-2", name: "Daniel Brooks", email: "daniel.brooks@example.com", role: "site-contributor", siteId: "northstar", status: "Active" },
   { id: "su-3", name: "Jordan Lee", email: "jordan.lee@example.com", role: "site-contributor", siteId: "northstar", status: "Inactive" },
-  { id: "su-4", name: "Noah Williams", email: "noah.williams@example.com", role: "enterprise-viewer", siteId: "riverbend", status: "Active" },
+  { id: "su-4", name: "Noah Williams", email: "noah.williams@example.com", role: "site-contributor", siteId: "riverbend", status: "Active" },
   { id: "su-5", name: "Sofia Chen", email: "sofia.chen@example.com", role: "site-contributor", siteId: "riverbend", status: "Active" },
   { id: "su-6", name: "Elena Garcia", email: "elena.garcia@example.com", role: "site-contributor", siteId: "lakeview", status: "Active" },
   { id: "su-7", name: "Priya Nair", email: "priya.nair@example.com", role: "site-contributor", siteId: "cedar-grove", status: "Active" },
-  { id: "su-8", name: "Aisha Rahman", email: "aisha.rahman@example.com", role: "enterprise-viewer", siteId: "solstice", status: "Active" },
+  { id: "su-8", name: "Aisha Rahman", email: "aisha.rahman@example.com", role: "site-contributor", siteId: "solstice", status: "Active" },
 ];
 
 export const notifications: AppNotification[] = [
@@ -600,7 +607,7 @@ export const notifications: AppNotification[] = [
     body: "44% complete with 42 open gaps. Consider a leadership review for this site.",
     category: "assessment",
     createdAt: "2026-08-16T11:20:00.000Z",
-    audience: ["enterprise-viewer", "administrator"],
+    audience: ["administrator"],
     readBy: [],
     link: "/sites/cedar-grove",
     siteId: "cedar-grove",

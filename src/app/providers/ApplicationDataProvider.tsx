@@ -3,8 +3,9 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { actionComplete, currentAssessmentPeriod, rollupPerformance } from "../../shared/domain/assessment";
 import { createdRequirementAuditChanges, deletedRequirementAuditChanges, updatedRequirementAuditChanges } from "../../shared/domain/requirement-audit";
 import { useDataSource } from "./DataSourceProvider";
-import { applicationRepositoryFor, importedQuestionsFor } from "../../data-access/repositories/application";
+import { applicationRepositoryFor } from "../../data-access/repositories/application";
 import type { AppSnapshot, DataSourceStatus, ImportHistoryRecord } from "../../data-access/contracts";
+import type { RequirementImportPlan } from "../../features/admin/model/importWorkbook";
 import type {
   ActionItem,
   AppNotification,
@@ -78,7 +79,7 @@ interface ApplicationDataValue extends PersistedState {
   addMasterRequirement: (requirement: MasterRequirement, actor?: RequirementAuditActor) => void;
   updateMasterRequirement: (requirement: MasterRequirement, actor?: RequirementAuditActor) => void;
   removeMasterRequirement: (requirementId: string, actor?: RequirementAuditActor) => void;
-  submitImportBatch: (fileName: string, siteIds: string[], actor?: RequirementAuditActor) => ImportHistoryRecord;
+  submitImportBatch: (plan: RequirementImportPlan, actor?: RequirementAuditActor) => ImportHistoryRecord;
   publishImportBatch: (batchId: string, actor?: RequirementAuditActor) => void;
   addSiteUser: (user: SiteUser) => void;
   updateSiteUser: (user: SiteUser) => void;
@@ -86,6 +87,10 @@ interface ApplicationDataValue extends PersistedState {
   addSite: (site: DashboardSite) => void;
   updateSite: (site: DashboardSite) => void;
   importSites: (sites: DashboardSite[]) => { added: number; skipped: string[] };
+  addRegion: (region: string) => void;
+  removeRegion: (region: string) => void;
+  addSegment: (segment: string) => void;
+  removeSegment: (segment: string) => void;
   notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
   markNotificationRead: (id: string, role: SiteUserRole) => void;
   markAllNotificationsRead: (role: SiteUserRole) => void;
@@ -354,7 +359,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function submitImportBatch(fileName: string, siteIds: string[], actor = defaultAuditActor) {
+  function submitImportBatch(plan: RequirementImportPlan, actor = defaultAuditActor) {
     const batchId = `IMP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     const recordedAt = new Date().toISOString();
     // Illustrative mock batch: a small, real set of rows is actually written to state (so the
@@ -362,46 +367,30 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     // Selection/counts are decided from the current render's `state` (safe here — this function
     // makes exactly one `touch` call, so `state` is still fresh); the write itself below still
     // derives from `current` inside `touch`, matching this file's usual pattern.
-    const sectionPool = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation"];
-    const createdRows: MasterRequirement[] = Array.from({ length: 4 }, (_, index) => {
-      const requirementId = `OS ${20 + index}.1.${index + 1}`;
-      return {
-        id: requirementId,
-        title: `Imported requirement ${index + 1} from ${fileName}`,
-        section: sectionPool[index % sectionPool.length],
-        status: "Draft",
-        siteIds,
-        importBatchId: batchId,
-        questions: importedQuestionsFor(source, requirementId, index),
-      };
-    });
-    const updateCandidateIds = state.masterRequirements.slice(0, 2).map((requirement) => requirement.id);
+    const { fileName, upserts } = plan;
+    const siteIds = [...new Set(upserts.flatMap((requirement) => requirement.siteIds))];
+    const createdRows: MasterRequirement[] = upserts.map((requirement) => ({ ...requirement, status: "Draft", importBatchId: batchId }));
+    const updateCandidateIds = createdRows.filter((requirement) => state.masterRequirements.some((item) => item.id === requirement.id)).map((requirement) => requirement.id);
     const record: ImportHistoryRecord = {
       id: batchId,
       fileName,
+      mode: plan.mode,
       importedAt: recordedAt,
       importedBy: actor.name,
       siteIds,
-      created: createdRows.length,
-      updated: updateCandidateIds.length,
-      unchanged: state.masterRequirements.length - updateCandidateIds.length,
+      created: plan.created,
+      updated: plan.updated + plan.addedQuestions,
+      unchanged: plan.unchanged,
       status: "Completed",
       publishStatus: "Draft",
     };
     touch((current) => {
-      const updatedRows = current.masterRequirements.map((requirement) => updateCandidateIds.includes(requirement.id)
-        ? {
-          ...requirement,
-          status: "Draft" as const,
-          importBatchId: batchId,
-          siteIds: [...new Set([...requirement.siteIds, ...siteIds])],
-        }
-        : requirement);
-      const createdAuditEntries = createdRows.map((requirement) => requirementAuditEntry(requirement, "imported", `Requirement imported from ${fileName}.`, createdRequirementAuditChanges(requirement), actor, recordedAt, batchId));
+      const updatedRows = current.masterRequirements.map((requirement) => createdRows.find((item) => item.id === requirement.id) ?? requirement);
+      const createdAuditEntries = createdRows.filter((requirement) => !updateCandidateIds.includes(requirement.id)).map((requirement) => requirementAuditEntry(requirement, "imported", `Requirement imported from ${fileName}.`, createdRequirementAuditChanges(requirement), actor, recordedAt, batchId));
       const updatedAuditEntries = current.masterRequirements
         .filter((requirement) => updateCandidateIds.includes(requirement.id))
         .map((requirement) => {
-          const updated = updatedRows.find((item) => item.id === requirement.id)!;
+          const updated = createdRows.find((item) => item.id === requirement.id)!;
           const changes = [
             ...updatedRequirementAuditChanges(requirement, updated),
             { kind: "updated" as const, target: "requirement" as const, label: "Import batch", before: requirement.importBatchId ?? "None", after: batchId },
@@ -411,7 +400,7 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
       return {
         ...current,
         masterRequirements: [
-        ...createdRows,
+          ...createdRows.filter((requirement) => !updateCandidateIds.includes(requirement.id)),
           ...updatedRows,
         ],
         requirementAuditLog: [...createdAuditEntries, ...updatedAuditEntries, ...current.requirementAuditLog],
@@ -478,6 +467,22 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     return { added: additions.length, skipped };
   }
 
+  function addRegion(region: string) {
+    touch((current) => current.regions.includes(region) ? current : { ...current, regions: [...current.regions, region].sort() });
+  }
+
+  function removeRegion(region: string) {
+    touch((current) => ({ ...current, regions: current.regions.filter((item) => item !== region) }));
+  }
+
+  function addSegment(segment: string) {
+    touch((current) => current.segments.includes(segment) ? current : { ...current, segments: [...current.segments, segment].sort() });
+  }
+
+  function removeSegment(segment: string) {
+    touch((current) => ({ ...current, segments: current.segments.filter((item) => item !== segment) }));
+  }
+
   function addSiteUser(user: SiteUser) {
     touch((current) => ({ ...current, siteUsers: [user, ...current.siteUsers] }));
   }
@@ -535,6 +540,10 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     addSite,
     updateSite,
     importSites,
+    addRegion,
+    removeRegion,
+    addSegment,
+    removeSegment,
     notify,
     markNotificationRead,
     markAllNotificationsRead,

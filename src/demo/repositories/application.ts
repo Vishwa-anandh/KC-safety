@@ -6,8 +6,10 @@ import {
   masterRequirements,
   notifications,
   ownerRecords,
+  regions,
   requirements,
   sections,
+  segments,
   siteUsers,
 } from "../fixtures/assessment";
 import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts";
@@ -262,6 +264,8 @@ function freshSnapshot(): AppSnapshot {
     notifications: structuredClone(notifications),
     assignedSite: structuredClone(assignedSite),
     lastUpdated: new Date().toISOString(),
+    regions: structuredClone(regions),
+    segments: structuredClone(segments),
   };
 }
 

@@ -13,12 +13,13 @@ function optionalUrl(value: string | undefined, name: string) {
 }
 
 export const environment = Object.freeze({
+  assetBaseUrl: import.meta.env.BASE_URL,
   apiBaseUrl: optionalUrl(import.meta.env.VITE_API_BASE_URL, "VITE_API_BASE_URL"),
   dataSourceSwitchEnabled: import.meta.env.DEV && import.meta.env.VITE_ENABLE_DATA_SOURCE_SWITCH === "true",
   demoAuthenticationEnabled: import.meta.env.VITE_ENABLE_DEMO_AUTH !== "false",
 });
 
-export const { apiBaseUrl, dataSourceSwitchEnabled, demoAuthenticationEnabled } = environment;
+export const { apiBaseUrl, assetBaseUrl, dataSourceSwitchEnabled, demoAuthenticationEnabled } = environment;
 
 export function readDataSource(): DataSourceKind {
   if (!dataSourceSwitchEnabled) return "demo";

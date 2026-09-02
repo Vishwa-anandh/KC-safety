@@ -8,9 +8,9 @@ import {
   ChevronRight,
   CircleHelp,
   ClipboardCheck,
-  FileInput,
   FileText,
   History,
+  KeyRound,
   LogOut,
   LayoutDashboard,
   MoreHorizontal,
@@ -19,12 +19,13 @@ import {
   PlayCircle,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   UsersRound,
   X,
 } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useApplicationData } from "../providers/ApplicationDataProvider";
-import { useAuth } from "../../features/auth";
+import { ChangePasswordDialog, useAuth } from "../../features/auth";
 import { useGuidedSetup, type UserRole } from "../../features/onboarding";
 import { useNotifications } from "../../features/notifications";
 import type { AppNotification, NotificationCategory } from "../../shared/types";
@@ -38,26 +39,26 @@ const navigation = [
     label: "Site workspace",
     roles: ["site-contributor"] as UserRole[],
     items: [
-      { to: appPaths.overview, label: "Overview", icon: LayoutDashboard },
-      { to: appPaths.siteInformation, label: "Site information", icon: Building2 },
-      { to: appPaths.owners, label: "Program owners", icon: UsersRound },
-      { to: appPaths.assessment, label: "Self-assessment", icon: ClipboardCheck },
-      { to: appPaths.actions, label: "Actions summary", icon: Activity },
+      { to: appPaths.overview, label: "Overview", icon: LayoutDashboard, matches: [appPaths.overview] },
+      { to: appPaths.siteInformation, label: "Site information", icon: Building2, matches: [appPaths.siteInformation] },
+      { to: appPaths.owners, label: "Program owners", icon: UsersRound, matches: [appPaths.owners] },
+      { to: appPaths.assessment, label: "Self-assessment", icon: ClipboardCheck, matches: [appPaths.assessment] },
+      { to: appPaths.actions, label: "Actions summary", icon: Activity, matches: [appPaths.actions] },
     ],
   },
   {
     label: "Oversight",
-    roles: ["enterprise-viewer", "administrator"] as UserRole[],
-    items: [{ to: appPaths.dashboard, label: "Enterprise dashboard", icon: BarChart3 }],
+    roles: ["administrator"] as UserRole[],
+    items: [{ to: appPaths.dashboard, label: "Enterprise dashboard", icon: BarChart3, matches: [appPaths.dashboard, "/sites/"] }],
   },
   {
     label: "Administration",
     roles: ["administrator"] as UserRole[],
     items: [
-      { to: appPaths.adminSites, label: "Sites", icon: Building2 },
-      { to: appPaths.adminImports, label: "Imports", icon: FileInput },
-      { to: appPaths.adminRequirements, label: "Master requirements", icon: FileText },
-      { to: appPaths.adminRequirementAudit, label: "Audit log", icon: History },
+      { to: appPaths.adminSites, label: "Sites", icon: Building2, matches: [appPaths.adminSites] },
+      { to: appPaths.adminRequirements, label: "Master data", icon: FileText, matches: [appPaths.adminRequirements, appPaths.adminImports] },
+      { to: appPaths.adminRequirementAudit, label: "Audit log", icon: History, matches: [appPaths.adminRequirementAudit] },
+      { to: appPaths.adminConfig, label: "Config", icon: SlidersHorizontal, matches: [appPaths.adminConfig] },
     ],
   },
 ];
@@ -66,35 +67,186 @@ const bottomTabs = [
   { to: appPaths.overview, label: "Overview", icon: LayoutDashboard, matches: [appPaths.overview], roles: ["site-contributor"] as UserRole[] },
   { to: appPaths.assessment, label: "Assessment", icon: ClipboardCheck, matches: [appPaths.assessment], roles: ["site-contributor"] as UserRole[] },
   { to: appPaths.actions, label: "Actions", icon: Activity, matches: [appPaths.actions], roles: ["site-contributor"] as UserRole[] },
-  { to: appPaths.dashboard, label: "Dashboard", icon: BarChart3, matches: [appPaths.dashboard, "/sites/"], roles: ["enterprise-viewer", "administrator"] as UserRole[] },
+  { to: appPaths.dashboard, label: "Dashboard", icon: BarChart3, matches: [appPaths.dashboard, "/sites/"], roles: ["administrator"] as UserRole[] },
   { to: appPaths.adminSites, label: "Sites", icon: Building2, matches: [appPaths.adminSites], roles: ["administrator"] as UserRole[] },
-  { to: appPaths.adminImports, label: "Imports", icon: FileInput, matches: [appPaths.adminImports], roles: ["administrator"] as UserRole[] },
-  { to: appPaths.adminRequirements, label: "Requirements", icon: FileText, matches: [appPaths.adminRequirements], roles: ["administrator"] as UserRole[] },
+  { to: appPaths.adminRequirements, label: "Master data", icon: FileText, matches: [appPaths.adminRequirements, appPaths.adminImports], roles: ["administrator"] as UserRole[] },
 ];
 
-function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: UserRole; onNavigate?: () => void }) {
+/*
+ * The shell keeps a small set of CSS variables that Tailwind utilities cannot express, applied
+ * through inline `style` props rather than arbitrary utilities:
+ *   --nav-background        layered radial + linear gradient behind both sidebars
+ *   --nav-active-background layered gradient behind the active nav item
+ *   --nav-active-shadow     accent-tinted glow under the active nav item
+ *   --nav-scrollbar-*       assignments to the global --scrollbar-* custom properties
+ *   --shadow-1 / --shadow-3 the custom elevation ramp
+ *   --surface-topbar / --surface-translucent  frosted translucent bars
+ *   --border-translucent    the glass hairline on those bars and on the shell popovers
+ *   --topbar                shell strip / brand row height (72px desktop, 66px below 1100px)
+ * All of those still swap by theme in tailwind.base.css, so they stay theme-correct without a
+ * `dark:` counterpart. Every other colour is a canonical utility plus an explicit `dark:` variant.
+ */
+const navScrollbarStyle = {
+  "--scrollbar-thumb": "var(--nav-scrollbar-thumb)",
+  "--scrollbar-thumb-hover": "var(--nav-scrollbar-thumb-hover)",
+  "--scrollbar-thumb-active": "var(--nav-scrollbar-thumb-active)",
+} as CSSProperties;
+
+const topbarHeightStyle: CSSProperties = { height: "var(--topbar)", flexBasis: "var(--topbar)" };
+
+/* Shared chrome for the collapsed-sidebar tooltips. Hidden by default; each call site adds its own
+   group-hover/group-focus reveal because Tailwind needs the literal variant in the source. */
+const navTooltipBase =
+  "nav-item__tooltip pointer-events-none invisible absolute top-1/2 left-full z-70 ml-3.5 w-max max-w-56 -translate-y-1/2 translate-x-1 rounded-lg border border-kc-blue-300/25 bg-linear-145 from-kc-blue-900 to-kc-blue-950 px-2.5 py-2 font-sans text-xs leading-tight font-semibold text-white opacity-0 shadow-2xl shadow-slate-950/30 transition-all duration-150 ease-out inset-shadow-2xs inset-shadow-white/10 before:absolute before:top-1/2 before:-left-1.5 before:-mt-1 before:size-2 before:rotate-45 before:border before:border-t-0 before:border-r-0 before:border-kc-blue-300/20 before:bg-kc-blue-950 dark:border-kc-blue-300/25 dark:from-kc-blue-900 dark:to-kc-blue-950 dark:text-white dark:before:border-kc-blue-300/20 dark:before:bg-kc-blue-950";
+
+/* Brand row shared by the desktop sidebar and the mobile drawer. */
+function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: () => void }) {
   return (
-    <nav className={cx("side-nav [--scrollbar-thumb:var(--nav-scrollbar-thumb)] [--scrollbar-thumb-hover:var(--nav-scrollbar-thumb-hover)] [--scrollbar-thumb-active:var(--nav-scrollbar-thumb-active)] [flex:1] [overflow:visible] [padding:1rem_0.75rem_1.5rem] [transition:padding_var(--motion-sidebar)] [@media_(max-height:_680px)_and_(min-width:_1101px)]:[overflow-y:auto] [@media_(max-height:_680px)_and_(min-width:_1101px)]:[overflow-x:hidden] [.app-shell--collapsed_.desktop-sidebar_&]:[padding-inline:0.65rem]")} aria-label="Primary navigation">
+    <div
+      className={cx(
+        "brand-lockup relative flex flex-none items-center border-b border-kc-blue-700/15 transition-all duration-300 ease-out dark:border-white/10",
+        collapsed ? "justify-center gap-0 px-0" : "gap-3 px-4.5",
+      )}
+      style={topbarHeightStyle}
+    >
+      <span className={cx("brand-lockup__mark inline-grid transition-all duration-150 ease-out", collapsed && "group-hover/sidebar:scale-75 group-hover/sidebar:opacity-0 pointer-coarse:scale-75 pointer-coarse:opacity-0")}>
+        <KcLogo />
+      </span>
+      {collapsed && onToggle && (
+        <button
+          type="button"
+          className={cx("collapsed-sidebar-toggle absolute inset-0 z-10 grid place-items-center text-kc-blue-800 opacity-0 pointer-events-none transition-all duration-150 ease-out group-hover/sidebar:opacity-100 group-hover/sidebar:pointer-events-auto hover:bg-kc-blue-50/70 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:outline-3 focus-visible:outline-offset-[-3px] focus-visible:outline-kc-blue-500 pointer-coarse:opacity-100 pointer-coarse:pointer-events-auto pointer-coarse:bg-kc-blue-50/70 dark:text-kc-blue-200 dark:hover:bg-kc-blue-950/60 dark:pointer-coarse:bg-kc-blue-950/60")}
+          onClick={onToggle}
+          aria-label="Expand navigation"
+        >
+          <PanelLeftOpen size={21} aria-hidden="true" />
+        </button>
+      )}
+      <div
+        className={cx(
+          "grid min-w-0 origin-left overflow-hidden transition-all duration-300 ease-out",
+          collapsed ? "max-w-0 -translate-x-2 scale-95 opacity-0" : "max-w-42 translate-x-0 opacity-100",
+        )}
+        aria-hidden={collapsed}
+      >
+        <strong className={cx("text-lg leading-tight tracking-normal")}>EHS360</strong>
+        <span className={cx("text-sm whitespace-nowrap text-slate-500 dark:text-white/65")}>Self-Assessment</span>
+      </div>
+    </div>
+  );
+}
+
+function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: UserRole; onNavigate?: () => void }) {
+  const location = useLocation();
+  return (
+    <nav
+      className={cx(
+        "side-nav flex-1 overflow-visible pt-4 pb-6 transition-all duration-300 ease-out",
+        /* Normally overflow-visible so the collapsed tooltips can escape the rail; only short
+           desktop viewports trade that for scrolling. No canonical height-based variant exists. */
+        "[@media(max-height:680px)_and_(min-width:1101px)]:overflow-x-hidden [@media(max-height:680px)_and_(min-width:1101px)]:overflow-y-auto",
+        collapsed ? "px-2.5" : "px-3",
+      )}
+      style={navScrollbarStyle}
+      aria-label="Primary navigation"
+    >
       {navigation.filter((group) => group.roles.includes(role)).map((group) => (
-        <div className={cx("nav-group [.nav-group_+_&]:[margin-top:1.3rem] [transition:margin_var(--motion-sidebar),_padding_var(--motion-sidebar),_border-color_var(--motion-sidebar)] [.app-shell--collapsed_.desktop-sidebar_&]:[margin-top:0.7rem] [.app-shell--collapsed_.desktop-sidebar_&]:[padding-top:0.7rem] [.app-shell--collapsed_.desktop-sidebar_&]:[border-top:1px_solid_var(--nav-divider)] [.app-shell--collapsed_.desktop-sidebar_&:first-child]:[margin-top:0] [.app-shell--collapsed_.desktop-sidebar_&:first-child]:[padding-top:0] [.app-shell--collapsed_.desktop-sidebar_&:first-child]:[border-top:0]")} key={group.label}>
-          <p className={cx("nav-group__label [max-height:20px] [overflow:hidden] [margin:0_0_0.45rem_0.7rem] [color:var(--nav-group-text)] [font-size:0.67rem] [font-weight:700] [letter-spacing:0.025em] [opacity:1] [transform:translateX(0)] [transform-origin:left_center] [transition:max-height_var(--motion-sidebar),_margin_var(--motion-sidebar),_opacity_140ms_ease_80ms,_transform_var(--motion-sidebar)] [.app-shell--collapsed_.desktop-sidebar_&]:[max-height:0] [.app-shell--collapsed_.desktop-sidebar_&]:[margin:0] [.app-shell--collapsed_.desktop-sidebar_&]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:translateX(-8px)] [.app-shell--collapsed_.desktop-sidebar_&]:[transition-delay:0ms]")} aria-hidden={collapsed}>{group.label}</p>
+        <div
+          className={cx(
+            "nav-group transition-all duration-300 ease-out",
+            collapsed
+              ? "mt-2.5 border-t border-kc-blue-700/10 pt-2.5 first:mt-0 first:border-t-0 first:pt-0 dark:border-white/10"
+              : "mt-5 first:mt-0",
+          )}
+          key={group.label}
+        >
+          <p
+            className={cx(
+              "nav-group__label origin-left overflow-hidden text-xs font-bold tracking-wide text-slate-500 transition-all duration-300 ease-out dark:text-white/45",
+              collapsed ? "m-0 max-h-0 -translate-x-2 opacity-0" : "mb-2 ml-3 max-h-5 translate-x-0 opacity-100",
+            )}
+            aria-hidden={collapsed}
+          >
+            {group.label}
+          </p>
           {group.items.map((item) => {
             const Icon = item.icon;
             const tooltipId = `nav-tooltip-${item.to.replaceAll("/", "-").replace(/^-/, "")}`;
+            const routeMatches = item.matches?.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`)) ?? false;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
                 onClick={onNavigate}
-                className={({ isActive }) => cx("nav-item [position:relative] [display:flex] [min-height:48px] [align-items:center] [gap:0.62rem] [margin:0.18rem_0] [padding:0.42rem_0.5rem] [border:1px_solid_transparent] [border-radius:12px] [color:var(--nav-text)] [font-size:0.875rem] [font-weight:560] [transition:gap_var(--motion-sidebar),_padding_var(--motion-sidebar),_background_160ms_ease,_color_160ms_ease,_box-shadow_160ms_ease] hover:[background:var(--nav-hover)] hover:[color:var(--nav-text-strong)] [.app-shell--collapsed_.desktop-sidebar_&]:[gap:0] [.app-shell--collapsed_.desktop-sidebar_&]:[justify-content:center] [.app-shell--collapsed_.desktop-sidebar_&]:[padding:0.42rem]", isActive && "nav-item--active [border-color:transparent] [background:var(--nav-active-background)] [color:var(--nav-text-strong)] [box-shadow:var(--nav-active-shadow)] before:[position:absolute] before:[top:50%] before:[left:-0.75rem] before:[width:4px] before:[height:24px] before:[border-radius:0_6px_6px_0] before:[background:var(--kc-300)] before:[box-shadow:0_0_12px_rgb(var(--accent-dark-glow-rgb)_/_0.55)] before:[content:''] before:[transform:translateY(-50%)] [.app-shell--collapsed_.desktop-sidebar_&]:[background:var(--nav-active-collapsed)] [.app-shell--collapsed_.desktop-sidebar_&]:[box-shadow:none] [.app-shell--collapsed_.desktop-sidebar_&::before]:[left:-0.65rem] [@media_(forced-colors:_active)]:[border:2px_solid_currentColor]")}
+                className={({ isActive }) => {
+                  const active = isActive || routeMatches;
+                  return cx(
+                  "nav-item group/nav relative my-0.5 flex min-h-12 items-center rounded-xl border border-transparent text-sm font-medium transition-all duration-300 ease-out",
+                  collapsed ? "justify-center gap-0 p-1.5" : "gap-2.5 px-2 py-1.5",
+                  active
+                    ? "nav-item--active text-slate-900 forced-colors:border-2 forced-colors:border-current dark:text-white"
+                    : "text-slate-600 hover:bg-kc-blue-700/7 hover:text-slate-900 dark:text-white/70 dark:hover:bg-white/7 dark:hover:text-white",
+                  /* The active marker bar. Only drawn on the expanded rail's left edge and on the
+                     collapsed rail slightly closer in. */
+                  active && "before:absolute before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-r-md before:bg-kc-blue-300 before:shadow-md before:shadow-kc-blue-400/55",
+                  active && (collapsed ? "bg-kc-blue-700/10 shadow-none before:-left-2.5 dark:bg-white/8" : "before:-left-3"),
+                );
+                }}
+                style={({ isActive }) => ((isActive || routeMatches) && !collapsed
+                  ? { background: "var(--nav-active-background)", boxShadow: "var(--nav-active-shadow)" }
+                  : undefined)}
                 aria-label={collapsed ? item.label : undefined}
                 aria-describedby={collapsed ? tooltipId : undefined}
                 data-tour={`nav-${item.to.split("/").filter(Boolean).join("-")}`}
               >
-                <span className={cx("nav-item__icon [display:grid] [width:34px] [height:34px] [flex:0_0_auto] [place-items:center] [border-radius:10px] [color:var(--nav-text)] [transform:scale(1)] [transition:transform_var(--motion-sidebar),_background_160ms_ease,_color_160ms_ease,_box-shadow_160ms_ease] [.nav-item:hover_&]:[background:var(--nav-icon-hover)] [.nav-item:hover_&]:[color:var(--nav-text-strong)] [.nav-item--active_&]:[background:var(--nav-active-icon-background)] [.nav-item--active_&]:[color:var(--brand-solid-active)] [.nav-item--active_&]:[box-shadow:0_5px_14px_rgb(2_19_31_/_0.22)] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:scale(0.96)]")}><Icon size={19} /></span>
-                <span className={cx("nav-item__label [min-width:0] [max-width:180px] [flex:1] [overflow:hidden] [opacity:1] [transform:translateX(0)] [white-space:nowrap] [transition:max-width_var(--motion-sidebar),_opacity_140ms_ease_80ms,_transform_var(--motion-sidebar)] [.app-shell--collapsed_.desktop-sidebar_&]:[max-width:0] [.app-shell--collapsed_.desktop-sidebar_&]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:translateX(-8px)] [.app-shell--collapsed_.desktop-sidebar_&]:[transition-delay:0ms]")} aria-hidden={collapsed}>{item.label}</span>
-                <ChevronRight className={cx("nav-item__chevron [flex:0_0_auto] [max-width:15px] [opacity:0] [transform:translateX(-4px)] [transition:max-width_var(--motion-sidebar),_opacity_160ms_ease,_transform_var(--motion-sidebar)] [.nav-item--active_&]:[opacity:0.72] [.nav-item--active_&]:[transform:translateX(0)] [.app-shell--collapsed_.desktop-sidebar_&]:[max-width:0] [.app-shell--collapsed_.desktop-sidebar_&]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:translateX(-8px)]")} size={15} aria-hidden="true" />
-                <span id={tooltipId} className={cx("nav-item__tooltip [position:absolute] [z-index:70] [top:50%] [left:calc(100%_+_14px)] [width:max-content] [max-width:220px] [padding:0.52rem_0.68rem] [border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.24)] [border-radius:10px] [background:linear-gradient(145deg,_var(--brand-deep),_var(--brand-deepest))] [box-shadow:inset_0_1px_0_rgb(255_255_255_/_0.1),_0_12px_30px_rgb(2_19_31_/_0.28)] [color:#fff] [font-family:var(--font-sans)] [font-size:0.72rem] [font-weight:600] [letter-spacing:0.005em] [line-height:1.25] [opacity:0] [pointer-events:none] [transform:translate(4px,_-50%)] [visibility:hidden] [transition:opacity_120ms_ease_120ms,_transform_150ms_ease_120ms,_visibility_0ms_linear_240ms] before:[position:absolute] before:[top:calc(50%_-_4px)] before:[left:-5px] before:[width:8px] before:[height:8px] before:[border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.2)] before:[border-top:0] before:[border-right:0] before:[background:var(--kc-950)] before:[content:''] before:[transform:rotate(45deg)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[transition-delay:180ms,_180ms,_0ms] max-[1100px]:[.mobile-sidebar_&]:[display:none]")} role="tooltip">{item.label}</span>
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={cx(
+                        "nav-item__icon grid size-8 flex-none place-items-center rounded-lg transition-all duration-300 ease-out",
+                        collapsed ? "scale-95" : "scale-100",
+                        isActive
+                          ? "bg-white text-kc-blue-800 shadow-md shadow-slate-950/20 dark:bg-white dark:text-kc-blue-800"
+                          : "text-slate-600 group-hover/nav:bg-kc-blue-700/10 group-hover/nav:text-slate-900 dark:text-white/70 dark:group-hover/nav:bg-white/10 dark:group-hover/nav:text-white",
+                      )}
+                    >
+                      <Icon size={19} />
+                    </span>
+                    <span
+                      className={cx(
+                        "nav-item__label min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-all duration-300 ease-out",
+                        collapsed ? "max-w-0 -translate-x-2 opacity-0" : "max-w-44 translate-x-0 opacity-100",
+                      )}
+                      aria-hidden={collapsed}
+                    >
+                      {item.label}
+                    </span>
+                    <ChevronRight
+                      className={cx(
+                        "nav-item__chevron flex-none transition-all duration-300 ease-out",
+                        collapsed
+                          ? "max-w-0 -translate-x-2 opacity-0"
+                          : isActive
+                            ? "max-w-4 translate-x-0 opacity-70"
+                            : "max-w-4 -translate-x-1 opacity-0",
+                      )}
+                      size={15}
+                      aria-hidden="true"
+                    />
+                    <span
+                      id={tooltipId}
+                      className={cx(
+                        navTooltipBase,
+                        collapsed
+                          ? "group-hover/nav:visible group-hover/nav:translate-x-0 group-hover/nav:opacity-100 group-hover/nav:delay-200 group-focus-visible/nav:visible group-focus-visible/nav:translate-x-0 group-focus-visible/nav:opacity-100 group-focus-visible/nav:delay-200"
+                          : "hidden",
+                      )}
+                      role="tooltip"
+                    >
+                      {item.label}
+                    </span>
+                  </>
+                )}
               </NavLink>
             );
           })}
@@ -141,6 +293,12 @@ function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" |
   const mine = notifications;
   const unread = mine.filter((item) => !item.readBy.includes(role)).length;
 
+  /* "up" placement is only ever used from the sidebar footer, and "down" only from the mobile
+     shell strip, so the placement also selects which panel geometry applies. That replaces the
+     dissolved `.mobile-shell-strip &` descendant rule: the strip exists only below 1100px, so the
+     strip panel needs no desktop geometry and the sidebar panel needs no mobile geometry. */
+  const inSidebar = menuPlacement === "up";
+
   useEffect(() => {
     if (!open) return;
     const closeOnOutsidePress = (event: PointerEvent) => {
@@ -164,30 +322,62 @@ function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" |
   }
 
   return (
-    <div className={cx("notification-menu-wrap [position:relative] [flex:none]")} ref={wrapRef}>
+    <div className={cx("notification-menu-wrap relative flex-none")} ref={wrapRef}>
       <button
         type="button"
-        className={cx("notification-button [position:relative] [display:grid] [width:38px] [height:38px] [place-items:center] [border:1px_solid_transparent] [border-radius:11px] [background:none] [color:var(--nav-text)] [cursor:pointer] hover:[border-color:var(--nav-border)] hover:[background:var(--nav-hover)] hover:[color:var(--nav-text-strong)]")}
+        className={cx("notification-button relative grid size-10 place-items-center rounded-xl border border-transparent bg-transparent text-slate-600 hover:border-kc-blue-700/15 hover:bg-kc-blue-700/7 hover:text-slate-900 dark:text-white/70 dark:hover:border-white/10 dark:hover:bg-white/7 dark:hover:text-white")}
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         aria-controls={menuId}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
         <Bell size={19} />
-        {unread > 0 && <span className={cx("notification-badge [position:absolute] [top:2px] [right:2px] [min-width:17px] [height:17px] [padding:0_4px] [border-radius:999px] [background:var(--danger)] [color:#fff] [font-size:0.6rem] [font-weight:750] [line-height:17px] [text-align:center]")} aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
+        {unread > 0 && <span className={cx("notification-badge absolute top-0.5 right-0.5 h-4 min-w-4 rounded-full bg-red-700 px-1 text-center text-xs leading-4 font-bold text-white dark:bg-red-700 dark:text-white")} aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
       </button>
 
       {open && (
-        <div id={menuId} className={cx("notification-panel max-[1100px]:[.mobile-shell-strip_&]:[position:fixed] max-[1100px]:[.mobile-shell-strip_&]:[top:calc(var(--topbar)_+_0.4rem)] max-[1100px]:[.mobile-shell-strip_&]:[right:0.75rem] max-[1100px]:[.mobile-shell-strip_&]:[left:0.75rem] max-[1100px]:[.mobile-shell-strip_&]:[width:auto] max-[1100px]:[.mobile-shell-strip_&]:[max-height:calc(100vh_-_var(--topbar)_-_1.5rem)] [position:absolute] [z-index:180] [top:calc(100%_+_0.65rem)] [right:0] [display:flex] [flex-direction:column] [width:min(380px,_calc(100vw_-_1.5rem))] [max-height:min(460px,_calc(100vh_-_6rem))] [overflow:hidden] [border:1px_solid_var(--border-translucent)] [border-radius:18px] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [color:var(--neutral-900)] [animation:profile-menu-in_160ms_cubic-bezier(0.22,_1,_0.36,_1)]", menuPlacement === "up" && "notification-panel--up [.notification-panel&]:[top:auto] [.notification-panel&]:[right:auto] [.notification-panel&]:[bottom:calc(100%_+_0.65rem)] [.notification-panel&]:[left:0] [.notification-panel&]:[animation-name:profile-menu-in-up]")} role="dialog" aria-label="Notifications">
-          <div className={cx("notification-panel__header [display:flex] [flex:none] [align-items:center] [justify-content:space-between] [gap:0.75rem] [border-bottom:1px_solid_var(--neutral-200)] [padding:0.85rem_1rem] [&_strong]:[font-size:0.9rem] [&_button]:[flex:none] [&_button]:[border:0] [&_button]:[background:none] [&_button]:[padding:0] [&_button]:[color:var(--kc-700)] [&_button]:[font-size:0.75rem] [&_button]:[font-weight:650] [&_button]:[cursor:pointer] [&_button:hover]:[color:var(--kc-800)] [&_button:hover]:[text-decoration:underline]")}>
+        <div
+          id={menuId}
+          className={cx(
+            "notification-panel z-180 flex flex-col overflow-hidden rounded-2xl border bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100",
+            inSidebar
+              ? "notification-panel--up absolute bottom-full left-0 mb-2.5 w-95"
+              : "fixed right-3 left-3 w-auto",
+          )}
+          style={inSidebar
+            ? {
+              maxHeight: "min(460px, calc(100vh - 6rem))",
+              borderColor: "var(--border-translucent)",
+              boxShadow: "var(--shadow-3)",
+              animation: "profile-menu-in-up 160ms cubic-bezier(0.22, 1, 0.36, 1)",
+            }
+            : {
+              top: "calc(var(--topbar) + 0.4rem)",
+              maxHeight: "calc(100vh - var(--topbar) - 1.5rem)",
+              borderColor: "var(--border-translucent)",
+              boxShadow: "var(--shadow-3)",
+              animation: "profile-menu-in 160ms cubic-bezier(0.22, 1, 0.36, 1)",
+            }}
+          role="dialog"
+          aria-label="Notifications"
+        >
+          <div className={cx("notification-panel__header flex flex-none items-center justify-between gap-3 border-b border-slate-200 px-4 py-3.5 dark:border-slate-700")}>
             <div>
-              <p className={cx("eyebrow [color:var(--kc-700)] [font-size:0.75rem] [font-weight:700] [letter-spacing:0.02em] [line-height:1.3] [.readonly-action_p&]:[margin-bottom:0.3rem] [.setup-complete_&]:[margin-top:1rem]")}>Notifications</p>
-              <strong>{unread ? `${unread} unread` : "All caught up"}</strong>
+              <p className={cx("eyebrow text-sm leading-snug font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}>Notifications</p>
+              <strong className={cx("text-base")}>{unread ? `${unread} unread` : "All caught up"}</strong>
             </div>
-            {unread > 0 && <button type="button" onClick={markAllRead}>Mark all as read</button>}
+            {unread > 0 && (
+              <button
+                type="button"
+                className={cx("flex-none bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:text-kc-blue-800 hover:underline dark:text-kc-blue-300 dark:hover:text-kc-blue-200")}
+                onClick={markAllRead}
+              >
+                Mark all as read
+              </button>
+            )}
           </div>
           {mine.length ? (
-            <ul className={cx("notification-list [flex:1] [overflow-y:auto] [margin:0] [padding:0.35rem] [list-style:none]")}>
+            <ul className={cx("notification-list m-0 flex-1 list-none overflow-y-auto p-1")}>
               {mine.map((item) => {
                 const Icon = notificationIcons[item.category];
                 const isUnread = !item.readBy.includes(role);
@@ -195,23 +385,28 @@ function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" |
                   <li key={item.id}>
                     <button
                       type="button"
-                      className={cx("notification-item [display:flex] [width:100%] [align-items:flex-start] [gap:0.65rem] [border:0] [border-radius:12px] [background:none] [padding:0.7rem] [text-align:left] [cursor:pointer] hover:[background:var(--neutral-50)]", isUnread && "notification-item--unread [background:var(--kc-50)] hover:[background:var(--kc-100)]")}
+                      className={cx(
+                        "notification-item flex w-full items-start gap-2.5 rounded-xl p-3 text-left",
+                        isUnread
+                          ? "notification-item--unread bg-kc-blue-50 hover:bg-kc-blue-100 dark:bg-kc-blue-950 dark:hover:bg-kc-blue-900"
+                          : "bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800",
+                      )}
                       onClick={() => openNotification(item)}
                     >
-                      <span className={cx("notification-item__icon [display:grid] [flex:none] [width:30px] [height:30px] [place-items:center] [border-radius:9px] [background:var(--surface-panel)] [color:var(--kc-700)]")}><Icon size={17} /></span>
-                      <span className={cx("notification-item__copy [display:grid] [gap:0.15rem] [min-width:0] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.8rem] [&_strong]:[line-height:1.3] [&_small]:[color:var(--neutral-600)] [&_small]:[font-size:0.72rem] [&_small]:[line-height:1.35] [&_time]:[color:var(--neutral-500)] [&_time]:[font-size:0.66rem]")}>
-                        <strong>{item.title}</strong>
-                        <small>{item.body}</small>
-                        <time dateTime={item.createdAt}>{relativeTime(item.createdAt)}</time>
+                      <span className={cx("notification-item__icon grid size-8 flex-none place-items-center rounded-lg bg-white text-kc-blue-700 dark:bg-slate-900 dark:text-kc-blue-300")}><Icon size={17} /></span>
+                      <span className={cx("notification-item__copy grid min-w-0 gap-0.5")}>
+                        <strong className={cx("text-sm leading-tight text-slate-900 dark:text-slate-100")}>{item.title}</strong>
+                        <small className={cx("text-xs leading-snug text-slate-600 dark:text-slate-400")}>{item.body}</small>
+                        <time className={cx("text-xs text-slate-500 dark:text-slate-400")} dateTime={item.createdAt}>{relativeTime(item.createdAt)}</time>
                       </span>
-                      {isUnread && <span className={cx("notification-item__dot [flex:none] [align-self:center] [width:8px] [height:8px] [border-radius:50%] [background:var(--kc-600)]")} aria-label="Unread" />}
+                      {isUnread && <span className={cx("notification-item__dot size-2 flex-none self-center rounded-full bg-kc-blue-600 dark:bg-kc-blue-600")} aria-label="Unread" />}
                     </button>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className={cx("notification-empty [padding:1.5rem_1.1rem] [color:var(--neutral-500)] [font-size:0.8rem] [text-align:center]")}>No notifications yet. Activity relevant to your role will appear here.</p>
+            <p className={cx("notification-empty px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400")}>No notifications yet. Activity relevant to your role will appear here.</p>
           )}
         </div>
       )}
@@ -219,14 +414,19 @@ function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" |
   );
 }
 
-function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: boolean; menuPlacement?: "down" | "up" }) {
+function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = false }: { compact?: boolean; menuPlacement?: "down" | "up"; collapsed?: boolean }) {
   const { role, profile, startTour } = useGuidedSetup();
   const { user, demoEnabled, signOut } = useAuth();
   const { preference, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const menuId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  /* "up" placement is only used from the sidebar footer, so it also selects the nav-tinted
+     trigger treatment that used to come from the `.sidebar-footer &` descendant rule. */
+  const inSidebar = menuPlacement === "up";
 
   useEffect(() => {
     if (!open) return;
@@ -245,56 +445,107 @@ function ProfileMenu({ compact = false, menuPlacement = "down" }: { compact?: bo
   }, [open]);
 
   return (
-    <div className={cx("profile-menu-wrap [.sidebar-footer_&]:[min-width:0] [.sidebar-footer_&]:[flex:1] [position:relative]")} ref={wrapRef}>
+    <div className={cx("profile-menu-wrap relative", inSidebar && "min-w-0 flex-1")} ref={wrapRef}>
       <button
-        className={cx("profile-button [.sidebar-footer_&]:[width:100%] [.sidebar-footer_&]:[color:var(--nav-text)] [.sidebar-footer_&:hover]:[background:var(--nav-hover)] [.app-shell--collapsed_.desktop-sidebar_&]:[justify-content:center] [.app-shell--collapsed_.desktop-sidebar_&]:[padding:0.25rem] [display:flex] [min-height:46px] [align-items:center] [gap:0.55rem] [border:0] [border-radius:12px] [background:transparent] [padding:0.25rem_0.45rem_0.25rem_0.25rem] [color:var(--neutral-600)] [text-align:left] hover:[background:var(--neutral-100)]", compact && "profile-button--compact [.profile-button&]:[min-height:auto] [.profile-button&]:[gap:0] [.profile-button&]:[padding:0]")}
+        className={cx(
+          "profile-button flex items-center rounded-xl bg-transparent text-left",
+          compact ? "profile-button--compact min-h-0 gap-0 p-0" : collapsed ? "min-h-12 justify-center gap-0 p-1" : "min-h-12 gap-2 py-1 pr-2 pl-1",
+          inSidebar
+            ? "w-full text-slate-600 hover:bg-kc-blue-700/7 dark:text-white/70 dark:hover:bg-white/7"
+            : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800",
+        )}
         aria-label="Open profile menu"
         aria-controls={menuId}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px]")}>{profile.initials}</span>
-        <span className={cx("profile-button__copy [.sidebar-footer_&_strong]:[color:var(--nav-text-strong)] [.sidebar-footer_&_small]:[color:var(--nav-text-muted)] [.profile-button--compact_&]:[display:none] [.app-shell--collapsed_.desktop-sidebar_&]:[display:none] [display:grid] [&_strong]:[color:var(--neutral-800)] [&_strong]:[font-size:0.8rem] [&_small]:[color:var(--neutral-500)] [&_small]:[font-size:0.67rem]")}>
-          <strong>{profile.name}</strong>
-          <small>{profile.label}</small>
+        <span className={cx("avatar inline-grid size-9 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 md:size-10 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{profile.initials}</span>
+        <span className={cx("profile-button__copy grid", (compact || collapsed) && "hidden")}>
+          <strong className={cx("text-sm", inSidebar ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-slate-200")}>{profile.name}</strong>
+          <small className={cx("text-xs", inSidebar ? "text-slate-500 dark:text-white/65" : "text-slate-500 dark:text-slate-400")}>{profile.label}</small>
         </span>
-        <ChevronDown className={cx("profile-button__chevron [.profile-button--compact_&]:[display:none] [.app-shell--collapsed_.desktop-sidebar_&]:[display:none] [transition:transform_160ms_ease]", open && "profile-button__chevron--open [transform:rotate(180deg)]")} size={16} />
+        <ChevronDown
+          className={cx(
+            "profile-button__chevron transition-transform duration-150 ease-out",
+            (compact || collapsed) && "hidden",
+            open && "profile-button__chevron--open rotate-180",
+          )}
+          size={16}
+        />
       </button>
 
       {open && (
-        <div id={menuId} className={cx("profile-menu [position:absolute] [z-index:180] [top:calc(100%_+_0.65rem)] [right:0] [width:min(330px,_calc(100vw_-_1.5rem))] [overflow:hidden] [border:1px_solid_var(--border-translucent)] [border-radius:18px] [background:var(--surface-elevated)] [box-shadow:var(--shadow-3)] [color:var(--neutral-900)] [animation:profile-menu-in_160ms_cubic-bezier(0.22,_1,_0.36,_1)]", menuPlacement === "up" && "profile-menu--up [.profile-menu&]:[top:auto] [.profile-menu&]:[right:auto] [.profile-menu&]:[bottom:calc(100%_+_0.65rem)] [.profile-menu&]:[left:0] [.profile-menu&]:[animation-name:profile-menu-in-up]")} role="dialog" aria-label="Profile and appearance">
-          <div className={cx("profile-menu__identity [display:flex] [align-items:center] [gap:0.75rem] [padding:1rem] [border-bottom:1px_solid_var(--neutral-200)] [background:linear-gradient(135deg,_var(--kc-50),_transparent)] [&_>_div]:[display:grid] [&_>_div]:[min-width:0] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.88rem] [&_span:last-child]:[color:var(--neutral-500)] [&_span:last-child]:[font-size:0.73rem]")}>
-            <span className={cx("avatar [display:inline-grid] [width:38px] [height:38px] [flex:0_0_38px] [place-items:center] [border:1px_solid_var(--kc-200)] [border-radius:50%] [background:linear-gradient(145deg,_var(--kc-100),_var(--surface-elevated))] [color:var(--kc-800)] [font-size:0.72rem] [font-weight:750] max-[740px]:[width:36px] max-[740px]:[height:36px] max-[740px]:[flex-basis:36px]")}>{profile.initials}</span>
-            <div>
-              <strong>{profile.name}</strong>
-              <span>{profile.label}</span>
+        <div
+          id={menuId}
+          className={cx(
+            "profile-menu absolute z-180 overflow-hidden rounded-2xl border bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100",
+            menuPlacement === "up" ? "profile-menu--up bottom-full left-0 mb-2.5" : "top-full right-0 mt-2.5",
+          )}
+          style={{
+            width: "min(330px, calc(100vw - 1.5rem))",
+            borderColor: "var(--border-translucent)",
+            boxShadow: "var(--shadow-3)",
+            animation: `${menuPlacement === "up" ? "profile-menu-in-up" : "profile-menu-in"} 160ms cubic-bezier(0.22, 1, 0.36, 1)`,
+          }}
+          role="dialog"
+          aria-label="Profile and appearance"
+        >
+          <div className={cx("profile-menu__identity flex items-center gap-3 border-b border-slate-200 bg-linear-135 from-kc-blue-50 to-transparent p-4 dark:border-slate-700 dark:from-kc-blue-950 dark:to-transparent")}>
+            <span className={cx("avatar inline-grid size-9 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 md:size-10 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{profile.initials}</span>
+            <div className={cx("grid min-w-0")}>
+              <strong className={cx("text-base text-slate-900 dark:text-slate-100")}>{profile.name}</strong>
+              <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{profile.label}</span>
             </div>
           </div>
-          <div className={cx("profile-menu__section [display:grid] [gap:0.75rem] [padding:1rem]")}>
-            <div className={cx("profile-menu__section-heading [display:flex] [align-items:baseline] [justify-content:space-between] [gap:0.75rem] [&_>_span]:[color:var(--neutral-800)] [&_>_span]:[font-size:0.8rem] [&_>_span]:[font-weight:700] [&_>_small]:[color:var(--neutral-500)] [&_>_small]:[font-size:0.66rem] [&_>_small]:[text-transform:capitalize]")}>
-              <span>Appearance</span>
-              <small>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>
+          <div className={cx("profile-menu__section grid gap-3 p-4")}>
+            <div className={cx("profile-menu__section-heading flex items-baseline justify-between gap-3")}>
+              <span className={cx("text-sm font-bold text-slate-800 dark:text-slate-200")}>Appearance</span>
+              <small className={cx("text-xs text-slate-500 capitalize dark:text-slate-400")}>{preference === "system" ? `${resolvedTheme} from system` : `${preference} selected`}</small>
             </div>
             <ThemeSelector compact />
           </div>
           {demoEnabled && (
-            <div className={cx("profile-menu__section [display:grid] [gap:0.75rem] [padding:1rem] profile-role-section [display:grid] [gap:0.65rem]")}>
-              <button className={cx("profile-setup-action [display:flex] [width:100%] [min-height:38px] [align-items:center] [gap:0.5rem] [border:1px_solid_var(--neutral-200)] [border-radius:9px] [background:var(--surface-panel)] [color:var(--kc-700)] [padding:0.45rem_0.55rem] [font-size:0.75rem] [font-weight:650] [text-align:left] hover:[background:var(--kc-50)] hover:[color:var(--kc-800)]")} onClick={() => { startTour(role, true); setOpen(false); }}>
+            <div className={cx("profile-menu__section profile-role-section grid gap-2.5 p-4")}>
+              <button className={cx("profile-setup-action flex min-h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-left text-sm font-semibold text-kc-blue-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:border-slate-700 dark:bg-slate-900 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")} onClick={() => { startTour(role, true); setOpen(false); }}>
                 <PlayCircle size={17} />
                 <span>Replay guided setup</span>
               </button>
             </div>
           )}
-          <div className={cx("profile-menu__section [display:grid] [gap:0.75rem] [padding:1rem] profile-menu__session [&_a]:[display:flex] [&_a]:[align-items:center] [&_a]:[gap:0.5rem] [&_a]:[border-radius:9px] [&_a]:[color:var(--neutral-700)] [&_a]:[padding:0.55rem_0.65rem] [&_a]:[font-size:0.78rem] [&_a]:[font-weight:650] [&_a:hover]:[background:var(--kc-50)] [&_a:hover]:[color:var(--kc-800)] [&_a]:[width:100%] [&_a]:[min-height:38px] [&_a]:[border:0] [&_a]:[background:transparent] [&_a]:[text-align:left] [&_button]:[display:flex] [&_button]:[width:100%] [&_button]:[min-height:38px] [&_button]:[align-items:center] [&_button]:[gap:0.5rem] [&_button]:[border:0] [&_button]:[border-radius:9px] [&_button]:[background:transparent] [&_button]:[color:var(--neutral-700)] [&_button]:[padding:0.55rem_0.65rem] [&_button]:[font-size:0.78rem] [&_button]:[font-weight:650] [&_button]:[text-align:left] [&_button:hover]:[background:var(--danger-surface)] [&_button:hover]:[color:var(--danger)]")}>
-            <Link to={appPaths.settings} onClick={() => setOpen(false)}><Settings size={17} /><span>Open settings</span></Link>
-            <Link to={appPaths.settingsSupport} onClick={() => setOpen(false)}><CircleHelp size={17} /><span>Help and support</span></Link>
-            <button type="button" onClick={() => { signOut(); setOpen(false); navigate(appPaths.login, { replace: true }); }}>
+          <div className={cx("profile-menu__section profile-menu__session grid gap-3 p-4")}>
+            <Link
+              className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:text-slate-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
+              to={appPaths.settings}
+              onClick={() => setOpen(false)}
+            >
+              <Settings size={17} /><span>Open settings</span>
+            </Link>
+            <button
+              className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:text-slate-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
+              type="button"
+              onClick={() => { setOpen(false); setChangePasswordOpen(true); }}
+            >
+              <KeyRound size={17} /><span>Change password</span>
+            </button>
+            <Link
+              className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:text-slate-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
+              to={appPaths.settingsSupport}
+              onClick={() => setOpen(false)}
+            >
+              <CircleHelp size={17} /><span>Help and support</span>
+            </Link>
+            <button
+              className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-red-50 hover:text-red-700 dark:text-slate-300 dark:hover:bg-red-950 dark:hover:text-red-300")}
+              type="button"
+              onClick={() => { signOut(); setOpen(false); navigate(appPaths.login, { replace: true }); }}
+            >
               <LogOut size={17} />
               <span>Sign out {user?.name ? `as ${user.name}` : ""}</span>
             </button>
           </div>
         </div>
       )}
+      {changePasswordOpen && <ChangePasswordDialog onClose={() => setChangePasswordOpen(false)} />}
     </div>
   );
 }
@@ -308,74 +559,98 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const moreTabActive = mobileOpen || [appPaths.siteInformation, appPaths.owners, "/admin/", appPaths.settings].some((path) => location.pathname.startsWith(path));
   const availableBottomTabs = bottomTabs.filter((tab) => tab.roles.includes(role));
-  const ScopeIcon = role === "site-contributor" ? Building2 : role === "enterprise-viewer" ? BarChart3 : ShieldCheck;
+  const ScopeIcon = role === "site-contributor" ? Building2 : ShieldCheck;
 
   useEffect(() => {
     window.localStorage.setItem("ehss-navigation-collapsed", String(collapsed));
   }, [collapsed]);
 
   return (
-    <div className={cx("app-shell [display:grid] [min-height:100vh] [grid-template-columns:var(--sidebar)_minmax(0,_1fr)] [transition:grid-template-columns_var(--motion-sidebar)] max-[1100px]:[display:block]", collapsed && "app-shell--collapsed [--sidebar:80px] max-[1100px]:[display:block]")}>
-      <a className={cx("skip-link [position:fixed] [left:1rem] [top:-4rem] [z-index:1000] [border-radius:var(--radius-md)] [background:var(--neutral-900)] [color:#fff] [padding:0.7rem_1rem] [font-weight:650] [transition:top_120ms_ease] focus:[top:1rem]")} href="#main-content">Skip to main content</a>
+    <div
+      className={cx("app-shell block min-h-screen transition-all duration-300 ease-out shell:grid", collapsed && "app-shell--collapsed")}
+      /* The rail width is the one grid track that has to animate, and Tailwind has no on-scale
+         utility for a fixed first column. Below shell: the shell is display:block, so the
+         declaration is inert there. */
+      style={{ gridTemplateColumns: collapsed ? "80px minmax(0, 1fr)" : "268px minmax(0, 1fr)" }}
+    >
+      <a className={cx("skip-link fixed -top-16 left-4 z-1000 rounded-md bg-slate-900 px-4 py-3 font-semibold text-white transition-all duration-150 ease-out focus:top-4 dark:bg-slate-100 dark:text-slate-900")} href="#main-content">Skip to main content</a>
       {!dataSourceStatus.connected && dataSourceStatus.message && <div role="status" style={{ position: "fixed", right: 12, bottom: 54, zIndex: 9999, maxWidth: 300, padding: "9px 11px", borderRadius: 8, background: "#fff3cd", color: "#664d03", fontSize: 12, boxShadow: "0 4px 16px rgb(0 0 0 / 0.15)" }}>{dataSourceStatus.message}</div>}
 
-      <aside className={cx("desktop-sidebar [position:sticky] [z-index:20] [top:0] [display:flex] [height:100vh] [grid-column:1] [grid-row:1] [flex-direction:column] [overflow:visible] [border-right:1px_solid_var(--nav-border)] [background:var(--nav-background)] [color:var(--nav-text-strong)] [will-change:width] max-[1100px]:[display:none]")}>
-        <div className={cx("brand-lockup [display:flex] [height:var(--topbar)] [flex:0_0_var(--topbar)] [align-items:center] [gap:0.7rem] [padding:0_1.15rem] [border-bottom:1px_solid_var(--nav-border)] [transition:gap_var(--motion-sidebar),_padding_var(--motion-sidebar)] [&_>_div:last-child]:[display:grid] [&_>_div:last-child]:[min-width:0] [&_>_div:last-child]:[max-width:170px] [&_>_div:last-child]:[overflow:hidden] [&_>_div:last-child]:[opacity:1] [&_>_div:last-child]:[transform:translateX(0)] [&_>_div:last-child]:[transform-origin:left_center] [&_>_div:last-child]:[transition:max-width_var(--motion-sidebar),_opacity_150ms_ease_80ms,_transform_var(--motion-sidebar)] [&_strong]:[font-size:1.05rem] [&_strong]:[line-height:1.15] [&_strong]:[letter-spacing:0.01em] [&_span]:[color:var(--nav-text-muted)] [&_span]:[font-size:0.75rem] [&_span]:[white-space:nowrap] [.app-shell--collapsed_.desktop-sidebar_&]:[gap:0] [.app-shell--collapsed_.desktop-sidebar_&]:[justify-content:center] [.app-shell--collapsed_.desktop-sidebar_&]:[padding-inline:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[max-width:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[transform:translateX(-8px)_scale(0.96)] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[transition-delay:0ms]")}>
-          <KcLogo />
-          <div aria-hidden={collapsed}>
-            <strong>Maitsys Assure</strong>
-            <span>Self-Assessment</span>
-          </div>
-        </div>
+      <aside
+        className={cx("desktop-sidebar group/sidebar sticky top-0 z-20 hidden h-screen flex-col overflow-visible border-r border-kc-blue-700/15 text-slate-900 shell:col-start-1 shell:row-start-1 shell:flex dark:border-white/10 dark:text-white")}
+        style={{ background: "var(--nav-background)", willChange: "width" }}
+      >
+        <BrandLockup collapsed={collapsed} onToggle={() => setCollapsed(false)} />
         <div
-          className={cx("site-context [display:flex] [min-width:0] [align-items:center] [gap:0.65rem] [color:var(--neutral-600)] [&_>_svg]:[color:var(--kc-700)] [&_>_div]:[display:grid] [&_span:not(.nav-item__tooltip)]:[color:var(--neutral-500)] [&_span:not(.nav-item__tooltip)]:[font-size:0.68rem] [&_span:not(.nav-item__tooltip)]:[line-height:1.05] [&_strong]:[overflow:hidden] [&_strong]:[color:var(--neutral-900)] [&_strong]:[font-size:0.87rem] [&_strong]:[line-height:1.35] [&_strong]:[text-overflow:ellipsis] [&_strong]:[white-space:nowrap] sidebar-context [position:relative] [margin:0.85rem_1.15rem_0.35rem] [padding:0.7rem_0.85rem] [border:1px_solid_var(--nav-border)] [border-radius:var(--radius-md)] [background:rgb(255_255_255_/_0.04)] [transition:padding_var(--motion-sidebar),_margin_var(--motion-sidebar)] [.site-context&]:[flex-wrap:wrap] [.site-context&]:[color:var(--nav-text)] [.site-context&_>_svg]:[color:var(--nav-accent)] [.site-context&_span:not(.nav-item__tooltip)]:[color:var(--nav-text-muted)] [.site-context&_strong]:[color:var(--nav-text-strong)] [.app-shell--collapsed_.desktop-sidebar_&]:[display:grid] [.app-shell--collapsed_.desktop-sidebar_&]:[place-items:center] [.app-shell--collapsed_.desktop-sidebar_&]:[margin-inline:0.65rem] [.app-shell--collapsed_.desktop-sidebar_&]:[padding:0.55rem] [.app-shell--collapsed_.desktop-sidebar_&_>_div]:[display:none]")}
+          className={cx(
+            "site-context sidebar-context group/context relative min-w-0 items-center rounded-md border border-kc-blue-700/15 bg-white/5 text-slate-600 transition-all duration-300 ease-out dark:border-white/10 dark:text-white/70",
+            collapsed ? "mx-2.5 mt-3.5 mb-1 grid place-items-center gap-2.5 p-2" : "mx-4.5 mt-3.5 mb-1 flex flex-wrap gap-2.5 px-3.5 py-3",
+          )}
           aria-label={role === "site-contributor" ? `Current assigned site: ${assignedSite.name} · ${assignedSite.code}` : `Current authorized scope: ${profile.scope}`}
           data-tour="site-context"
         >
-          <ScopeIcon size={17} />
-          <div>
-            <span>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
-            <strong>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
+          <ScopeIcon className={cx("text-kc-blue-700 dark:text-kc-blue-300")} size={17} />
+          <div className={cx("grid", collapsed && "hidden")}>
+            <span className={cx("text-xs leading-none text-slate-500 dark:text-white/65")}>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
+            <strong className={cx("overflow-hidden text-sm leading-snug text-ellipsis whitespace-nowrap text-slate-900 dark:text-white")}>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
           </div>
-          {role === "site-contributor" && <span className={cx("site-context__code [.site-context.sidebar-context_&]:[width:100%] [.site-context.sidebar-context_&]:[margin-left:0] [.site-context.sidebar-context_&]:[border-left:0] [.site-context.sidebar-context_&]:[padding-left:0] [.site-context.sidebar-context_&]:[color:var(--nav-text-muted)] [.site-context.sidebar-context_&]:[font-size:0.72rem] [.site-context.sidebar-context_&]:[white-space:nowrap] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context_>_&]:[display:none] [margin-left:0.25rem] [border-left:1px_solid_var(--neutral-200)] [padding-left:0.65rem] [font-weight:600]")}>{assignedSite.code}</span>}
-          <span className={cx("nav-item__tooltip [position:absolute] [z-index:70] [top:50%] [left:calc(100%_+_14px)] [width:max-content] [max-width:220px] [padding:0.52rem_0.68rem] [border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.24)] [border-radius:10px] [background:linear-gradient(145deg,_var(--brand-deep),_var(--brand-deepest))] [box-shadow:inset_0_1px_0_rgb(255_255_255_/_0.1),_0_12px_30px_rgb(2_19_31_/_0.28)] [color:#fff] [font-family:var(--font-sans)] [font-size:0.72rem] [font-weight:600] [letter-spacing:0.005em] [line-height:1.25] [opacity:0] [pointer-events:none] [transform:translate(4px,_-50%)] [visibility:hidden] [transition:opacity_120ms_ease_120ms,_transform_150ms_ease_120ms,_visibility_0ms_linear_240ms] before:[position:absolute] before:[top:calc(50%_-_4px)] before:[left:-5px] before:[width:8px] before:[height:8px] before:[border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.2)] before:[border-top:0] before:[border-right:0] before:[background:var(--kc-950)] before:[content:''] before:[transform:rotate(45deg)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.nav-item:hover_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.nav-item:focus-visible_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:hover_&]:[transition-delay:180ms,_180ms,_0ms] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[transform:translate(0,_-50%)] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[visibility:visible] [.app-shell--collapsed_.desktop-sidebar_.sidebar-context:focus-within_&]:[transition-delay:180ms,_180ms,_0ms] max-[1100px]:[.mobile-sidebar_&]:[display:none]")} role="tooltip" aria-hidden="true">
+          {role === "site-contributor" && <span className={cx("site-context__code w-full text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65", collapsed && "hidden")}>{assignedSite.code}</span>}
+          <span
+            className={cx(
+              navTooltipBase,
+              collapsed
+                ? "group-hover/context:visible group-hover/context:translate-x-0 group-hover/context:opacity-100 group-hover/context:delay-200 group-focus-within/context:visible group-focus-within/context:translate-x-0 group-focus-within/context:opacity-100 group-focus-within/context:delay-200"
+                : "hidden",
+            )}
+            role="tooltip"
+            aria-hidden="true"
+          >
             {role === "site-contributor" ? `${assignedSite.name} · ${assignedSite.code}` : profile.scope}
           </span>
         </div>
         <SideNav collapsed={collapsed} role={role} />
-        <div className={cx("sidebar-footer [display:flex] [min-width:0] [align-items:center] [gap:0.4rem] [margin-top:auto] [padding:0.85rem_1.15rem] [border-top:1px_solid_var(--nav-divider)] [.app-shell--collapsed_.desktop-sidebar_&]:[flex-direction:column]")}>
+        <div className={cx("sidebar-footer mt-auto flex min-w-0 items-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3.5 dark:border-white/10", collapsed && "flex-col")}>
           <NotificationMenu menuPlacement="up" />
-          <ProfileMenu menuPlacement="up" />
+          <ProfileMenu menuPlacement="up" collapsed={collapsed} />
         </div>
-        <button
-          className={cx("collapse-control [position:absolute] [z-index:35] [top:calc(var(--topbar)_-_16px)] [right:-16px] [display:grid] [width:32px] [height:32px] [place-items:center] [border:1px_solid_var(--neutral-200)] [border-radius:50%] [background:var(--surface-elevated)] [box-shadow:0_7px_20px_rgb(15_23_42_/_0.18)] [color:var(--kc-800)] [transition:color_140ms_ease,_transform_140ms_ease,_box-shadow_140ms_ease,_background_140ms_ease,_border-color_140ms_ease] hover:[color:var(--kc-600)] hover:[box-shadow:0_9px_24px_rgb(15_23_42_/_0.24)] hover:[transform:translateY(-1px)] [&:active]:[transform:translateY(0)_scale(0.94)]")}
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+        {!collapsed && <button
+          className={cx("collapse-control group/collapse absolute top-14 -right-4 z-35 grid size-8 place-items-center rounded-full border border-slate-200 bg-white text-kc-blue-800 shadow-lg shadow-slate-900/20 transition-all duration-150 ease-out hover:-translate-y-px hover:text-kc-blue-600 hover:shadow-xl active:translate-y-0 active:scale-95 dark:border-slate-700 dark:bg-slate-900 dark:text-kc-blue-200 dark:hover:text-kc-blue-400")}
+          onClick={() => setCollapsed(true)}
+          aria-label="Collapse navigation"
           aria-describedby={collapseTooltipId}
-          aria-expanded={!collapsed}
+          aria-expanded="true"
         >
-          <span className={cx("collapse-control__icons [position:relative] [display:grid] [width:19px] [height:19px] [place-items:center]")} aria-hidden="true">
-            <PanelLeftClose className={cx("collapse-control__icon [position:absolute] [inset:0] [opacity:1] [transform:rotate(0)_scale(1)] [transition:opacity_140ms_ease,_transform_var(--motion-sidebar)] collapse-control__icon--close [.app-shell--collapsed_.desktop-sidebar_&]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:rotate(28deg)_scale(0.72)]")} size={19} />
-            <PanelLeftOpen className={cx("collapse-control__icon [position:absolute] [inset:0] [opacity:1] [transform:rotate(0)_scale(1)] [transition:opacity_140ms_ease,_transform_var(--motion-sidebar)] collapse-control__icon--open [opacity:0] [transform:rotate(-28deg)_scale(0.72)] [.app-shell--collapsed_.desktop-sidebar_&]:[opacity:1] [.app-shell--collapsed_.desktop-sidebar_&]:[transform:rotate(0)_scale(1)]")} size={19} />
+          <PanelLeftClose size={19} aria-hidden="true" />
+          <span
+            id={collapseTooltipId}
+            className={cx(
+              "app-tooltip app-tooltip--right pointer-events-none invisible absolute top-1/2 left-full z-320 ml-3 w-max max-w-58 -translate-y-1/2 translate-x-1 rounded-lg border border-kc-blue-300/25 bg-linear-145 from-kc-blue-900 to-kc-blue-950 px-2.5 py-2 font-sans text-xs leading-tight font-semibold whitespace-normal text-white opacity-0 shadow-2xl shadow-slate-950/25 transition-all duration-150 ease-out inset-shadow-2xs inset-shadow-white/10 after:absolute after:top-1/2 after:-left-1.5 after:-mt-1 after:size-2 after:rotate-45 after:border after:border-t-0 after:border-r-0 after:border-kc-blue-300/20 after:bg-kc-blue-950 group-hover/collapse:visible group-hover/collapse:translate-x-0 group-hover/collapse:opacity-100 group-hover/collapse:delay-200 group-focus-visible/collapse:visible group-focus-visible/collapse:translate-x-0 group-focus-visible/collapse:opacity-100 group-focus-visible/collapse:delay-200 pointer-coarse:hidden dark:border-kc-blue-300/25 dark:from-kc-blue-900 dark:to-kc-blue-950 dark:text-white dark:after:border-kc-blue-300/20 dark:after:bg-kc-blue-950",
+              "group-has-[.nav-item:hover]/sidebar:invisible group-has-[.nav-item:hover]/sidebar:opacity-0 group-has-[.nav-item:hover]/sidebar:delay-0",
+            )}
+            role="tooltip"
+          >
+            Collapse navigation
           </span>
-          <span id={collapseTooltipId} className={cx("app-tooltip [position:absolute] [z-index:320] [width:max-content] [max-width:230px] [padding:0.52rem_0.68rem] [border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.24)] [border-radius:10px] [background:linear-gradient(145deg,_var(--brand-deep),_var(--brand-deepest))] [box-shadow:inset_0_1px_0_rgb(255_255_255_/_0.1),_0_12px_30px_rgb(2_19_31_/_0.24)] [color:#fff] [font-family:var(--font-sans)] [font-size:0.72rem] [font-weight:600] [letter-spacing:0.005em] [line-height:1.25] [opacity:0] [pointer-events:none] [visibility:hidden] [white-space:normal] [transition:opacity_120ms_ease_120ms,_transform_150ms_ease_120ms,_visibility_0ms_linear_240ms] after:[position:absolute] after:[width:8px] after:[height:8px] after:[border:1px_solid_rgb(var(--accent-dark-scroll-rgb)_/_0.2)] after:[background:var(--kc-950)] after:[content:''] [.icon-button:hover_>_&]:[opacity:1] [.icon-button:hover_>_&]:[visibility:visible] [.icon-button:hover_>_&]:[transition-delay:180ms,_180ms,_0ms] [.icon-button:focus-visible_>_&]:[opacity:1] [.icon-button:focus-visible_>_&]:[visibility:visible] [.icon-button:focus-visible_>_&]:[transition-delay:180ms,_180ms,_0ms] [.collapse-control:hover_>_&]:[opacity:1] [.collapse-control:hover_>_&]:[visibility:visible] [.collapse-control:hover_>_&]:[transition-delay:180ms,_180ms,_0ms] [.collapse-control:focus-visible_>_&]:[opacity:1] [.collapse-control:focus-visible_>_&]:[visibility:visible] [.collapse-control:focus-visible_>_&]:[transition-delay:180ms,_180ms,_0ms] [.desktop-sidebar:has(.nav-item:hover)_.collapse-control_>_&]:[opacity:0] [.desktop-sidebar:has(.nav-item:hover)_.collapse-control_>_&]:[visibility:hidden] [.desktop-sidebar:has(.nav-item:hover)_.collapse-control_>_&]:[transition-delay:0ms] max-[1100px]:[.mobile-sidebar_&]:[display:none] [@media_(hover:_none)]:[display:none] [.row-actions--menu:has(.row-menu)_&]:[opacity:0]! [.row-actions--menu:has(.row-menu)_&]:[visibility:hidden]! app-tooltip--right [top:50%] [left:calc(100%_+_11px)] [transform:translate(4px,_-50%)] after:[top:calc(50%_-_4px)] after:[left:-5px] after:[border-top:0] after:[border-right:0] after:[transform:rotate(45deg)] [.icon-button:hover_>_&]:[transform:translate(0,_-50%)] [.icon-button:focus-visible_>_&]:[transform:translate(0,_-50%)] [.collapse-control:hover_>_&]:[transform:translate(0,_-50%)] [.collapse-control:focus-visible_>_&]:[transform:translate(0,_-50%)]")} role="tooltip">
-            {collapsed ? "Expand navigation" : "Collapse navigation"}
-          </span>
-        </button>
+        </button>}
       </aside>
 
       {mobileOpen && (
-        <div className={cx("mobile-nav-layer [display:none] max-[1100px]:[position:fixed] max-[1100px]:[z-index:120] max-[1100px]:[inset:0] max-[1100px]:[display:block]")}>
-          <button className={cx("mobile-nav-backdrop [position:absolute] [inset:0] [border:0] [background:rgb(2_6_23_/_0.48)] [backdrop-filter:blur(3px)]")} aria-label="Close navigation" onClick={() => setMobileOpen(false)} />
-          <aside id="mobile-navigation-drawer" className={cx("mobile-sidebar max-[1100px]:[--scrollbar-thumb:var(--nav-scrollbar-thumb)] max-[1100px]:[--scrollbar-thumb-hover:var(--nav-scrollbar-thumb-hover)] max-[1100px]:[--scrollbar-thumb-active:var(--nav-scrollbar-thumb-active)] max-[1100px]:[position:absolute] max-[1100px]:[top:0] max-[1100px]:[bottom:0] max-[1100px]:[left:0] max-[1100px]:[width:min(340px,_calc(100%_-_2rem))] max-[1100px]:[overflow-x:hidden] max-[1100px]:[overflow-y:auto] max-[1100px]:[background:var(--nav-background)] max-[1100px]:[color:var(--nav-text-strong)] max-[1100px]:[box-shadow:var(--shadow-3)] max-[1100px]:[animation:nav-in_180ms_ease-out]")} aria-label="Mobile navigation">
-            <div className={cx("mobile-sidebar__header max-[1100px]:[display:flex] max-[1100px]:[align-items:center] max-[1100px]:[justify-content:space-between] max-[1100px]:[border-bottom:1px_solid_var(--nav-border)]")}>
-              <div className={cx("brand-lockup [display:flex] [height:var(--topbar)] [flex:0_0_var(--topbar)] [align-items:center] [gap:0.7rem] [padding:0_1.15rem] [border-bottom:1px_solid_var(--nav-border)] [transition:gap_var(--motion-sidebar),_padding_var(--motion-sidebar)] [&_>_div:last-child]:[display:grid] [&_>_div:last-child]:[min-width:0] [&_>_div:last-child]:[max-width:170px] [&_>_div:last-child]:[overflow:hidden] [&_>_div:last-child]:[opacity:1] [&_>_div:last-child]:[transform:translateX(0)] [&_>_div:last-child]:[transform-origin:left_center] [&_>_div:last-child]:[transition:max-width_var(--motion-sidebar),_opacity_150ms_ease_80ms,_transform_var(--motion-sidebar)] [&_strong]:[font-size:1.05rem] [&_strong]:[line-height:1.15] [&_strong]:[letter-spacing:0.01em] [&_span]:[color:var(--nav-text-muted)] [&_span]:[font-size:0.75rem] [&_span]:[white-space:nowrap] [.app-shell--collapsed_.desktop-sidebar_&]:[gap:0] [.app-shell--collapsed_.desktop-sidebar_&]:[justify-content:center] [.app-shell--collapsed_.desktop-sidebar_&]:[padding-inline:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[max-width:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[opacity:0] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[transform:translateX(-8px)_scale(0.96)] [.app-shell--collapsed_.desktop-sidebar_&_>_div:last-child]:[transition-delay:0ms]")}>
-                <KcLogo />
-                <div>
-                  <strong>Maitsys Assure</strong>
-                  <span>Self-Assessment</span>
-                </div>
-              </div>
+        <div className={cx("mobile-nav-layer fixed inset-0 z-120 block shell:hidden")}>
+          <button className={cx("mobile-nav-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-xs dark:bg-slate-950/50")} aria-label="Close navigation" onClick={() => setMobileOpen(false)} />
+          <aside
+            id="mobile-navigation-drawer"
+            className={cx("mobile-sidebar absolute inset-y-0 left-0 overflow-x-hidden overflow-y-auto text-slate-900 dark:text-white")}
+            style={{
+              ...navScrollbarStyle,
+              width: "min(340px, calc(100% - 2rem))",
+              background: "var(--nav-background)",
+              boxShadow: "var(--shadow-3)",
+              animation: "nav-in 180ms ease-out",
+            }}
+            aria-label="Mobile navigation"
+          >
+            <div className={cx("mobile-sidebar__header flex items-center justify-between border-b border-kc-blue-700/15 dark:border-white/10")}>
+              <BrandLockup />
               <IconButton label="Close navigation" onClick={() => setMobileOpen(false)}>
                 <X size={20} />
               </IconButton>
@@ -385,12 +660,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className={cx("mobile-shell-strip [display:none] max-[1100px]:[position:sticky] max-[1100px]:[z-index:15] max-[1100px]:[top:0] max-[1100px]:[display:flex] max-[1100px]:[height:var(--topbar)] max-[1100px]:[align-items:center] max-[1100px]:[justify-content:space-between] max-[1100px]:[gap:0.75rem] max-[1100px]:[padding:0_1rem] max-[1100px]:[border-bottom:1px_solid_var(--border-translucent)] max-[1100px]:[background:var(--surface-topbar)] max-[1100px]:[box-shadow:0_1px_8px_rgb(15_23_42_/_0.03)] max-[1100px]:[backdrop-filter:blur(18px)_saturate(140%)] max-[740px]:[gap:0.4rem] max-[740px]:[padding-inline:0.65rem]")}>
-        <div className={cx("mobile-shell-strip__badge max-[1100px]:[display:flex] max-[1100px]:[min-width:0] max-[1100px]:[align-items:center] max-[1100px]:[gap:0.45rem] max-[1100px]:[overflow:hidden] max-[1100px]:[color:var(--neutral-700)] max-[1100px]:[font-size:0.78rem] max-[1100px]:[font-weight:650] max-[1100px]:[white-space:nowrap] max-[1100px]:[&_>_svg]:[flex:0_0_auto] max-[1100px]:[&_>_svg]:[color:var(--kc-700)] max-[1100px]:[&_>_span]:[overflow:hidden] max-[1100px]:[&_>_span]:[text-overflow:ellipsis]")} aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
-          <ScopeIcon size={16} />
-          <span>{role === "site-contributor" ? assignedSite.code : profile.scope}</span>
+      <div
+        className={cx("mobile-shell-strip sticky top-0 z-15 flex items-center justify-between gap-1.5 border-b px-2.5 shadow-xs backdrop-blur-lg backdrop-saturate-150 md:gap-3 md:px-4 shell:hidden")}
+        style={{ height: "var(--topbar)", borderColor: "var(--border-translucent)", background: "var(--surface-topbar)" }}
+      >
+        <div className={cx("mobile-shell-strip__badge flex min-w-0 items-center gap-1.5 overflow-hidden text-sm font-semibold whitespace-nowrap text-slate-700 dark:text-slate-300")} aria-label={role === "site-contributor" ? "Current assigned site" : "Current authorized scope"} data-tour="site-context">
+          <ScopeIcon className={cx("flex-none text-kc-blue-700 dark:text-kc-blue-300")} size={16} />
+          <span className={cx("overflow-hidden text-ellipsis")}>{role === "site-contributor" ? assignedSite.code : profile.scope}</span>
         </div>
-        <div className={cx("mobile-shell-strip__actions max-[1100px]:[display:flex] max-[1100px]:[flex:0_0_auto] max-[1100px]:[align-items:center] max-[1100px]:[gap:0.35rem]")}>
+        <div className={cx("mobile-shell-strip__actions flex flex-none items-center gap-1")}>
           <NotificationMenu />
             <IconButton label="Help and guided setup" onClick={openHelp} data-tour="help">
             <CircleHelp size={18} />
@@ -399,11 +677,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      <main id="main-content" className={cx("main-content [min-width:0] [grid-column:2] [grid-row:1] max-[1100px]:[grid-column:auto] max-[1100px]:[padding-bottom:calc(88px_+_env(safe-area-inset-bottom))]")}>
+      {/* The bottom tab bar overlaps the content on mobile, so the column reserves its height plus
+          the iOS home-indicator inset — env() has no on-scale utility equivalent. */}
+      <main id="main-content" className={cx("main-content min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] shell:col-start-2 shell:row-start-1 shell:pb-0")}>
         {children}
       </main>
 
-      <nav className={cx("bottom-tab-bar [display:none] max-[1100px]:[position:fixed] max-[1100px]:[z-index:90] max-[1100px]:[right:50%] max-[1100px]:[bottom:calc(0.65rem_+_env(safe-area-inset-bottom))] max-[1100px]:[display:grid] max-[1100px]:[width:min(720px,_calc(100%_-_2rem))] max-[1100px]:[grid-template-columns:repeat(var(--bottom-tab-count,_5),_minmax(0,_1fr))] max-[1100px]:[gap:0.25rem] max-[1100px]:[padding:0.35rem] max-[1100px]:[border:1px_solid_var(--border-translucent)] max-[1100px]:[border-radius:22px] max-[1100px]:[background:var(--surface-translucent)] max-[1100px]:[box-shadow:0_18px_50px_rgb(15_23_42_/_0.2)] max-[1100px]:[backdrop-filter:blur(22px)_saturate(150%)] max-[1100px]:[transform:translateX(50%)] max-[740px]:[right:0] max-[740px]:[bottom:0] max-[740px]:[left:0] max-[740px]:[width:100%] max-[740px]:[gap:0] max-[740px]:[padding:0.35rem_0.25rem_calc(0.35rem_+_env(safe-area-inset-bottom))] max-[740px]:[border-right:0] max-[740px]:[border-bottom:0] max-[740px]:[border-left:0] max-[740px]:[border-radius:20px_20px_0_0] max-[740px]:[transform:none]")} aria-label="Primary tabs" style={{ "--bottom-tab-count": availableBottomTabs.length + 1 } as CSSProperties}>
+      <nav
+        className={cx("bottom-tab-bar fixed right-0 bottom-0 left-0 z-90 grid w-full translate-x-0 gap-0 rounded-t-3xl border-t px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-2xl shadow-slate-900/20 backdrop-blur-xl backdrop-saturate-150 md:right-1/2 md:bottom-[calc(0.625rem+env(safe-area-inset-bottom))] md:left-auto md:w-180 md:max-w-full md:translate-x-1/2 md:gap-1 md:rounded-3xl md:border md:p-1.5 shell:hidden")}
+        aria-label="Primary tabs"
+        style={{
+          gridTemplateColumns: `repeat(${availableBottomTabs.length + 1}, minmax(0, 1fr))`,
+          borderColor: "var(--border-translucent)",
+          background: "var(--surface-translucent)",
+        }}
+      >
         {availableBottomTabs.map((tab) => {
           const Icon = tab.icon;
           const active = tab.matches.some((path) => location.pathname === path || location.pathname.startsWith(path.endsWith("/") ? path : `${path}/`));
@@ -411,24 +699,50 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <NavLink
               key={tab.to}
               to={tab.to}
-              className={cx("bottom-tab-item [position:relative] [display:grid] [min-width:0] [min-height:54px] [place-items:center] [align-content:center] [gap:0.18rem] [border:0] [border-radius:15px] [background:transparent] [color:var(--neutral-500)] [font-size:0.66rem] [font-weight:650] [line-height:1] [transition:background_150ms_ease,_color_150ms_ease,_transform_100ms_ease] hover:[background:var(--neutral-100)] hover:[color:var(--neutral-800)] [&:active]:[transform:scale(0.96)] max-[740px]:[min-height:56px] max-[740px]:[padding-inline:0.1rem] max-[740px]:[font-size:0.61rem]", active && "bottom-tab-item--active [background:var(--kc-50)] [color:var(--kc-800)]")}
+              className={cx(
+                "bottom-tab-item relative grid min-h-14 min-w-0 place-items-center content-center gap-0.5 rounded-2xl px-0.5 text-xs leading-none font-semibold transition-all duration-150 ease-out active:scale-95 md:px-0",
+                active
+                  ? "bottom-tab-item--active bg-kc-blue-50 text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200"
+                  : "bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+              )}
               aria-current={active ? "page" : undefined}
               data-tour={`tab-${tab.to.split("/").filter(Boolean).join("-")}`}
             >
-              <span className={cx("bottom-tab-item__icon [display:grid] [width:31px] [height:27px] [place-items:center] [border-radius:10px] [transition:background_150ms_ease,_color_150ms_ease,_transform_180ms_ease] [.bottom-tab-item--active_&]:[background:var(--surface-elevated)] [.bottom-tab-item--active_&]:[color:var(--kc-700)] [.bottom-tab-item--active_&]:[box-shadow:var(--shadow-1)] [.bottom-tab-item--active_&]:[transform:translateY(-1px)]")}><Icon size={21} /></span>
+              <span
+                className={cx(
+                  "bottom-tab-item__icon grid h-7 w-8 place-items-center rounded-lg transition-all duration-150 ease-out",
+                  active && "-translate-y-px bg-white text-kc-blue-700 dark:bg-slate-900 dark:text-kc-blue-300",
+                )}
+                style={active ? { boxShadow: "var(--shadow-1)" } : undefined}
+              >
+                <Icon size={21} />
+              </span>
               <span>{tab.label}</span>
             </NavLink>
           );
         })}
         <button
-          className={cx("bottom-tab-item [position:relative] [display:grid] [min-width:0] [min-height:54px] [place-items:center] [align-content:center] [gap:0.18rem] [border:0] [border-radius:15px] [background:transparent] [color:var(--neutral-500)] [font-size:0.66rem] [font-weight:650] [line-height:1] [transition:background_150ms_ease,_color_150ms_ease,_transform_100ms_ease] hover:[background:var(--neutral-100)] hover:[color:var(--neutral-800)] [&:active]:[transform:scale(0.96)] max-[740px]:[min-height:56px] max-[740px]:[padding-inline:0.1rem] max-[740px]:[font-size:0.61rem]", moreTabActive && "bottom-tab-item--active [background:var(--kc-50)] [color:var(--kc-800)]")}
+          className={cx(
+            "bottom-tab-item relative grid min-h-14 min-w-0 place-items-center content-center gap-0.5 rounded-2xl px-0.5 text-xs leading-none font-semibold transition-all duration-150 ease-out active:scale-95 md:px-0",
+            moreTabActive
+              ? "bottom-tab-item--active bg-kc-blue-50 text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200"
+              : "bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200",
+          )}
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open more navigation"
           aria-controls="mobile-navigation-drawer"
           aria-expanded={mobileOpen}
         >
-          <span className={cx("bottom-tab-item__icon [display:grid] [width:31px] [height:27px] [place-items:center] [border-radius:10px] [transition:background_150ms_ease,_color_150ms_ease,_transform_180ms_ease] [.bottom-tab-item--active_&]:[background:var(--surface-elevated)] [.bottom-tab-item--active_&]:[color:var(--kc-700)] [.bottom-tab-item--active_&]:[box-shadow:var(--shadow-1)] [.bottom-tab-item--active_&]:[transform:translateY(-1px)]")}><MoreHorizontal size={22} /></span>
+          <span
+            className={cx(
+              "bottom-tab-item__icon grid h-7 w-8 place-items-center rounded-lg transition-all duration-150 ease-out",
+              moreTabActive && "-translate-y-px bg-white text-kc-blue-700 dark:bg-slate-900 dark:text-kc-blue-300",
+            )}
+            style={moreTabActive ? { boxShadow: "var(--shadow-1)" } : undefined}
+          >
+            <MoreHorizontal size={22} />
+          </span>
           <span>More</span>
         </button>
       </nav>

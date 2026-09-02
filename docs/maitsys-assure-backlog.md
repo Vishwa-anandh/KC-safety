@@ -99,7 +99,7 @@ A story is complete when:
 **Acceptance criteria:**
 
 - Public routes remain accessible without a session.
-- Site users, enterprise viewers, and administrators see only authorized navigation and routes.
+- Site users and administrators see only authorized navigation and routes.
 - Direct URL access is checked independently of menu visibility.
 - Backend authorization rejects unauthorized requests even if the frontend is bypassed.
 - Every tenant-scoped query and mutation derives scope from the authenticated session, not from a trusted client parameter alone.
@@ -455,7 +455,7 @@ A story is complete when:
 
 #### US-06.01.01 — Review enterprise and site performance
 
-**Story:** As an enterprise viewer or administrator, I want to review completion, performance, questions, and gaps across sites so that I can identify risk and progress.
+**Story:** As an administrator, I want to review completion, performance, questions, and gaps across sites so that I can identify risk and progress.
 
 **Acceptance criteria:**
 
@@ -475,7 +475,7 @@ A story is complete when:
 
 #### US-06.02.01 — Review the history of a question
 
-**Story:** As an enterprise viewer or administrator, I want to see every saved state of each site's question so that I can understand what changed, when, and by whom.
+**Story:** As an administrator, I want to see every saved state of each site's question so that I can understand what changed, when, and by whom.
 
 **Acceptance criteria:**
 

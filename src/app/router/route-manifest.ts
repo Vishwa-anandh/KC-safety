@@ -26,6 +26,7 @@ export const appPaths = {
   siteSection: "/sites/:siteId/sections/:sectionId",
   adminSites: "/admin/sites",
   adminSiteDetail: "/admin/sites/:siteId",
+  adminConfig: "/admin/config",
   adminImports: "/admin/imports",
   adminImportHistory: "/admin/imports/history",
   adminImportPreview: "/admin/imports/:batchId/preview",
@@ -55,7 +56,7 @@ export const settingsSegments = {
 } as const;
 
 const contributor = ["site-contributor"] as const;
-const enterprise = ["enterprise-viewer", "administrator"] as const;
+const enterprise = ["administrator"] as const;
 const administrator = ["administrator"] as const;
 
 export const routeManifest: readonly AppRouteDefinition[] = [
@@ -72,6 +73,7 @@ export const routeManifest: readonly AppRouteDefinition[] = [
   { id: "site-section", path: appPaths.siteSection, access: { kind: "role", roles: enterprise }, navigation: false },
   { id: "admin-sites", path: appPaths.adminSites, access: { kind: "role", roles: administrator }, navigation: true },
   { id: "admin-site-detail", path: appPaths.adminSiteDetail, access: { kind: "role", roles: administrator }, navigation: false },
+  { id: "admin-config", path: appPaths.adminConfig, access: { kind: "role", roles: administrator }, navigation: true },
   { id: "admin-imports", path: appPaths.adminImports, access: { kind: "role", roles: administrator }, navigation: true },
   { id: "admin-import-history", path: appPaths.adminImportHistory, access: { kind: "role", roles: administrator }, navigation: false },
   { id: "admin-import-preview", path: appPaths.adminImportPreview, access: { kind: "role", roles: administrator }, navigation: false },
