@@ -11,20 +11,19 @@ import {
   Copy,
   ChevronDown,
   Download,
-  FileCheck2,
   FileInput,
   FileSpreadsheet,
   FileText,
   Filter,
   History,
   ListChecks,
+  MapPin,
   MoreHorizontal,
   Menu,
   Paperclip,
   Pencil,
   Plus,
   Search,
-  ShieldCheck,
   Trash2,
   Target,
   Upload,
@@ -42,7 +41,7 @@ import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconBu
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
-const importSteps = ["Choose flow", "Upload", "Review changes", "Publish"];
+const importSteps = ["Choose flow", "Upload", "Review changes", "Site selection", "Publish"];
 
 // ---------------------------------------------------------------------------------------------
 // Canonical class recipes shared across this file's screens. Each mirrors a pattern duplicated
@@ -80,7 +79,6 @@ const pillTone = {
   provisional: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300",
 };
 const publishBadgeClass = cx("publish-badge", pillBaseClass);
-const warningLabelClass = cx("warning-label", pillBaseClass, pillTone.warning);
 
 /**
  * Canonical data-table recipe (see SitePanels.tsx): a real table from `shell` (1100px) up, a
@@ -123,41 +121,6 @@ const dialogFooterClass = "dialog__footer flex flex-col-reverse items-stretch ga
 
 const linkButtonBaseClass = "inline-flex min-w-0 items-center justify-center gap-2 rounded-lg border border-transparent text-sm font-semibold whitespace-nowrap transition-colors";
 
-const TARGET_FIELDS = [
-  { value: "requirement_id", label: "requirement_id" },
-  { value: "requirement_text", label: "requirement_text" },
-  { value: "question_id", label: "question_id" },
-  { value: "question_number", label: "question_number" },
-  { value: "question_text", label: "question_text" },
-  { value: "guidance", label: "guidance" },
-  { value: "expected_evidence", label: "expected_evidence" },
-  { value: "evidence_required", label: "evidence_required" },
-  { value: "subsection", label: "subsection" },
-  { value: "section", label: "section" },
-  { value: "applicable_sites", label: "applicable_sites" },
-  { value: "overall_priority", label: "overall_priority" },
-  { value: "section_priority", label: "section_priority" },
-];
-
-interface ColumnMapping {
-  source: string;
-  target: string;
-  sample: string;
-  needsReview: boolean;
-}
-
-const INITIAL_MAPPINGS: ColumnMapping[] = [
-  { source: "Section", target: "section", sample: "Leadership & Engagement", needsReview: false },
-  { source: "Sub-Section", target: "subsection", sample: "Leadership & Commitment", needsReview: false },
-  { source: "Requirement ID", target: "requirement_id", sample: "OS 1.2.1", needsReview: false },
-  { source: "Requirement Text", target: "requirement_text", sample: "Take accountability for the effectiveness...", needsReview: false },
-  { source: "Question ID", target: "question_id", sample: "OS-01-Q1", needsReview: false },
-  { source: "Question / How to Meet Requirement", target: "question_text", sample: "Establish tiered accountability meetings...", needsReview: false },
-  { source: "Evidence Requirement", target: "expected_evidence", sample: "Tiered accountability KPIs are aligned...", needsReview: false },
-  { source: "Applicable Sites", target: "applicable_sites", sample: "Leave blank for all sites", needsReview: false },
-  { source: "Overall Priority", target: "overall_priority", sample: "Optional", needsReview: false },
-  { source: "Section Priority", target: "section_priority", sample: "Optional", needsReview: false },
-];
 
 // Sorted and grouped by region so a list that can run into the hundreds is still scannable.
 // Derived from live state rather than a module constant, since sites are now editable.
@@ -200,22 +163,33 @@ function notifyBatchPublished(
   notify({ title, body, category: "master-data", audience: ["site-contributor"], link: "/assessment" });
 }
 
-const stepItemCircleClass = "relative z-10 grid size-7 place-items-center rounded-full border-2 border-slate-300 bg-white font-extrabold text-slate-700 md:size-8 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+const stepItemCircleBaseClass = "relative z-10 grid size-7 place-items-center rounded-full border-2 font-extrabold md:size-8";
+const stepItemCircleTone = {
+  complete: "border-kc-blue-600 bg-kc-blue-600 text-white dark:border-kc-blue-500 dark:bg-kc-blue-500",
+  current: "border-kc-blue-600 bg-white text-kc-blue-700 ring-3 ring-kc-blue-100 dark:border-kc-blue-400 dark:bg-slate-900 dark:text-kc-blue-300 dark:ring-kc-blue-900",
+  upcoming: "border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-500",
+};
+const stepItemLabelTone = {
+  complete: "text-slate-700 dark:text-slate-300",
+  current: "text-kc-blue-700 dark:text-kc-blue-300",
+  upcoming: "text-slate-400 dark:text-slate-500",
+};
 
 function StepIndicator({ current }: { current: number }) {
-  return <div className={cx("border-b border-slate-200 dark:border-slate-700")}><ol className={cx("step-indicator mx-auto my-0 grid w-full max-w-4xl grid-cols-4 list-none px-2 py-3.5 md:p-4")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
+  return <div className={cx("border-b border-slate-200 dark:border-slate-700")}><ol className={cx("step-indicator mx-auto my-0 grid w-full max-w-4xl grid-cols-5 list-none px-2 py-3.5 md:p-4")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
     const state = index < current ? "complete" : index === current ? "current" : "upcoming";
     return (
       <li
         className={cx(
-          "step-item relative grid min-w-0 justify-items-center gap-1 text-xs text-slate-400 md:gap-1.5 after:absolute after:top-4 after:-right-1/2 after:z-0 after:h-0.5 after:w-full after:bg-slate-200 last:after:hidden dark:text-slate-500 dark:after:bg-slate-700",
+          "step-item relative grid min-w-0 justify-items-center gap-1 text-xs md:gap-1.5 after:absolute after:top-4 after:-right-1/2 after:z-0 after:h-0.5 after:w-full last:after:hidden md:after:top-4.5",
+          index < current ? "after:bg-kc-blue-600 dark:after:bg-kc-blue-500" : "after:bg-slate-200 dark:after:bg-slate-700",
           `step-item--${state}`,
         )}
         key={step}
         aria-current={state === "current" ? "step" : undefined}
       >
-        <span className={cx(stepItemCircleClass)}>{state === "complete" ? <Check size={15} /> : index + 1}</span>
-        <strong className={cx("block max-w-full truncate")}>{step}</strong>
+        <span className={cx(stepItemCircleBaseClass, stepItemCircleTone[state])}>{state === "complete" ? <Check size={15} /> : index + 1}</span>
+        <strong className={cx("block max-w-full truncate", stepItemLabelTone[state])}>{step}</strong>
       </li>
     );
   })}</ol></div>;
@@ -294,15 +268,6 @@ const dropzoneClass = "dropzone grid min-h-65 place-content-center place-items-c
 const selectedFileClass = "selected-file flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950";
 const inspectionGridClass = "inspection-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
 const inspectionTileClass = "grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900";
-const inspectionListClass = "inspection-list grid overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700";
-const inspectionRowClass = "flex items-center gap-3 border-b border-slate-200 px-3.5 py-3 last:border-b-0 dark:border-slate-700";
-const mappingTableClass = "mapping-table grid overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700";
-const mappingRowClass = "flex flex-wrap items-center gap-3 border-b border-slate-200 p-3 last:border-b-0 dark:border-slate-700";
-const validationSummaryClass = "validation-summary mb-4 grid grid-cols-1 gap-3 md:grid-cols-3";
-const validationTileClass = "flex items-center gap-2.5 rounded-xl border border-slate-200 p-3.5 text-slate-700 dark:border-slate-700 dark:text-slate-300";
-const dryRunGridClass = "dry-run-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
-const dryRunTileClass = "relative grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 py-3.5 pr-3.5 pl-8 dark:border-slate-700 dark:bg-slate-900";
-const dryRunDotClass = "dry-run-dot absolute top-4 left-3.5 size-2 rounded-full";
 const resultStateClass = "result-state mx-auto grid max-w-160 justify-items-center py-12 text-center";
 const importCardFooterClass = "import-card__footer flex flex-col items-stretch justify-between gap-3 border-t border-slate-200 p-3.5 md:flex-row md:items-center dark:border-slate-700";
 
@@ -385,14 +350,19 @@ export function AdminSitesScreen() {
         description="Every site in the KC network, its assessment status, and the governed requirements scoped to it."
         actions={
           <>
-            <IconButton
-              label="Download site import template"
-              className={cx("border border-slate-300 dark:border-slate-600")}
-              onClick={() => downloadStaticFile(`${assetBaseUrl}templates/Site-Import-Template.xlsx`, "EHS360 Site Import Template.xlsx")}
-            >
-              <Download size={18} />
-            </IconButton>
-            <Button variant="secondary" icon={<Upload size={18} />} onClick={() => csvRef.current?.click()}>Import</Button>
+            <div className={cx("inline-flex items-stretch rounded-lg border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800")} aria-label="Site import actions">
+              <IconButton
+                label="Download site import template"
+                tooltipPlacement="bottom"
+                className={cx("rounded-r-none border-r border-slate-300 dark:border-slate-600")}
+                onClick={() => downloadStaticFile(`${assetBaseUrl}templates/Site-Import-Template.xlsx`, "EHS360 Site Import Template.xlsx")}
+              >
+                <Download size={18} />
+              </IconButton>
+              <Button variant="secondary" className={cx("rounded-l-none border-0 px-4")} icon={<Upload size={17} />} onClick={() => csvRef.current?.click()}>
+                Import
+              </Button>
+            </div>
             <Button variant="primary" icon={<Plus size={18} />} onClick={() => setEditing("new")}>Create site</Button>
           </>
         }
@@ -598,6 +568,7 @@ export function AdminImportBatchPreviewScreen() {
               <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
                 <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
                 <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{item.title}</span></div>
+                <span className={cx(pillBaseClass, pillTone.neutral)}>Version {item.version || "1"}</span>
                 <span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span>
               </div>
               <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
@@ -652,13 +623,13 @@ export function AdminImportsScreen() {
   const [plan, setPlan] = useState<RequirementImportPlan | null>(null);
   const [editableRows, setEditableRows] = useState<ImportTemplateRow[]>([]);
   const [selectedRowNumbers, setSelectedRowNumbers] = useState<number[]>([]);
-  const [selectedRequirementIds, setSelectedRequirementIds] = useState<string[]>([]);
   const lastSelectedRowNumber = useRef<number | null>(null);
   const [publishNow, setPublishNow] = useState(false);
-  const [mappings, setMappings] = useState<ColumnMapping[]>(INITIAL_MAPPINGS);
-  const [confirmed, setConfirmed] = useState(false);
+  const [siteScope, setSiteScope] = useState<"all" | "specific">("all");
+  const [scopedSiteIds, setScopedSiteIds] = useState<string[]>([]);
   const [result, setResult] = useState<ImportHistoryRecord | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const siteOptions = buildSiteOptions(sites);
 
   useEffect(() => {
     if (!result || !publishNow || result.publishStatus === "Published") return;
@@ -696,7 +667,18 @@ export function AdminImportsScreen() {
     lastSelectedRowNumber.current = rowNumber;
   }
   function advance() {
-    if (step === 3 && plan && !plan.issues.some((issue) => issue.severity === "error")) {
+    if (step === 3) {
+      // Site selection applies as one shared scope for the whole batch, overriding whatever the
+      // workbook's own "Applicable Sites" column held for every row — the batch is scoped as a
+      // unit, not row by row.
+      const scopeValue = siteScope === "all" ? "" : scopedSiteIds.map((id) => sites.find((site) => site.id === id)?.code).filter(Boolean).join(", ");
+      const nextRows = editableRows.map((row) => ({ ...row, "Applicable Sites": scopeValue }));
+      setEditableRows(nextRows);
+      if (mode && file) setPlan(planRequirementRows(mode, file.name, nextRows, masterRequirements, sites));
+      setStep(4);
+      return;
+    }
+    if (step === 4 && selectedPlan && !selectedPlan.issues.some((issue) => issue.severity === "error")) {
       const selected = new Set(selectedRowNumbers);
       const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, sites);
       const record = submitImportBatch(stagedPlan);
@@ -707,17 +689,22 @@ export function AdminImportsScreen() {
         audience: ["administrator"],
         link: `/admin/imports/${record.id}/preview`,
       });
-      setResult(record); setStep(4); return;
+      setResult(record); setStep(5); return;
     }
-    setStep((value) => Math.min(4, value + 1));
+    setStep((value) => Math.min(5, value + 1));
   }
   function resetImport() {
-    setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setMappings(INITIAL_MAPPINGS); setConfirmed(false); setResult(null);
+    setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setSiteScope("all"); setScopedSiteIds([]); setResult(null);
   }
   const selectedPlan = mode && file
     ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, sites)
     : plan;
-  const needsReview = mappings.some((mapping) => mapping.needsReview) || Boolean(selectedPlan?.issues.some((issue) => issue.severity === "error"));
+  // Continue is blocked while any *selected* row has an error — but with nothing shown near the
+  // table, that block was silent (the user could select every row and still not know why the
+  // button stayed disabled). These surface exactly which rows and why.
+  const selectedErrorIssues = (selectedPlan?.issues ?? []).filter((issue) => issue.severity === "error");
+  const selectedErrorRows = new Set(selectedErrorIssues.map((issue) => issue.row));
+  const needsReview = selectedErrorIssues.length > 0;
 
   return (
     <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
@@ -729,7 +716,7 @@ export function AdminImportsScreen() {
           {step === 0 && <>
             <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><FileInput size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 1 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose an import flow</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>New imports add master requirements. Updates safely change existing requirement and question IDs.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 1 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose an import flow</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>New imports add master requirements. Updates safely change existing requirement and question IDs.</p></div>
             </div>
             <div className={cx("grid gap-4 md:grid-cols-2")}>
               {(["new", "update"] as const).map((choice) => <button key={choice} type="button" onClick={() => { if (mode !== choice) { setFile(null); setPlan(null); setSelectedRowNumbers([]); } setMode(choice); }} className={cx("rounded-xl border p-5 text-left transition-colors", mode === choice ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 hover:border-kc-blue-300 dark:border-slate-700") }>
@@ -741,7 +728,7 @@ export function AdminImportsScreen() {
           {step === 1 && <>
             <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><FileInput size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 2 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Upload source workbook</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Use the EHS360 Master Requirement Import Template or an approved workbook with the same columns.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 2 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Upload source workbook</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Use the EHS360 Master Requirement Import Template or an approved workbook with the same columns.</p></div>
             </div>
             <input ref={inputRef} className={cx("sr-only")} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void selectFile(event.target.files?.[0])} />
             {!file ? (
@@ -770,7 +757,7 @@ export function AdminImportsScreen() {
             <div className={cx("mb-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(42rem,1.6fr)] xl:items-center xl:gap-6")}>
             <div className={cx(importStageHeadingClass, "mb-0 max-w-none")}>
               <span className={cx(stageIconClass)}><FileSpreadsheet size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 3 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Review and edit imported requirements</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the parsed workbook data, deselect anything not ready to apply, or open a requirement to edit it.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 3 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Review and edit imported requirements</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the parsed workbook data, deselect anything not ready to apply, or open a requirement to edit it.</p></div>
             </div>
             <div className={cx(inspectionGridClass, "mb-0")}>
               <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>1</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Import Template sheet read</span></div>
@@ -781,22 +768,42 @@ export function AdminImportsScreen() {
             </div>
             <div className={cx("mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700")} style={{ maxHeight: "65vh" }}>
               <div className={cx("sticky top-0 left-0 z-20 flex min-w-full flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Workbook rows</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>Edit any import-template value, add a row, or remove a row before release. Select multiple rows to apply together.</p></div><div className={cx("flex flex-wrap items-center gap-2")}><span className={cx("text-xs font-semibold text-slate-600 dark:text-slate-300")}>{selectedRowNumbers.length} of {editableRows.length} selected</span><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers(editableRows.map((row) => row.rowNumber))}>Select all</Button><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers([])}>Clear</Button><Button variant="secondary" size="compact" icon={<Plus size={16} />} onClick={() => updatePreviewRows([...editableRows, { ...Object.fromEntries(importTemplateColumns.map((column) => [column, ""])), rowNumber: Math.max(4, ...editableRows.map((row) => row.rowNumber)) + 1 } as ImportTemplateRow])}>Add row</Button></div></div>
-              <table className={cx("min-w-400 text-left text-xs")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx("min-w-36 p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t border-slate-100 align-top dark:border-slate-800")}><td className={cx("sticky left-0 bg-white p-2 dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold text-slate-500 dark:text-slate-400")}>{rowIndex + 1}</td>{importTemplateColumns.map((column) => <td key={column} className={cx("p-1.5")}><textarea rows={2} className={cx("min-w-36 resize-y rounded-md border border-slate-200 bg-white p-1.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100")} value={row[column]} onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))} /></td>)}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>)}</tbody></table>
+              <table className={cx("min-w-400 text-left text-xs")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx("min-w-36 p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => {
+                const rowIssues = selectedRowNumbers.includes(row.rowNumber) ? selectedErrorIssues.filter((issue) => issue.row === row.rowNumber) : [];
+                return <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t align-top", rowIssues.length ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40" : "border-slate-100 dark:border-slate-800")}><td className={cx("sticky left-0 p-2", rowIssues.length ? "bg-red-50 dark:bg-red-950/40" : "bg-white dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold", rowIssues.length ? "text-red-700 dark:text-red-300" : "text-slate-500 dark:text-slate-400")}><span className={cx("inline-flex items-center gap-1")}>{rowIssues.length > 0 && <AlertCircle size={13} className={cx("flex-none")} aria-label={rowIssues.map((issue) => issue.message).join(" ")} />}{rowIndex + 1}</span></td>{importTemplateColumns.map((column) => <td key={column} className={cx("p-1.5")}><textarea rows={2} className={cx("min-w-36 resize-y rounded-md border p-1.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100 dark:bg-slate-900 dark:text-slate-100", rowIssues.some((issue) => issue.field === column) ? "border-red-400 dark:border-red-700" : "border-slate-200 bg-white dark:border-slate-600")} value={row[column]} onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))} /></td>)}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>;
+              })}</tbody></table>
             </div>
-            <div className={cx("hidden")}>
-              <div className={cx("flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Requirements to apply</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>All valid requirements are selected by default. Deselect a row to exclude it from this import.</p></div><Button variant="tertiary" size="compact" onClick={() => setSelectedRequirementIds(plan?.upserts.map((requirement) => requirement.id) ?? [])}>Select all</Button></div>
-              {plan?.upserts.map((requirement) => <label key={requirement.id} className={cx("flex items-start gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800")}><input className={cx("mt-0.5 size-4.5 accent-kc-blue-600")} type="checkbox" checked={selectedRequirementIds.includes(requirement.id)} onChange={(event) => setSelectedRequirementIds((current) => event.target.checked ? [...current, requirement.id] : current.filter((id) => id !== requirement.id))} /><span className={cx("min-w-0 flex-1")}><strong className={cx("block text-sm text-slate-900 dark:text-slate-100")}>{requirement.id} · {requirement.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{requirement.section} · {requirement.questions.length} question{requirement.questions.length === 1 ? "" : "s"} · {requirement.siteIds.length ? `${requirement.siteIds.length} scoped site${requirement.siteIds.length === 1 ? "" : "s"}` : "All sites"}</span></span><Link className={cx("text-xs font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} to={`/admin/requirements/${requirement.id}`}>Edit</Link></label>)}
-            </div>
-            <div className={cx("hidden", inspectionListClass)}>
-              <div className={cx(inspectionRowClass)}><FileCheck2 size={18} className={cx("flex-none text-kc-blue-700 dark:text-kc-blue-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Leadership & Engagement</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>68 rows · Valid structure</small></span><CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} /></div>
-              <div className={cx(inspectionRowClass)}><FileCheck2 size={18} className={cx("flex-none text-kc-blue-700 dark:text-kc-blue-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Planning</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>94 rows · Valid structure</small></span><CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} /></div>
-              <div className={cx(inspectionRowClass)}><AlertCircle size={18} className={cx("flex-none text-amber-700 dark:text-amber-300")} /><span className={cx("grid flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>Machine Safety</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>2 blank guidance cells</small></span><span className={cx(warningLabelClass)}>Warning</span></div>
-            </div>
+            {selectedErrorIssues.length > 0 && (
+              <InlineMessage tone="danger" title={`${selectedErrorRows.size} selected row${selectedErrorRows.size === 1 ? "" : "s"} can't be imported yet`}>
+                <p className={cx("mb-1.5")}>Fix the flagged cells above (highlighted in red) or clear that row's checkbox to continue without it.</p>
+                <ul className={cx("m-0 grid list-disc gap-1 pl-4")}>
+                  {selectedErrorIssues.slice(0, 5).map((issue, index) => (
+                    <li key={index}>Row {editableRows.findIndex((row) => row.rowNumber === issue.row) + 1}{issue.field ? ` · ${issue.field}` : ""}: {issue.message}</li>
+                  ))}
+                </ul>
+                {selectedErrorIssues.length > 5 && <p className={cx("mt-1.5 text-xs")}>+{selectedErrorIssues.length - 5} more issue{selectedErrorIssues.length - 5 === 1 ? "" : "s"}.</p>}
+              </InlineMessage>
+            )}
           </>}
           {step === 3 && <>
             <div className={cx(importStageHeadingClass)}>
+              <span className={cx(stageIconClass)}><MapPin size={23} /></span>
+              <div><p className={cx(eyebrowClasses)}>Step 4 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose which sites this batch applies to</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>This scope applies to every selected requirement in this batch and overrides any Applicable Sites value already in the workbook.</p></div>
+            </div>
+            <div className={cx("grid gap-3 md:grid-cols-2")}>
+              <button type="button" onClick={() => setSiteScope("all")} className={cx("rounded-xl border p-4 text-left", siteScope === "all" ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Apply to all sites</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Every requirement in this batch applies to every site.</span></button>
+              <button type="button" onClick={() => setSiteScope("specific")} className={cx("rounded-xl border p-4 text-left", siteScope === "specific" ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Apply to specific sites</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Choose the sites this batch of requirements should apply to.</span></button>
+            </div>
+            {siteScope === "specific" && <div className={cx(fieldWideWrapClass, "mt-4")}>
+              <span className={cx(fieldLabelRowClass)}>Sites</span>
+              <CheckboxList label="Sites" searchable options={siteOptions} selected={scopedSiteIds} onChange={setScopedSiteIds} />
+              {scopedSiteIds.length === 0 && <InlineMessage className={cx("mt-3")} tone="warning" title="Choose at least one site">Select one or more sites, or switch to "Apply to all sites" to continue.</InlineMessage>}
+            </div>}
+          </>}
+          {step === 4 && <>
+            <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><CheckCircle2 size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 4 of 4</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose how to release changes</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Apply the selected requirements now, then either publish them immediately or keep the batch in review.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 5 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose how to release changes</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Apply the selected requirements now, then either publish them immediately or keep the batch in review.</p></div>
             </div>
             <div className={cx("grid gap-3 md:grid-cols-2")}>
               <button type="button" onClick={() => setPublishNow(false)} className={cx("rounded-xl border p-4 text-left", !publishNow ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Publish after review</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Stage the selected changes as Draft and publish later from the batch preview.</span></button>
@@ -804,54 +811,7 @@ export function AdminImportsScreen() {
             </div>
             <InlineMessage className={cx("mt-4")} tone="info" title={`${selectedRowNumbers.length} workbook row${selectedRowNumbers.length === 1 ? "" : "s"} selected`}>{publishNow ? "Selected changes will become live immediately after confirmation." : "Selected changes will remain Draft until an administrator publishes the batch."}</InlineMessage>
           </>}
-          {step === -1 && plan && <>
-            <div className={cx(importStageHeadingClass)}>
-              <span className={cx(stageIconClass)}><ArrowRight size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 4 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Map workbook columns</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Confirm how source values map into governed master fields. Resolve any flagged row before continuing.</p></div>
-            </div>
-            <div className={cx(mappingTableClass)}>{mappings.map((mapping, index) => (
-              <div className={cx(mappingRowClass, mapping.needsReview && "mapping-table__row--flagged border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950")} key={mapping.source}>
-                <span className={cx("grid min-w-32 flex-none gap-0.5")}><strong className={cx("text-sm text-slate-900 dark:text-slate-100")}>{mapping.source}</strong><small className={cx("text-xs text-slate-500 dark:text-slate-400")}>Source column</small></span>
-                <ArrowRight size={18} className={cx("flex-none text-slate-400 dark:text-slate-500")} />
-                <div className={cx("min-w-40 flex-1")}><Select label={`Target field for ${mapping.source}`} value={mapping.target} onChange={(value) => setMappings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, target: value, needsReview: false } : row))} options={TARGET_FIELDS} /></div>
-                <span className={cx("mapping-sample hidden min-w-0 flex-1 truncate text-xs text-slate-500 lg:block dark:text-slate-400")}>{mapping.sample}</span>
-                {mapping.needsReview ? <span className={cx(warningLabelClass)}>Needs review</span> : <CheckCircle2 size={18} className={cx("flex-none text-emerald-700 dark:text-emerald-300")} />}
-              </div>
-            ))}</div>
-            {needsReview && <InlineMessage tone="warning" title="Resolve flagged mappings">One or more source columns were auto-detected with low confidence. Choose the correct target field for each flagged row before continuing.</InlineMessage>}
-          </>}
-          {step === -1 && plan && <>
-            <div className={cx(importStageHeadingClass)}>
-              <span className={cx(stageIconClass)}><ShieldCheck size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 5 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Validation results</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Resolve blocking errors before import. Warnings may be accepted with review.</p></div>
-            </div>
-            <div className={cx(validationSummaryClass)}>
-              <div className={cx(validationTileClass, "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300")}><CheckCircle2 size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.sourceRows ?? 0}</strong> rows checked</span></div>
-              <div className={cx(validationTileClass, "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300")}><AlertCircle size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "warning").length ?? 0}</strong> warnings</span></div>
-              <div className={cx(validationTileClass, "border-slate-200 dark:border-slate-700")}><Circle size={22} /><span><strong className={cx("text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "error").length ?? 0}</strong> blocking errors</span></div>
-            </div>
-            {plan?.issues.length ? <InlineMessage tone={plan.issues.some((issue) => issue.severity === "error") ? "danger" : "warning"} title="Workbook findings">{plan.issues.slice(0, 5).map((issue) => `Row ${issue.row}${issue.field ? ` · ${issue.field}` : ""}: ${issue.message}`).join(" ")}</InlineMessage> : <InlineMessage tone="success" title="Workbook validated">The Import Template rows are ready for a staged draft import.</InlineMessage>}
-            <div className={cx("mt-4")}><Button variant="secondary" icon={<Download size={17} />} onClick={() => downloadTextFile("EHS360_import_validation_report.csv", "row,severity,field,message\r\n214,Warning,guidance,Guidance is blank\r\n389,Warning,guidance,Guidance is blank\r\n521,Warning,display_order,Display order is reused\r\n522,Warning,display_order,Display order is reused")}>Download validation report</Button></div>
-          </>}
-          {step === -1 && plan && <>
-            <div className={cx(importStageHeadingClass)}>
-              <span className={cx(stageIconClass)}><FileCheck2 size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 6 of 7</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Confirm import</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the dry-run result before applying master data changes.</p></div>
-            </div>
-            <div className={cx(dryRunGridClass)}>
-              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--create bg-emerald-600 dark:bg-emerald-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.created ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Create</span></div>
-              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--update bg-kc-blue-600")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{(plan?.updated ?? 0) + (plan?.addedQuestions ?? 0)}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Update / add question</span></div>
-              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--same bg-slate-400 dark:bg-slate-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.unchanged ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Unchanged</span></div>
-              <div className={cx(dryRunTileClass)}><span className={cx(dryRunDotClass, "dry-run-dot--conflict bg-red-600 dark:bg-red-500")} /><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.filter((issue) => issue.severity === "error").length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Conflicts</span></div>
-            </div>
-            <InlineMessage tone="info" title="Import scope">Each row uses its Applicable Sites column. A blank value applies that requirement to all sites and writes an administrator audit record.</InlineMessage>
-            {plan?.changes.length ? <div className={cx("mt-4 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700")}><div className={cx("border-b border-slate-200 px-3.5 py-2 text-sm font-bold text-slate-900 dark:border-slate-700 dark:text-slate-100")}>Planned changes</div>{plan.changes.slice(0, 12).map((change, index) => <div key={`${change.requirementId}-${change.questionId ?? "requirement"}-${change.field}-${index}`} className={cx("grid gap-0.5 border-b border-slate-100 px-3.5 py-2.5 text-sm last:border-b-0 dark:border-slate-800")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{change.requirementId}{change.questionId ? ` · ${change.questionId}` : ""} · {change.field}</strong><span className={cx("text-xs text-slate-600 dark:text-slate-400")}>{change.before ? `${change.before} → ` : ""}{change.after ?? "Added"}</span></div>)}</div> : null}
-            <label className={cx("confirmation-check mt-4 flex items-start gap-2.5 rounded-xl border border-slate-200 p-3.5 text-sm dark:border-slate-700")}>
-              <input className={cx("size-4.5 flex-none accent-kc-blue-600")} type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-              <span>I reviewed the validation warnings and confirm this import scope.</span>
-            </label>
-          </>}
-          {step === 4 && result && (() => {
+          {step === 5 && result && (() => {
             const latest = importHistory.find((record) => record.id === result.id) ?? result;
             const published = latest.publishStatus === "Published";
             const requirementCount = latest.created + latest.updated;
@@ -883,7 +843,7 @@ export function AdminImportsScreen() {
             );
           })()}
         </div>
-        {step < 4 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !mode) || (step === 1 && !file) || (step === 2 && (needsReview || selectedRowNumbers.length === 0)) || (step === 3 && (needsReview || selectedRowNumbers.length === 0))} icon={<ArrowRight size={17} />} iconPosition="end">{step === 3 ? (publishNow ? "Publish selected changes" : "Stage for review") : "Continue"}</Button></div>}
+        {step < 5 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !mode) || (step === 1 && !file) || (step === 2 && (needsReview || selectedRowNumbers.length === 0)) || (step === 3 && siteScope === "specific" && scopedSiteIds.length === 0) || (step === 4 && (needsReview || selectedRowNumbers.length === 0))} icon={<ArrowRight size={17} />} iconPosition="end">{step === 4 ? (publishNow ? "Publish selected changes" : "Stage for review") : "Continue"}</Button></div>}
       </section>
     </div>
   );
@@ -937,6 +897,7 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
               </label>
               {evidenceRequired && <>
                 <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300")}><Paperclip size={14} /> Required evidence <small className={cx("ml-auto text-xs font-normal tracking-normal text-slate-500 normal-case dark:text-slate-400")}>Shown only with Question {index + 1}</small></span>
+                <p className={cx("m-0 text-xs leading-relaxed text-slate-500 dark:text-slate-400")}>For a Partial or Yes answer, the site must explain how each file or link they upload meets this requirement.</p>
                 <div className={cx("question-evidence__editor grid gap-2")}>
                   {question.expectedEvidence.map((item, evidenceIndex) => (
                     <div className={cx("question-evidence__item flex items-center gap-2")} key={`${question.id}-evidence-${evidenceIndex}`}>

@@ -163,6 +163,27 @@ export const initialRequirement: Requirement = {
         description: "Refresh the leadership accountability matrix and brief all newly appointed operations leaders.",
         owner: "Maya Patel",
       },
+      history: [
+        {
+          id: "q-1-hist-1",
+          event: "Response recorded",
+          recordedAt: "2026-08-12T09:15:00.000Z",
+          recordedBy: "Maya Patel",
+          response: "partial",
+          evidence: [
+            {
+              id: "ev-1",
+              questionId: "q-1",
+              type: "file",
+              title: "Leadership accountability matrix",
+              detail: "KC-NSM-EHS-RACI-v4.pdf · 1.8 MB",
+              note: "Matrix lists EHS&S accountabilities for each site leader, but two operations managers appointed in July still need to be added and briefed.",
+              uploadedBy: "Maya Patel",
+              uploadedAt: "12 Aug 2026",
+            },
+          ],
+        },
+      ],
     },
     {
       id: "q-2",
@@ -171,6 +192,27 @@ export const initialRequirement: Requirement = {
       response: "yes",
       period: currentAssessmentPeriod,
       expectedEvidence: ["Recent business operating review agenda.", "EHS&S objectives tracking sheet."],
+      history: [
+        {
+          id: "q-2-hist-1",
+          event: "Response recorded",
+          recordedAt: "2026-08-13T14:40:00.000Z",
+          recordedBy: "Daniel Brooks",
+          response: "yes",
+          evidence: [
+            {
+              id: "ev-2",
+              questionId: "q-2",
+              type: "link",
+              title: "August operating review minutes",
+              detail: "sharepoint.example.com/sites/northstar/ehss/reviews",
+              note: "Minutes show EHS&S objectives and results reviewed at every monthly operating review, with owners assigned for each open item.",
+              uploadedBy: "Daniel Brooks",
+              uploadedAt: "13 Aug 2026",
+            },
+          ],
+        },
+      ],
     },
     {
       id: "q-3",
@@ -192,6 +234,7 @@ export const initialRequirement: Requirement = {
       type: "file",
       title: "Leadership accountability matrix",
       detail: "KC-NSM-EHS-RACI-v4.pdf · 1.8 MB",
+      note: "Matrix lists EHS&S accountabilities for each site leader, but two operations managers appointed in July still need to be added and briefed.",
       uploadedBy: "Maya Patel",
       uploadedAt: "12 Aug 2026",
     },
@@ -201,6 +244,7 @@ export const initialRequirement: Requirement = {
       type: "link",
       title: "August operating review minutes",
       detail: "sharepoint.example.com/sites/northstar/ehss/reviews",
+      note: "Minutes show EHS&S objectives and results reviewed at every monthly operating review, with owners assigned for each open item.",
       uploadedBy: "Daniel Brooks",
       uploadedAt: "13 Aug 2026",
     },

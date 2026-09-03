@@ -54,6 +54,9 @@ export interface EvidenceItem {
   type: "file" | "link";
   title: string;
   detail: string;
+  /** How this upload satisfies the question's requirement — collected once the response claims
+   * some level of implementation (Partial or Yes); a No response has nothing to explain. */
+  note?: string;
   uploadedBy: string;
   uploadedAt: string;
   questionId?: string;
@@ -154,6 +157,9 @@ export interface MasterRequirement {
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;
+  /** Revision number from the import workbook's Version column. Defaults to "1" on first import;
+   * an admin bumps it when re-importing a revision of an already-published requirement. */
+  version?: string;
   questions: MasterQuestion[];
 }
 

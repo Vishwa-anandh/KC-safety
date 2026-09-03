@@ -412,7 +412,11 @@ function QuestionHistoryTimeline({ question }: { question: AssessmentQuestion })
             </div>
             <div className={cx("response-history__response mt-2.5 flex items-center justify-between gap-3")}><span className={cx("text-sm font-semibold text-slate-500 dark:text-slate-400")}>Response</span><span className={cx(responseChipClass(entry.response))}>{responseLabel(entry.response)}</span></div>
             {entry.action && <div className={cx("response-history__action mt-2.5 rounded-md bg-white p-2.5 dark:bg-slate-800")}><strong className={cx("text-sm text-slate-900 dark:text-slate-100")}>Corrective action</strong><p className={cx("mt-1 text-sm text-slate-800 dark:text-slate-200")}>{entry.action.description || "No action description added."}</p><div className={cx("mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400")}><span>Owner · {entry.action.owner || "Not assigned"}</span><span>Status · {entry.action.status ?? "Open"}</span><span>Follow-up · {entry.action.followUp || "Not added"}</span></div></div>}
-            <div className={cx("response-history__evidence mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400")}><Paperclip size={14} /><span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>{entry.evidence.length > 0 && <ul className={cx("mt-1 ml-5 basis-full")}>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}</div>
+            <div className={cx("response-history__evidence mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400")}><Paperclip size={14} /><span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>{entry.evidence.length > 0 && <ul className={cx("mt-1 ml-5 basis-full list-disc")}>{entry.evidence.map((item) => (
+              // The grid lives on this inner wrapper, not the <li> itself — setting `display:
+              // grid` directly on the <li> would drop its bullet marker.
+              <li key={item.id}><div className={cx("grid gap-0.5")}><span className={cx("text-slate-700 dark:text-slate-300")}>{item.title}{item.detail ? ` — ${item.detail}` : ""}</span>{item.note && <span className={cx("italic")}>How it meets the requirement: {item.note}</span>}</div></li>
+            ))}</ul>}</div>
           </div>
         </li>
       ))}

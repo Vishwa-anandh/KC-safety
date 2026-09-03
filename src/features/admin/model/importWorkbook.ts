@@ -34,7 +34,7 @@ export interface RequirementImportPlan {
   rows: ImportTemplateRow[];
 }
 
-export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement", "Applicable Sites", "Overall Priority", "Section Priority", "Sub-Section Priority", "Version", "Status", "Sort Order"] as const;
+export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement", "Applicable Sites", "Overall Priority", "Section Priority", "Sub-Section Priority", "Version", "Status"] as const;
 type ImportTemplateColumn = (typeof importTemplateColumns)[number];
 export type ImportTemplateRow = Record<ImportTemplateColumn, string> & { rowNumber: number };
 const columns = importTemplateColumns;
@@ -113,7 +113,7 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
 
     if (mode === "new") {
       if (existingRequirement) { issues.push({ severity: "error", row: row.rowNumber, field: "Requirement ID", message: `Requirement "${requirementId}" already exists. Use Update requirements.` }); return; }
-      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, status: "Draft" as const, siteIds, questions: [] };
+      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, status: "Draft" as const, siteIds, version: row["Version"] || "1", questions: [] };
       if (draft.title && title && draft.title !== title) issues.push({ severity: "error", row: row.rowNumber, field: "Requirement Text", message: "Rows sharing a Requirement ID must use the same requirement text." });
       if (!upserts.has(requirementId)) changes.push({ requirementId, kind: "create-requirement", field: "Requirement", after: title });
       const question: MasterQuestion = { id: questionId, number: String(draft.questions.length + 1), text: questionText, expectedEvidence: evidence(row["Evidence Requirement"]), evidenceRequired: evidence(row["Evidence Requirement"]).length > 0 };
@@ -139,6 +139,7 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     }
     if (title && title !== draft.title) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Requirement text", before: draft.title, after: title }); draft.title = title; }
     if (section && section !== draft.section) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Section", before: draft.section, after: section }); draft.section = section; }
+    const rowVersion = row["Version"]; if (rowVersion && rowVersion !== draft.version) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Version", before: draft.version ?? "1", after: rowVersion }); draft.version = rowVersion; }
     const scope = row["Applicable Sites"]; if (scope || !row["Applicable Sites"]) { const before = draft.siteIds.join(","); const after = siteIds.join(","); if (before !== after) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Applicable Sites", before, after: after || "All sites" }); draft.siteIds = siteIds; } }
     draft.status = "Draft"; upserts.set(draft.id, draft);
   });

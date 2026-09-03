@@ -59,7 +59,11 @@ const fieldErrorClass = "field-error mt-1.5 block text-xs font-semibold text-red
 
 const dialogLayerClass = "dialog-layer fixed inset-0 z-100 grid place-items-center p-4";
 const dialogBackdropClass = "dialog-backdrop absolute inset-0 bg-slate-950/50 backdrop-blur-sm";
-const dialogClass = "dialog relative max-h-full w-full max-w-md overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900";
+// No max-w-* here — it's set per usage below. Two max-w-* utilities on one element are a coin
+// flip in Tailwind v4's cascade (output order follows first-seen-in-source, not JSX order), so
+// combining this constant with an overriding width class was silently losing to whichever one
+// Tailwind happened to emit second; keeping the scale choice mutually exclusive avoids that.
+const dialogClass = "dialog relative max-h-full w-full overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900";
 const dialogHeaderClass = "dialog__header flex items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-slate-700";
 const dialogHeaderTitleClass = "mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100";
 const dialogFormClass = "dialog-form grid gap-4 p-4.5";
@@ -188,8 +192,15 @@ const responseToneClasses: Record<Exclude<ResponseValue, null>, { selected: stri
   },
 };
 
-const responseOptionBaseClass = "response-option flex min-w-0 min-h-22 items-start gap-2.5 rounded-xl border border-slate-300 bg-white p-3 cursor-pointer transition-colors hover:border-slate-400 hover:bg-slate-50 max-md:min-h-0 forced-colors:border-2 forced-colors:border-current dark:border-slate-600 dark:bg-slate-800 dark:hover:border-slate-500 dark:hover:bg-slate-900";
-const responseOptionControlClass = "response-option__control grid size-6 flex-none place-items-center rounded-full border border-slate-300 text-slate-400 transition-colors peer-focus-visible:outline-3 peer-focus-visible:outline-kc-blue-500 peer-focus-visible:outline-offset-2 dark:border-slate-600 dark:text-slate-500";
+// Border/background color utilities are deliberately absent from these two base classes and
+// live only in the mutually-exclusive default/tone classes below. Tailwind v4 orders generated
+// utilities by first-seen-in-source rather than by JSX class order, so an always-on
+// `border-slate-300` sitting next to a conditional `border-red-600` is a coin flip for which one
+// wins the cascade — this was silently losing the red/amber/emerald selected state to gray.
+const responseOptionBaseClass = "response-option flex min-w-0 min-h-22 items-start gap-2.5 rounded-xl border p-3 cursor-pointer transition-colors max-md:min-h-0 forced-colors:border-2 forced-colors:border-current";
+const responseOptionDefaultClass = "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-slate-500 dark:hover:bg-slate-900";
+const responseOptionControlClass = "response-option__control grid size-6 flex-none place-items-center rounded-full border transition-colors peer-focus-visible:outline-3 peer-focus-visible:outline-kc-blue-500 peer-focus-visible:outline-offset-2";
+const responseOptionControlDefaultClass = "border-slate-300 text-slate-400 dark:border-slate-600 dark:text-slate-500";
 
 function ResponseSelector({ value, onChange, questionId }: { value: ResponseValue; onChange: (value: ResponseValue) => void; questionId: string }) {
   const options: Array<{ value: Exclude<ResponseValue, null>; label: string; performance: string; description: string }> = [
@@ -207,9 +218,9 @@ function ResponseSelector({ value, onChange, questionId }: { value: ResponseValu
           const selected = value === option.value;
           const tone = responseToneClasses[option.value];
           return (
-            <label key={option.value} className={cx(responseOptionBaseClass, `response-option--${option.value}`, selected && cx("response-option--selected", tone.selected))}>
+            <label key={option.value} className={cx(responseOptionBaseClass, `response-option--${option.value}`, selected ? cx("response-option--selected", tone.selected) : responseOptionDefaultClass)}>
               <input className="peer sr-only" type="radio" name={`response-${questionId}`} value={option.value} checked={selected} onChange={() => onChange(option.value)} />
-              <span className={cx(responseOptionControlClass, selected && tone.control)}>{selected ? <Check size={15} /> : <Circle size={14} />}</span>
+              <span className={cx(responseOptionControlClass, selected ? tone.control : responseOptionControlDefaultClass)}>{selected ? <Check size={15} /> : <Circle size={14} />}</span>
               <span className="response-option__copy grid min-w-0 gap-0.5">
                 <strong className="text-sm text-slate-900 dark:text-slate-100">{option.label}</strong>
                 <small className="text-xs font-semibold text-slate-500 dark:text-slate-400">{option.performance}</small>
@@ -254,13 +265,13 @@ function ActionEditor({ action, response, onChange, onRemove }: { action?: Actio
   });
   return (
     <div className="action-editor mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900">
-      <div className="action-editor__header flex gap-2.5">
+      <div className="action-editor__header flex items-start gap-2.5">
         <div className="action-editor__icon text-amber-700 dark:text-amber-300"><AlertTriangle size={18} /></div>
-        <div>
+        <div className="min-w-0 flex-1">
           <strong className="text-sm font-bold text-slate-900 dark:text-slate-100">Corrective action</strong>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{requiredByResponse ? "Created automatically from this assessment gap and tracked in Actions summary." : "Optional supporting action for this assessment response."}</p>
         </div>
-        {!requiredByResponse && <Button variant="tertiary" onClick={onRemove}>Remove action</Button>}
+        {!requiredByResponse && <Button className="flex-none" variant="tertiary" onClick={onRemove}>Remove action</Button>}
       </div>
       <div className="form-grid grid grid-cols-1 gap-4 pt-3.5 md:grid-cols-2">
         <label className={fieldWideWrapClass}>
@@ -333,6 +344,7 @@ export function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { e
   );
 }
 
+
 function QuestionEvidenceAttachments({
   evidence,
   questionNumber,
@@ -361,6 +373,7 @@ function QuestionEvidenceAttachments({
               <button type="button" className="question-evidence__attachment-copy grid min-w-0 flex-1 cursor-pointer border-0 bg-transparent p-0 text-left text-slate-800 dark:text-slate-200" onClick={() => onView(item)}>
                 <strong className="truncate text-sm text-slate-900 dark:text-slate-100">{item.title}</strong>
                 <small className="truncate text-xs text-slate-500 dark:text-slate-400">{item.detail}</small>
+                {item.note && <small className="mt-0.5 truncate text-xs text-slate-600 italic dark:text-slate-300">{item.note}</small>}
               </button>
               <span className="question-evidence__attachment-actions flex flex-none gap-0.5">
                 <IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={15} /></IconButton>
@@ -412,20 +425,25 @@ function GuidancePanel({ requirement, onCollapse }: { requirement: Requirement; 
   );
 }
 
-function EvidenceDialog({ item, onClose, onSave }: { item?: EvidenceItem; onClose: () => void; onSave: (item: EvidenceItem) => void }) {
+function EvidenceDialog({ item, response, onClose, onSave }: { item?: EvidenceItem; response: ResponseValue; onClose: () => void; onSave: (item: EvidenceItem) => void }) {
   const [type, setType] = useState<"file" | "link">(item?.type ?? "file");
   const [title, setTitle] = useState(item?.title ?? "");
   const [url, setUrl] = useState(item?.type === "link" ? item.detail : "");
   const [file, setFile] = useState<File | null>(null);
+  const [note, setNote] = useState(item?.note ?? "");
   const [submitted, setSubmitted] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const validUrl = type !== "link" || /^https?:\/\//i.test(url.trim());
-  const valid = Boolean(title.trim() && validUrl && (type === "link" || file || item?.type === "file"));
+  // A Partial or Yes response claims some level of implementation, so this is where the site
+  // explains how the upload backs that claim — a No or not-yet-assessed question has nothing to
+  // explain yet.
+  const showNote = response === "partial" || response === "yes";
+  const valid = Boolean(title.trim() && validUrl && (type === "link" || file || item?.type === "file") && (!showNote || note.trim()));
 
   return (
     <div className={dialogLayerClass} role="presentation">
       <button className={dialogBackdropClass} onClick={onClose} aria-label="Close evidence dialog" />
-      <section className={dialogClass} role="dialog" aria-modal="true" aria-labelledby="evidence-dialog-title">
+      <section className={cx(dialogClass, "max-w-lg")} role="dialog" aria-modal="true" aria-labelledby="evidence-dialog-title">
         <div className={dialogHeaderClass}>
           <div>
             <p className={eyebrowClasses}>Supporting material</p>
@@ -480,6 +498,13 @@ function EvidenceDialog({ item, onClose, onSave }: { item?: EvidenceItem; onClos
               {submitted && !validUrl && <small className={fieldErrorClass}>Enter a complete link beginning with http:// or https://.</small>}
             </label>
           )}
+          {showNote && (
+            <label className={fieldClass}>
+              <span className={fieldLabelRowClass}>How does this evidence meet the requirement? <b className={fieldRequiredMarkClass}>Required</b></span>
+              <textarea className={cx(fieldInputClass, "resize-y leading-relaxed", submitted && !note.trim() && fieldInvalidClass)} rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Explain what this file or link shows and how it satisfies the requirement" aria-invalid={submitted && !note.trim()} />
+              {submitted && !note.trim() && <small className={fieldErrorClass}>Explain how this evidence meets the requirement.</small>}
+            </label>
+          )}
         </div>
         <div className={dialogFooterClass}>
           <Button variant="tertiary" onClick={onClose}>Cancel</Button>
@@ -489,7 +514,7 @@ function EvidenceDialog({ item, onClose, onSave }: { item?: EvidenceItem; onClos
             const detail = type === "file"
               ? (file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB` : item?.detail ?? "Evidence file")
               : url.trim();
-            onSave({ id: item?.id ?? `ev-${Date.now()}`, type, title: title.trim(), detail, uploadedBy: "Rachel Morgan", uploadedAt: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) });
+            onSave({ id: item?.id ?? `ev-${Date.now()}`, type, title: title.trim(), detail, note: showNote ? note.trim() : undefined, uploadedBy: "Rachel Morgan", uploadedAt: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) });
           }}>{item ? "Save changes" : "Add evidence"}</Button>
         </div>
       </section>
@@ -515,6 +540,12 @@ function EvidenceViewer({ item, onClose }: { item: EvidenceItem; onClose: () => 
           <strong className="max-w-full font-bold break-words text-slate-900 dark:text-slate-100">{item.detail}</strong>
           <small className="text-slate-500 dark:text-slate-400">Added by {item.uploadedBy} on {item.uploadedAt}</small>
         </div>
+        {item.note && (
+          <div className="evidence-preview__note mx-4.5 mb-4.5 grid gap-1 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">How this meets the requirement</span>
+            <p className="m-0 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{item.note}</p>
+          </div>
+        )}
         <div className={dialogFooterClass}>
           <Button variant="tertiary" onClick={onClose}>Close</Button>
           {isLink && <Button variant="primary" icon={<ExternalLink size={17} />} onClick={() => window.open(item.detail, "_blank", "noopener,noreferrer")}>Open secure link</Button>}
@@ -626,10 +657,13 @@ export default function RequirementWorkspace() {
                     </div>
                     <PerformanceBadge performance={performanceForResponse(question.response)} compact />
                   </div>
-                  {Boolean(question.evidenceRequired ?? question.expectedEvidence?.length) && (
+                  {/* A "No" response means the requirement isn't in place yet, so there's nothing
+                      to attach evidence of — the evidence panel only applies once a response of
+                      Partial or Yes claims some level of implementation. */}
+                  {Boolean(question.evidenceRequired ?? question.expectedEvidence?.length) && question.response !== "no" && (
                     <>
                       <div className={questionEvidenceNoticeClass}>
-                        <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence required <small className="ml-auto text-xs font-medium text-slate-500 normal-case tracking-normal dark:text-slate-400">Attach evidence even when the response is Yes, if it is available.</small></span>
+                        <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence required <small className="ml-auto text-xs font-medium text-slate-500 normal-case tracking-normal dark:text-slate-400">Attach evidence even when the response is Partial or Yes, if it is available.</small></span>
                         <ul className="m-0 mt-2 grid gap-1.5 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                           {(question.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}
                         </ul>
@@ -700,7 +734,10 @@ export default function RequirementWorkspace() {
           </div>
         </div>
       )}
-      {evidenceEditor && <EvidenceDialog item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item} onClose={() => setEvidenceEditor(null)} onSave={(item) => {
+      {evidenceEditor && <EvidenceDialog
+        item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item}
+        response={requirement.questions.find((question) => question.id === (evidenceEditor.mode === "new" ? evidenceEditor.questionId : evidenceEditor.item.questionId))?.response ?? null}
+        onClose={() => setEvidenceEditor(null)} onSave={(item) => {
         if (evidenceEditor.mode === "new") addEvidence(requirement.id, { ...item, questionId: evidenceEditor.questionId }, user?.name); else updateEvidence(requirement.id, item, user?.name);
         setEvidenceEditor(null);
         queueSavedState();

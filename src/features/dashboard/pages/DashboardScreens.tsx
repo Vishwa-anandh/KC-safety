@@ -135,7 +135,20 @@ function QuestionResponseHistory({ question }: { question: AssessmentQuestion })
                 <div className={cx("response-history__evidence mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400")}>
                   <Paperclip size={14} />
                   <span>{entry.evidence.length} evidence {entry.evidence.length === 1 ? "item" : "items"} at this point</span>
-                  {entry.evidence.length > 0 && <ul className={cx("m-0 mt-1 basis-full list-disc pl-5")}>{entry.evidence.map((item) => <li key={item.id}>{item.title}</li>)}</ul>}
+                  {entry.evidence.length > 0 && (
+                    <ul className={cx("m-0 mt-1 basis-full list-disc pl-5")}>
+                      {entry.evidence.map((item) => (
+                        <li key={item.id}>
+                          {/* The grid lives on this inner wrapper, not the <li> itself — setting
+                              `display: grid` directly on the <li> would drop its bullet marker. */}
+                          <div className={cx("grid gap-0.5")}>
+                            <span className={cx("text-slate-700 dark:text-slate-300")}>{item.title}{item.detail ? ` — ${item.detail}` : ""}</span>
+                            {item.note && <span className={cx("italic")}>How it meets the requirement: {item.note}</span>}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </li>
