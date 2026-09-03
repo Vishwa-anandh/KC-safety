@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { DashboardSite, MasterQuestion, MasterRequirement } from "../../../shared/types";
+import type { MasterQuestion, MasterRequirement } from "../../../shared/types";
 
 export type RequirementImportMode = "new" | "update";
 export type ImportIssueSeverity = "error" | "warning";
@@ -34,7 +34,7 @@ export interface RequirementImportPlan {
   rows: ImportTemplateRow[];
 }
 
-export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement", "Applicable Sites", "Overall Priority", "Section Priority", "Sub-Section Priority", "Version", "Status"] as const;
+export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement"] as const;
 type ImportTemplateColumn = (typeof importTemplateColumns)[number];
 export type ImportTemplateRow = Record<ImportTemplateColumn, string> & { rowNumber: number };
 const columns = importTemplateColumns;
@@ -61,31 +61,24 @@ function getRows(file: File): Promise<ImportTemplateRow[]> {
   });
 }
 
-function scopedSites(value: string, sites: DashboardSite[], row: number, issues: ImportIssue[]) {
-  if (!value) return [];
-  const codes = value.split(",").map((item) => item.trim()).filter(Boolean);
-  const ids: string[] = [];
-  codes.forEach((code) => {
-    const site = sites.find((item) => item.code.toLowerCase() === code.toLowerCase());
-    if (!site) issues.push({ severity: "error", row, field: "Applicable Sites", message: `Unknown site code "${code}".` });
-    else ids.push(site.id);
-  });
-  return [...new Set(ids)];
-}
-
 function cloneRequirement(requirement: MasterRequirement): MasterRequirement {
   return { ...requirement, siteIds: [...requirement.siteIds], questions: requirement.questions.map((question) => ({ ...question, expectedEvidence: [...question.expectedEvidence] })) };
 }
 
-export async function planRequirementImport(mode: RequirementImportMode, file: File, existing: MasterRequirement[], sites: DashboardSite[]): Promise<RequirementImportPlan> {
+export async function planRequirementImport(mode: RequirementImportMode, file: File, existing: MasterRequirement[], siteIds: string[], sections: string[], subSections: string[]): Promise<RequirementImportPlan> {
   const rows = await getRows(file);
-  return planRequirementRows(mode, file.name, rows, existing, sites);
+  return planRequirementRows(mode, file.name, rows, existing, siteIds, sections, subSections);
 }
 
-export function planRequirementRows(mode: RequirementImportMode, fileName: string, rows: ImportTemplateRow[], existing: MasterRequirement[], sites: DashboardSite[]): RequirementImportPlan {
+// Site scope is no longer a per-row workbook column — the whole batch shares one scope, chosen
+// in the wizard's Site selection step (empty siteIds means "all sites"). Section/Sub-Section are
+// validated against the Config-curated lists rather than "whatever's already in existing data" —
+// that let a typo in an early import silently become a permanent, unquestioned section name.
+export function planRequirementRows(mode: RequirementImportMode, fileName: string, rows: ImportTemplateRow[], existing: MasterRequirement[], siteIds: string[], sections: string[], subSections: string[]): RequirementImportPlan {
   const issues: ImportIssue[] = [];
   const changes: ImportChange[] = [];
-  const knownSections = new Set(existing.map((item) => item.section.toLowerCase()));
+  const knownSections = new Set(sections.map((item) => item.toLowerCase()));
+  const knownSubSections = new Set(subSections.map((item) => item.toLowerCase()));
   const existingById = new Map(existing.map((item) => [item.id.toLowerCase(), item]));
   const upserts = new Map<string, MasterRequirement>();
   const seenQuestions = new Set<string>();
@@ -94,6 +87,7 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
 
   rows.forEach((row) => {
     const section = row.Section;
+    const subsection = row["Sub-Section"];
     const title = row["Requirement Text"];
     let requirementId = row["Requirement ID"];
     if (!requirementId && mode === "new") requirementId = `REQ-${String(++generatedRequirement).padStart(3, "0")}`;
@@ -104,16 +98,17 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     if (!requirementId) issues.push({ severity: "error", row: row.rowNumber, field: "Requirement ID", message: "Requirement ID is required for updates." });
     if (!questionId) issues.push({ severity: "error", row: row.rowNumber, field: "Question ID", message: "Question ID is required for updates." });
     if (!section) issues.push({ severity: "error", row: row.rowNumber, field: "Section", message: "Section is required." });
-    else if (knownSections.size && !knownSections.has(section.toLowerCase())) issues.push({ severity: "error", row: row.rowNumber, field: "Section", message: `Unknown section "${section}".` });
+    else if (!knownSections.has(section.toLowerCase())) issues.push({ severity: "error", row: row.rowNumber, field: "Section", message: `Unknown section "${section}". Add it from Administration > Config first.` });
+    if (!subsection) issues.push({ severity: "error", row: row.rowNumber, field: "Sub-Section", message: "Sub-Section is required." });
+    else if (!knownSubSections.has(subsection.toLowerCase())) issues.push({ severity: "error", row: row.rowNumber, field: "Sub-Section", message: `Unknown sub-section "${subsection}". Add it from Administration > Config first.` });
     if (!questionText && mode === "new") issues.push({ severity: "error", row: row.rowNumber, field: "Question / How to Meet Requirement", message: "Question text is required for a new requirement." });
     if (seenQuestions.has(pair)) issues.push({ severity: "error", row: row.rowNumber, field: "Question ID", message: `Duplicate requirement/question ID pair "${requirementId} / ${questionId}" in this workbook.` });
     seenQuestions.add(pair);
-    const siteIds = scopedSites(row["Applicable Sites"], sites, row.rowNumber, issues);
     const existingRequirement = existingById.get(requirementId.toLowerCase());
 
     if (mode === "new") {
       if (existingRequirement) { issues.push({ severity: "error", row: row.rowNumber, field: "Requirement ID", message: `Requirement "${requirementId}" already exists. Use Update requirements.` }); return; }
-      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, status: "Draft" as const, siteIds, version: row["Version"] || "1", questions: [] };
+      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, subsection, status: "Draft" as const, siteIds, questions: [] };
       if (draft.title && title && draft.title !== title) issues.push({ severity: "error", row: row.rowNumber, field: "Requirement Text", message: "Rows sharing a Requirement ID must use the same requirement text." });
       if (!upserts.has(requirementId)) changes.push({ requirementId, kind: "create-requirement", field: "Requirement", after: title });
       const question: MasterQuestion = { id: questionId, number: String(draft.questions.length + 1), text: questionText, expectedEvidence: evidence(row["Evidence Requirement"]), evidenceRequired: evidence(row["Evidence Requirement"]).length > 0 };
@@ -139,8 +134,9 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     }
     if (title && title !== draft.title) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Requirement text", before: draft.title, after: title }); draft.title = title; }
     if (section && section !== draft.section) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Section", before: draft.section, after: section }); draft.section = section; }
-    const rowVersion = row["Version"]; if (rowVersion && rowVersion !== draft.version) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Version", before: draft.version ?? "1", after: rowVersion }); draft.version = rowVersion; }
-    const scope = row["Applicable Sites"]; if (scope || !row["Applicable Sites"]) { const before = draft.siteIds.join(","); const after = siteIds.join(","); if (before !== after) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Applicable Sites", before, after: after || "All sites" }); draft.siteIds = siteIds; } }
+    if (subsection && subsection !== draft.subsection) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Sub-Section", before: draft.subsection, after: subsection }); draft.subsection = subsection; }
+    const beforeScope = draft.siteIds.join(","); const afterScope = siteIds.join(",");
+    if (beforeScope !== afterScope) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Applicable sites", before: beforeScope || "All sites", after: afterScope || "All sites" }); draft.siteIds = siteIds; }
     draft.status = "Draft"; upserts.set(draft.id, draft);
   });
 

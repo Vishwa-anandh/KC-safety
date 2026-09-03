@@ -632,7 +632,10 @@ export function ConfirmDialog({
       <section className={cx("dialog dialog--compact relative max-h-full w-full max-w-md overflow-x-hidden overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl animate-dialog-in dark:border-slate-700 dark:bg-slate-900")} role="alertdialog" aria-modal="true" aria-labelledby={titleId}>
         <div className={cx("dialog__header flex items-center justify-between gap-4 border-b border-slate-200 p-4 dark:border-slate-700")}>
           <div><p className={cx(eyebrowClasses)}>{eyebrow}</p><h2 id={titleId} className={cx("mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100")}>{title}</h2></div>
-          <IconButton label={cancelLabel} onClick={onCancel}><X size={20} /></IconButton>
+          {/* This button sits at the dialog's top-right corner, so its default centered-below
+              tooltip overflows past the right edge — the dialog clips that with overflow-x:
+              hidden. Pointing it left keeps the tooltip inside the dialog's own width. */}
+          <IconButton label={cancelLabel} tooltipPlacement="left" onClick={onCancel}><X size={20} /></IconButton>
         </div>
         <p className={cx("dialog-context mx-4 mt-4 border-l-3 border-kc-blue-500 py-1 pl-3 text-sm text-slate-700 dark:border-kc-blue-400 dark:text-slate-300")}>{body}</p>
         <div className={cx("dialog__footer flex flex-col-reverse items-stretch gap-4 border-t border-slate-200 p-4 md:flex-row md:items-center md:justify-end dark:border-slate-700")}>

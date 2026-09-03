@@ -16,8 +16,11 @@ import {
   FileText,
   Filter,
   History,
+  Layers,
   ListChecks,
+  ListTree,
   MapPin,
+  Rows3,
   MoreHorizontal,
   Menu,
   Paperclip,
@@ -264,7 +267,7 @@ const importCardClass = "import-card mt-5 rounded-xl border border-slate-200 bg-
 const importStageClass = "import-stage min-h-0 p-4 md:p-6";
 const importStageHeadingClass = "import-stage__heading mb-5 flex max-w-3xl gap-3.5";
 const stageIconClass = "stage-icon grid size-12 flex-none place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300";
-const dropzoneClass = "dropzone grid min-h-65 place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
+const dropzoneClass = "dropzone grid min-h-65 w-full place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
 const selectedFileClass = "selected-file flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950";
 const inspectionGridClass = "inspection-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
 const inspectionTileClass = "grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900";
@@ -327,7 +330,7 @@ export function AdminImportHistoryScreen() {
 
 export function AdminSitesScreen() {
   const navigate = useNavigate();
-  const { masterRequirements, siteUsers, sites, regions: configRegions, segments: configSegments, addSite, updateSite, importSites } = useAdministration();
+  const { masterRequirements, siteUsers, sites, regions: configRegions, segments: configSegments, addSite, updateSite, importSites, addRegion, addSegment, addSiteUser } = useAdministration();
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("all");
   const [editing, setEditing] = useState<DashboardSite | "new" | null>(null);
@@ -375,7 +378,9 @@ export function AdminSitesScreen() {
         const textPromise = isWorkbook
           ? file.arrayBuffer().then((buffer) => {
             const workbook = XLSX.read(buffer, { type: "array" });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            // Prefer the named "Import Template" sheet — the styled workbook (like the Master
+            // Requirement template) puts Instructions first, so sheet order alone isn't reliable.
+            const sheet = workbook.Sheets["Import Template"] ?? workbook.Sheets[workbook.SheetNames[0]];
             return sheet ? XLSX.utils.sheet_to_csv(sheet) : "";
           })
           : file.text();
@@ -385,13 +390,42 @@ export function AdminSitesScreen() {
             setFeedback({ tone: "warning", title: "Nothing imported", body: invalid.length ? invalid.join(" ") : `No rows found. Expected columns: ${SITE_CSV_COLUMNS}.` });
             return;
           }
-          const { added, skipped } = importSites(parsed);
+          const { added, skipped } = importSites(parsed.map((row) => row.site));
+
+          // Region/Segment are free text on the site record itself, but the Config screen's
+          // dropdown lists are what "Create site" offers later — register any values this
+          // import introduced so they show up there too instead of only existing as raw text.
+          const newRegions = new Set(parsed.map((row) => row.site.region).filter((value) => !configRegions.includes(value)));
+          const newSegments = new Set(parsed.map((row) => row.site.segment).filter((value) => !configSegments.includes(value)));
+          newRegions.forEach((value) => addRegion(value));
+          newSegments.forEach((value) => addSegment(value));
+
+          // Users listed against a row whose site code already existed still get attached — to
+          // that existing site's real id, which may not match the freshly-slugified one we
+          // computed for a brand-new row.
+          const seenEmails = new Set(siteUsers.map((user) => user.email.toLowerCase()));
+          let usersAdded = 0;
+          const skippedUsers: string[] = [];
+          parsed.forEach((row) => {
+            const existingSite = sites.find((site) => site.code.toLowerCase() === row.site.code.toLowerCase());
+            const targetSiteId = existingSite ? existingSite.id : row.site.id;
+            row.users.forEach((user) => {
+              const emailKey = user.email.toLowerCase();
+              if (seenEmails.has(emailKey)) { skippedUsers.push(user.email); return; }
+              seenEmails.add(emailKey);
+              addSiteUser({ id: `su-${Date.now().toString(36)}-${usersAdded}`, name: user.name, email: user.email, role: "site-contributor", siteId: targetSiteId, status: "Active" });
+              usersAdded += 1;
+            });
+          });
+
           const notes = [
             added ? `${added} site${added === 1 ? "" : "s"} added.` : "No new sites added.",
             skipped.length ? `Skipped ${skipped.length} existing site code${skipped.length === 1 ? "" : "s"}: ${skipped.join(", ")}.` : "",
+            usersAdded ? `${usersAdded} site user${usersAdded === 1 ? "" : "s"} added.` : "",
+            skippedUsers.length ? `Skipped ${skippedUsers.length} user${skippedUsers.length === 1 ? "" : "s"} with an email already in use: ${skippedUsers.join(", ")}.` : "",
             ...invalid,
           ].filter(Boolean);
-          setFeedback({ tone: added ? "success" : "warning", title: added ? "Sites imported" : "Import completed with no changes", body: notes.join(" ") });
+          setFeedback({ tone: added || usersAdded ? "success" : "warning", title: added || usersAdded ? "Import complete" : "Import completed with no changes", body: notes.join(" ") });
         });
       }} />
       {feedback && <InlineMessage tone={feedback.tone} title={feedback.title}>{feedback.body}</InlineMessage>}
@@ -450,7 +484,7 @@ export function AdminSitesScreen() {
   );
 }
 
-/** One card in the Config screen: an add form plus the current values as removable pills. */
+/** One panel in the Config screen: an add form plus the current values as removable pills. */
 function ConfigListCard({
   title,
   description,
@@ -458,6 +492,7 @@ function ConfigListCard({
   values,
   onAdd,
   onRemove,
+  removalNote = "Existing records that already use it keep their current value.",
 }: {
   title: string;
   description: string;
@@ -465,6 +500,7 @@ function ConfigListCard({
   values: string[];
   onAdd: (value: string) => void;
   onRemove: (value: string) => void;
+  removalNote?: string;
 }) {
   const [draft, setDraft] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
@@ -513,7 +549,7 @@ function ConfigListCard({
         <ConfirmDialog
           eyebrow="Config"
           title={`Remove "${removing}"?`}
-          body="This removes the value from the dropdown. Sites that already use it keep their existing value."
+          body={`This removes the value from the dropdown. ${removalNote}`}
           confirmLabel="Remove value"
           cancelLabel="Keep value"
           onCancel={() => setRemoving(null)}
@@ -524,14 +560,66 @@ function ConfigListCard({
   );
 }
 
+type ConfigListKey = "regions" | "segments" | "sections" | "subsections";
+
 export function AdminConfigScreen() {
-  const { regions, segments, addRegion, removeRegion, addSegment, removeSegment } = useAdministration();
+  const {
+    regions, segments, addRegion, removeRegion, addSegment, removeSegment,
+    masterSections, masterSubSections, addMasterSection, removeMasterSection, addMasterSubSection, removeMasterSubSection,
+  } = useAdministration();
+  const [activeKey, setActiveKey] = useState<ConfigListKey>("regions");
+
+  const lists: Record<ConfigListKey, { label: string; icon: typeof MapPin; count: number; card: React.ReactNode }> = {
+    regions: {
+      label: "Regions", icon: MapPin, count: regions.length,
+      card: <ConfigListCard title="Regions" description="Shown in the Region field when creating or editing a site." placeholder="For example, North America" values={regions} onAdd={addRegion} onRemove={removeRegion} removalNote="Sites that already use it keep their current value." />,
+    },
+    segments: {
+      label: "Segments", icon: Layers, count: segments.length,
+      card: <ConfigListCard title="Segments" description="Shown in the Segment field when creating or editing a site." placeholder="For example, Family Care" values={segments} onAdd={addSegment} onRemove={removeSegment} removalNote="Sites that already use it keep their current value." />,
+    },
+    sections: {
+      label: "Sections", icon: ListTree, count: masterSections.length,
+      card: <ConfigListCard title="Sections" description="Shown in the Section field when creating or editing a master requirement, and validated against on import." placeholder="For example, Leadership & Engagement" values={masterSections} onAdd={addMasterSection} onRemove={removeMasterSection} removalNote="Master requirements that already use it keep their current value." />,
+    },
+    subsections: {
+      label: "Sub-Sections", icon: Rows3, count: masterSubSections.length,
+      card: <ConfigListCard title="Sub-Sections" description="Shown in the Sub-Section field when creating or editing a master requirement, and validated against on import." placeholder="For example, 1.2 Leadership commitment" values={masterSubSections} onAdd={addMasterSubSection} onRemove={removeMasterSubSection} removalNote="Master requirements that already use it keep their current value." />,
+    },
+  };
+
   return (
     <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
-      <PageHeader eyebrow="Administration" title="Config" description="Manage the shared dropdown values used on site records, such as regions and segments." />
-      <div className={cx("grid grid-cols-1 gap-5 lg:grid-cols-2")}>
-        <ConfigListCard title="Regions" description="Shown in the Region field when creating or editing a site." placeholder="For example, North America" values={regions} onAdd={addRegion} onRemove={removeRegion} />
-        <ConfigListCard title="Segments" description="Shown in the Segment field when creating or editing a site." placeholder="For example, Family Care" values={segments} onAdd={addSegment} onRemove={removeSegment} />
+      <PageHeader eyebrow="Administration" title="Config" description="Manage the shared dropdown values used on site and master requirement records." />
+      <div className={cx("config-shell flex min-w-0 items-start gap-4 max-lg:flex-col lg:flex-row")}>
+        <aside className={cx("config-index grid w-full flex-none gap-1.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm lg:w-65")} style={{ background: "var(--surface-panel)" }}>
+          {(Object.keys(lists) as ConfigListKey[]).map((key) => {
+            const item = lists[key];
+            const Icon = item.icon;
+            const active = key === activeKey;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveKey(key)}
+                className={cx(
+                  "config-index__item flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border border-transparent p-2 text-left text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-99 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+                  active && "config-index__item--active border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+                )}
+                aria-current={active ? "true" : undefined}
+              >
+                <span className={cx("grid size-8.5 flex-none place-items-center rounded-lg bg-slate-50 text-slate-500 dark:bg-slate-800 dark:text-slate-400")}><Icon size={18} /></span>
+                <span className={cx("grid min-w-0 flex-1")}>
+                  <strong className={cx("overflow-hidden text-xs text-ellipsis whitespace-nowrap")}>{item.label}</strong>
+                </span>
+                <span className={cx(pillBaseClass, pillTone.neutral, "flex-none")}>{item.count}</span>
+              </button>
+            );
+          })}
+        </aside>
+        <div className={cx("config-content grid min-w-0 flex-1 gap-3.5")}>
+          {lists[activeKey].card}
+        </div>
       </div>
     </div>
   );
@@ -568,7 +656,6 @@ export function AdminImportBatchPreviewScreen() {
               <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
                 <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
                 <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{item.title}</span></div>
-                <span className={cx(pillBaseClass, pillTone.neutral)}>Version {item.version || "1"}</span>
                 <span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span>
               </div>
               <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
@@ -613,9 +700,21 @@ export function AdminImportBatchPreviewScreen() {
   );
 }
 
+// "Requirement ID" and "Question ID" hold short codes (e.g. LE-01, LE-01-Q1) so they need far
+// less room than the free-text columns; Section/Sub-Section values are short phrases that were
+// already wrapping onto two lines at the wider size. Trimming both keeps the "Workbook rows"
+// table from needing a horizontal scrollbar at a normal admin viewport width.
+const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID"]);
+const mediumWorkbookColumns = new Set<string>(["Section", "Sub-Section"]);
+function workbookColumnWidthClass(column: string) {
+  if (compactWorkbookColumns.has(column)) return "min-w-16";
+  if (mediumWorkbookColumns.has(column)) return "min-w-28";
+  return "min-w-32";
+}
+
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify } = useAdministration();
+  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify, masterSections, masterSubSections } = useAdministration();
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<RequirementImportMode | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -630,6 +729,14 @@ export function AdminImportsScreen() {
   const [result, setResult] = useState<ImportHistoryRecord | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const siteOptions = buildSiteOptions(sites);
+  // Spreadsheet-style range selection over the "Workbook rows" cells, for copy/paste across
+  // multiple cells at once. Coordinates are indexes into editableRows / importTemplateColumns,
+  // not row numbers/column names, so a pasted block can be applied purely by offset.
+  const [cellSelection, setCellSelection] = useState<{ anchorRow: number; anchorCol: number; focusRow: number; focusCol: number } | null>(null);
+  const isSelectingCellsRef = useRef(false);
+  // The whole batch shares one site scope, chosen in the wizard's Site selection step — not a
+  // per-row workbook value.
+  const resolvedSiteIds = siteScope === "specific" ? scopedSiteIds : [];
 
   useEffect(() => {
     if (!result || !publishNow || result.publishStatus === "Published") return;
@@ -637,18 +744,25 @@ export function AdminImportsScreen() {
     setResult((current) => current ? { ...current, publishStatus: "Published" } : current);
   }, [publishImportBatch, publishNow, result]);
 
+  // Ends a drag-selection wherever the mouse button is released, even outside the table.
+  useEffect(() => {
+    function endCellDrag() { isSelectingCellsRef.current = false; }
+    window.addEventListener("mouseup", endCellDrag);
+    return () => window.removeEventListener("mouseup", endCellDrag);
+  }, []);
+
   async function selectFile(selected?: File) {
     if (!selected) return;
     if (!mode) { setFileError("Choose New requirements or Update requirements before uploading a workbook."); return; }
     if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setPlan(null); setFileError("Choose the EHS360 Excel .xlsx import template."); return; }
     if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The import file must be 25 MB or smaller."); return; }
-    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, sites); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
+    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds, masterSections, masterSubSections); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
     catch (error) { setFile(null); setPlan(null); setFileError(error instanceof Error ? error.message : "The workbook could not be read."); }
   }
   function updatePreviewRows(nextRows: ImportTemplateRow[]) {
     setEditableRows(nextRows);
     if (!mode || !file) return;
-    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, sites);
+    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds, masterSections, masterSubSections);
     setPlan(nextPlan);
     setSelectedRowNumbers((current) => mode === "new"
       ? nextPlan.rows.map((row) => row.rowNumber)
@@ -666,21 +780,85 @@ export function AdminImportsScreen() {
       : current.filter((number) => !range.includes(number)));
     lastSelectedRowNumber.current = rowNumber;
   }
+  function cellSelectionBounds(selection: { anchorRow: number; anchorCol: number; focusRow: number; focusCol: number }) {
+    return {
+      minRow: Math.min(selection.anchorRow, selection.focusRow),
+      maxRow: Math.max(selection.anchorRow, selection.focusRow),
+      minCol: Math.min(selection.anchorCol, selection.focusCol),
+      maxCol: Math.max(selection.anchorCol, selection.focusCol),
+    };
+  }
+  function isCellSelected(rowIndex: number, colIndex: number) {
+    if (!cellSelection) return false;
+    const bounds = cellSelectionBounds(cellSelection);
+    return rowIndex >= bounds.minRow && rowIndex <= bounds.maxRow && colIndex >= bounds.minCol && colIndex <= bounds.maxCol;
+  }
+  function startCellSelection(rowIndex: number, colIndex: number, extend: boolean) {
+    isSelectingCellsRef.current = true;
+    setCellSelection((current) => extend && current
+      ? { ...current, focusRow: rowIndex, focusCol: colIndex }
+      : { anchorRow: rowIndex, anchorCol: colIndex, focusRow: rowIndex, focusCol: colIndex });
+  }
+  function extendCellSelection(rowIndex: number, colIndex: number) {
+    if (!isSelectingCellsRef.current) return;
+    setCellSelection((current) => current ? { ...current, focusRow: rowIndex, focusCol: colIndex } : current);
+  }
+  // Only intercepted when the selection spans more than one cell — a single-cell selection lets
+  // the browser's normal in-textarea copy/paste behave exactly as expected.
+  function handleWorkbookCopy(event: React.ClipboardEvent<HTMLDivElement>) {
+    if (!cellSelection) return;
+    const bounds = cellSelectionBounds(cellSelection);
+    if (bounds.minRow === bounds.maxRow && bounds.minCol === bounds.maxCol) return;
+    event.preventDefault();
+    const tsv = [];
+    for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex++) {
+      const cols = [];
+      for (let colIndex = bounds.minCol; colIndex <= bounds.maxCol; colIndex++) cols.push(editableRows[rowIndex]?.[importTemplateColumns[colIndex]] ?? "");
+      tsv.push(cols.join("\t"));
+    }
+    event.clipboardData.setData("text/plain", tsv.join("\n"));
+  }
+  function handleWorkbookPaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    if (!cellSelection) return;
+    const text = event.clipboardData.getData("text/plain");
+    if (!text) return;
+    const lines = text.replace(/\r/g, "").split("\n");
+    if (lines.at(-1) === "") lines.pop();
+    const grid = lines.map((line) => line.split("\t"));
+    // A single value (no tabs, one line) isn't a "paste a block" gesture — let it land in
+    // whichever cell natively has focus instead.
+    if (grid.length <= 1 && (grid[0]?.length ?? 0) <= 1) return;
+    event.preventDefault();
+    const bounds = cellSelectionBounds(cellSelection);
+    const next = editableRows.map((row) => ({ ...row }));
+    grid.forEach((line, rowOffset) => {
+      const targetRow = bounds.minRow + rowOffset;
+      if (targetRow >= next.length) return;
+      line.forEach((value, colOffset) => {
+        const targetCol = bounds.minCol + colOffset;
+        if (targetCol >= importTemplateColumns.length) return;
+        next[targetRow][importTemplateColumns[targetCol]] = value;
+      });
+    });
+    updatePreviewRows(next);
+    setCellSelection({
+      anchorRow: bounds.minRow,
+      anchorCol: bounds.minCol,
+      focusRow: Math.min(next.length - 1, bounds.minRow + grid.length - 1),
+      focusCol: Math.min(importTemplateColumns.length - 1, bounds.minCol + (grid[0]?.length ?? 1) - 1),
+    });
+  }
   function advance() {
     if (step === 3) {
-      // Site selection applies as one shared scope for the whole batch, overriding whatever the
-      // workbook's own "Applicable Sites" column held for every row — the batch is scoped as a
-      // unit, not row by row.
-      const scopeValue = siteScope === "all" ? "" : scopedSiteIds.map((id) => sites.find((site) => site.id === id)?.code).filter(Boolean).join(", ");
-      const nextRows = editableRows.map((row) => ({ ...row, "Applicable Sites": scopeValue }));
-      setEditableRows(nextRows);
-      if (mode && file) setPlan(planRequirementRows(mode, file.name, nextRows, masterRequirements, sites));
+      // Site selection applies as one shared scope for the whole batch — every requirement in
+      // this import gets the same siteIds, not a per-row workbook value.
+      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds, masterSections, masterSubSections));
       setStep(4);
       return;
     }
     if (step === 4 && selectedPlan && !selectedPlan.issues.some((issue) => issue.severity === "error")) {
       const selected = new Set(selectedRowNumbers);
-      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, sites);
+      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, masterSubSections);
       const record = submitImportBatch(stagedPlan);
       notify({
         title: `${record.fileName} imported`,
@@ -697,7 +875,7 @@ export function AdminImportsScreen() {
     setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setSiteScope("all"); setScopedSiteIds([]); setResult(null);
   }
   const selectedPlan = mode && file
-    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, sites)
+    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, masterSubSections)
     : plan;
   // Continue is blocked while any *selected* row has an error — but with nothing shown near the
   // table, that block was silent (the user could select every row and still not know why the
@@ -766,11 +944,29 @@ export function AdminImportsScreen() {
               <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Validation findings</span></div>
             </div>
             </div>
-            <div className={cx("mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700")} style={{ maxHeight: "65vh" }}>
-              <div className={cx("sticky top-0 left-0 z-20 flex min-w-full flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Workbook rows</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>Edit any import-template value, add a row, or remove a row before release. Select multiple rows to apply together.</p></div><div className={cx("flex flex-wrap items-center gap-2")}><span className={cx("text-xs font-semibold text-slate-600 dark:text-slate-300")}>{selectedRowNumbers.length} of {editableRows.length} selected</span><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers(editableRows.map((row) => row.rowNumber))}>Select all</Button><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers([])}>Clear</Button><Button variant="secondary" size="compact" icon={<Plus size={16} />} onClick={() => updatePreviewRows([...editableRows, { ...Object.fromEntries(importTemplateColumns.map((column) => [column, ""])), rowNumber: Math.max(4, ...editableRows.map((row) => row.rowNumber)) + 1 } as ImportTemplateRow])}>Add row</Button></div></div>
-              <table className={cx("min-w-400 text-left text-xs")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx("min-w-36 p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => {
+            <div className={cx("mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700")} style={{ maxHeight: "65vh" }} onCopy={handleWorkbookCopy} onPaste={handleWorkbookPaste}>
+              <div className={cx("sticky top-0 left-0 z-20 flex min-w-full flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Workbook rows</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>Edit any import-template value, add a row, or remove a row before release. Select multiple rows to apply together, or drag/shift-click across cells to copy and paste a range.</p></div><div className={cx("flex flex-wrap items-center gap-2")}><span className={cx("text-xs font-semibold text-slate-600 dark:text-slate-300")}>{selectedRowNumbers.length} of {editableRows.length} selected</span><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers(editableRows.map((row) => row.rowNumber))}>Select all</Button><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers([])}>Clear</Button><Button variant="secondary" size="compact" icon={<Plus size={16} />} onClick={() => updatePreviewRows([...editableRows, { ...Object.fromEntries(importTemplateColumns.map((column) => [column, ""])), rowNumber: Math.max(4, ...editableRows.map((row) => row.rowNumber)) + 1 } as ImportTemplateRow])}>Add row</Button></div></div>
+              <table className={cx("w-full text-left text-xs select-none")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx(workbookColumnWidthClass(column), "p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => {
                 const rowIssues = selectedRowNumbers.includes(row.rowNumber) ? selectedErrorIssues.filter((issue) => issue.row === row.rowNumber) : [];
-                return <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t align-top", rowIssues.length ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40" : "border-slate-100 dark:border-slate-800")}><td className={cx("sticky left-0 p-2", rowIssues.length ? "bg-red-50 dark:bg-red-950/40" : "bg-white dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold", rowIssues.length ? "text-red-700 dark:text-red-300" : "text-slate-500 dark:text-slate-400")}><span className={cx("inline-flex items-center gap-1")}>{rowIssues.length > 0 && <AlertCircle size={13} className={cx("flex-none")} aria-label={rowIssues.map((issue) => issue.message).join(" ")} />}{rowIndex + 1}</span></td>{importTemplateColumns.map((column) => <td key={column} className={cx("p-1.5")}><textarea rows={2} className={cx("min-w-36 resize-y rounded-md border p-1.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100 dark:bg-slate-900 dark:text-slate-100", rowIssues.some((issue) => issue.field === column) ? "border-red-400 dark:border-red-700" : "border-slate-200 bg-white dark:border-slate-600")} value={row[column]} onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))} /></td>)}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>;
+                return <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t align-top", rowIssues.length ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40" : "border-slate-100 dark:border-slate-800")}><td className={cx("sticky left-0 p-2", rowIssues.length ? "bg-red-50 dark:bg-red-950/40" : "bg-white dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold", rowIssues.length ? "text-red-700 dark:text-red-300" : "text-slate-500 dark:text-slate-400")}><span className={cx("inline-flex items-center gap-1")}>{rowIssues.length > 0 && <AlertCircle size={13} className={cx("flex-none")} aria-label={rowIssues.map((issue) => issue.message).join(" ")} />}{rowIndex + 1}</span></td>{importTemplateColumns.map((column, colIndex) => {
+                  const selected = isCellSelected(rowIndex, colIndex);
+                  return <td key={column} className={cx("p-1.5")}><textarea
+                    rows={2}
+                    className={cx(
+                      "w-full resize-y rounded-md border p-1.5 text-xs text-slate-900 outline-none dark:bg-slate-900 dark:text-slate-100",
+                      workbookColumnWidthClass(column),
+                      rowIssues.some((issue) => issue.field === column) ? "border-red-400 dark:border-red-700" : "border-slate-200 bg-white dark:border-slate-600",
+                      // A selection ring stays on regardless of :focus; a plain single-cell click
+                      // instead gets the ordinary focus ring — never both at once on the same
+                      // property, so there's nothing for Tailwind's cascade order to arbitrate.
+                      selected ? "ring-2 ring-inset ring-kc-blue-500 dark:ring-kc-blue-400" : "focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100",
+                    )}
+                    value={row[column]}
+                    onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))}
+                    onMouseDown={(event) => startCellSelection(rowIndex, colIndex, event.shiftKey)}
+                    onMouseEnter={() => extendCellSelection(rowIndex, colIndex)}
+                  /></td>;
+                })}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>;
               })}</tbody></table>
             </div>
             {selectedErrorIssues.length > 0 && (
@@ -788,7 +984,7 @@ export function AdminImportsScreen() {
           {step === 3 && <>
             <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><MapPin size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 4 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose which sites this batch applies to</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>This scope applies to every selected requirement in this batch and overrides any Applicable Sites value already in the workbook.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 4 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose which sites this batch applies to</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>This scope applies to every selected requirement in this batch.</p></div>
             </div>
             <div className={cx("grid gap-3 md:grid-cols-2")}>
               <button type="button" onClick={() => setSiteScope("all")} className={cx("rounded-xl border p-4 text-left", siteScope === "all" ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 dark:border-slate-700")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Apply to all sites</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Every requirement in this batch applies to every site.</span></button>
@@ -1093,14 +1289,13 @@ export function AdminRequirementAuditScreen() {
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
-  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites, masterSections, masterSubSections } = useAdministration();
   const isNew = !requirementId;
   const existing = requirementId ? masterRequirements.find((item) => item.id === requirementId) : undefined;
-  const sections = [...new Set(masterRequirements.map((item) => item.section))];
-  const defaultSection = sections[0] ?? "";
+  const defaultSection = masterSections[0] ?? "";
+  const defaultSubSection = masterSubSections[0] ?? "";
   const siteOptions = buildSiteOptions(sites);
-  const sectionOptions = sections.map((value) => ({ value, label: value }));
-  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, status: "Draft", siteIds: [], questions: [] });
+  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
@@ -1110,10 +1305,10 @@ export function AdminRequirementDetailScreen() {
   // from the route record keeps the header, fields, and left navigator in lockstep after a
   // requirement is selected from the navigator.
   useEffect(() => {
-    setDraft(existing ?? { id: "", title: "", section: defaultSection, status: "Draft", siteIds: [], questions: [] });
+    setDraft(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
     setSubmitted(false);
     setPendingNavigation(null);
-  }, [defaultSection, existing, requirementId]);
+  }, [defaultSection, defaultSubSection, existing, requirementId]);
 
   if (requirementId && !existing) {
     return (
@@ -1125,7 +1320,11 @@ export function AdminRequirementDetailScreen() {
   }
 
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.questions.every((question) => question.text.trim()));
+  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.subsection.trim() && draft.questions.every((question) => question.text.trim()));
+  // Union the draft's current value in, same as the site form does for Region/Segment — editing
+  // an older requirement whose section was since removed from Config shouldn't silently blank it.
+  const sectionOptions = [...new Set([...masterSections, ...(draft.section ? [draft.section] : [])])].map((value) => ({ value, label: value }));
+  const subSectionOptions = [...new Set([...masterSubSections, ...(draft.subsection ? [draft.subsection] : [])])].map((value) => ({ value, label: value }));
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
   const navigatorCurrent = masterRequirements.find((item) => item.id === requirementId) ?? draft;
 
@@ -1158,6 +1357,7 @@ export function AdminRequirementDetailScreen() {
       id: trimmedId,
       title: draft.title.trim(),
       section: draft.section.trim(),
+      subsection: draft.subsection.trim(),
       questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
     };
     if (isNew) addMasterRequirement(cleaned); else updateMasterRequirement(cleaned);
@@ -1191,6 +1391,7 @@ export function AdminRequirementDetailScreen() {
                 aria-label="Requirement ID"
               />
               <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
+              <Select label="Sub-Section" value={draft.subsection} onChange={(value) => update("subsection", value)} options={subSectionOptions} />
             </div>
             <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
               <div className={cx("min-w-0 md:flex-1")}>
@@ -1264,7 +1465,7 @@ export function AdminRequirementDetailScreen() {
 export function AdminRequirementsScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites, masterSections } = useAdministration();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
   const [status, setStatus] = useState("Published and draft");
@@ -1289,7 +1490,6 @@ export function AdminRequirementsScreen() {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [menu]);
-  const sections = [...new Set(masterRequirements.map((item) => item.section))];
   const rows = masterRequirements.filter((item) =>
     (`${item.title} ${item.id}`.toLowerCase().includes(query.toLowerCase())) &&
     (section === "All sections" || item.section === section) &&
@@ -1324,7 +1524,7 @@ export function AdminRequirementsScreen() {
       <section className={cx(tableCardClass)}>
         <div className={cx(dashboardFilterBarClass)} data-tour="requirement-filters">
           <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
-          <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...sections].map((value) => ({ value, label: value }))} />
+          <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
@@ -1504,7 +1704,8 @@ export function AdminSiteDetailScreen() {
   );
 }
 
-const SITE_CSV_COLUMNS = "Site name,Site code,Region,Segment";
+const SITE_TEMPLATE_COLUMNS = ["Site Name", "Site Code", "Region", "Segment", "User 1 Name", "User 1 Email", "User 2 Name", "User 2 Email", "User 3 Name", "User 3 Email"] as const;
+const SITE_CSV_COLUMNS = SITE_TEMPLATE_COLUMNS.join(", ");
 
 function slugifySiteId(code: string) {
   return code.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `site-${Date.now().toString().slice(-6)}`;
@@ -1579,20 +1780,28 @@ function SiteDialog({ site, existing, regions, segments, onClose, onSave }: { si
   );
 }
 
+interface ParsedSiteRow {
+  site: DashboardSite;
+  users: { name: string; email: string }[];
+}
 interface SiteImportOutcome {
-  parsed: DashboardSite[];
+  parsed: ParsedSiteRow[];
   invalid: string[];
 }
 
 /** Minimal CSV reader: handles quoted fields and embedded commas, which is all the site
- *  columns need. Rows missing any required column are reported rather than silently dropped. */
+ *  columns need. The styled .xlsx template puts a title/description/blank row before the real
+ *  header (matching the Master Requirement Import Template's layout), so this searches for the
+ *  header row by column name rather than assuming it's the first line — a plain CSV export
+ *  (header on line 1) still parses the same way. Rows missing a required column are reported
+ *  rather than silently dropped; a user slot needs both its name and email or it's skipped. */
 function parseSitesCsv(text: string): SiteImportOutcome {
   // Excel writes a UTF-8 BOM; strip it by code point rather than embedding the literal
   // character in a regex, which trips the no-irregular-whitespace lint rule.
   const body = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
-  const rows = body.split(/\r?\n/).filter((line) => line.trim());
+  const lines = body.split(/\r?\n/).filter((line) => line.trim());
   const invalid: string[] = [];
-  const parsed: DashboardSite[] = [];
+  const parsed: ParsedSiteRow[] = [];
   const splitRow = (line: string) => {
     const cells: string[] = [];
     let cell = "";
@@ -1606,12 +1815,40 @@ function parseSitesCsv(text: string): SiteImportOutcome {
     cells.push(cell);
     return cells.map((value) => value.trim());
   };
-  const startsWithHeader = rows[0]?.toLowerCase().includes("site name") || rows[0]?.toLowerCase().includes("site code");
-  rows.slice(startsWithHeader ? 1 : 0).forEach((line, index) => {
-    const [name, code, region, segment] = splitRow(line);
-    const rowNumber = index + (startsWithHeader ? 2 : 1);
-    if (!name || !code || !region || !segment) { invalid.push(`Row ${rowNumber}: needs all four columns (${SITE_CSV_COLUMNS}).`); return; }
-    parsed.push({ ...blankSite(), id: slugifySiteId(code), name, code, region, segment });
+  // The styled template marks required columns with a trailing " *" (e.g. "Site Name *"),
+  // matching the Master Requirement Import Template's own convention — strip it before matching.
+  const stripRequiredMark = (cell: string) => cell.trim().replace(/\s*\*$/, "");
+  const rows = lines.map(splitRow);
+  const headerIndex = rows.findIndex((row) => {
+    const normalized = row.map((cell) => stripRequiredMark(cell).toLowerCase());
+    return normalized.includes("site name") && normalized.includes("site code");
+  });
+  if (headerIndex < 0) return { parsed: [], invalid: [] };
+  const headers = rows[headerIndex].map((cell) => stripRequiredMark(cell).toLowerCase());
+  const columnIndex = (column: string) => headers.indexOf(column.toLowerCase());
+  const nameIndex = columnIndex("Site Name");
+  const codeIndex = columnIndex("Site Code");
+  const regionIndex = columnIndex("Region");
+  const segmentIndex = columnIndex("Segment");
+  const userSlots = [1, 2, 3].map((slot) => ({ nameIndex: columnIndex(`User ${slot} Name`), emailIndex: columnIndex(`User ${slot} Email`) }));
+
+  rows.slice(headerIndex + 1).forEach((cells, offset) => {
+    if (!cells.some((cell) => cell)) return; // fully blank row — a spacer, not data
+    const rowNumber = headerIndex + offset + 2; // 1-based spreadsheet row number
+    const name = cells[nameIndex] ?? "";
+    const code = cells[codeIndex] ?? "";
+    const region = cells[regionIndex] ?? "";
+    const segment = cells[segmentIndex] ?? "";
+    if (!name || !code || !region || !segment) { invalid.push(`Row ${rowNumber}: needs Site Name, Site Code, Region, and Segment.`); return; }
+    const users: { name: string; email: string }[] = [];
+    userSlots.forEach(({ nameIndex: userNameIndex, emailIndex: userEmailIndex }) => {
+      const userName = (cells[userNameIndex] ?? "").trim();
+      const userEmail = (cells[userEmailIndex] ?? "").trim();
+      if (!userName && !userEmail) return;
+      if (!userName || !userEmail) { invalid.push(`Row ${rowNumber}: a user needs both a name and an email — that user was skipped.`); return; }
+      users.push({ name: userName, email: userEmail });
+    });
+    parsed.push({ site: { ...blankSite(), id: slugifySiteId(code), name, code, region, segment }, users });
   });
   return { parsed, invalid };
 }

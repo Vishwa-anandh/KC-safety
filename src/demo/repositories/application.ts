@@ -4,6 +4,8 @@ import {
   dashboardSites,
   initialSiteContacts,
   masterRequirements,
+  masterSections,
+  masterSubSections,
   notifications,
   ownerRecords,
   regions,
@@ -266,6 +268,8 @@ function freshSnapshot(): AppSnapshot {
     lastUpdated: new Date().toISOString(),
     regions: structuredClone(regions),
     segments: structuredClone(segments),
+    masterSections: structuredClone(masterSections),
+    masterSubSections: structuredClone(masterSubSections),
   };
 }
 

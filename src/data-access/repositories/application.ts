@@ -9,7 +9,7 @@ const emptySnapshot: AppSnapshot = {
     siteManager: "", siteManagerEmail: "", environmentalLeader: "", environmentalLeaderEmail: "", healthSafetyLeader: "", healthSafetyLeaderEmail: "", occupationalHealthNurse: "", occupationalHealthNurseEmail: "", regionalHealthSafetyLeader: "", regionalHealthSafetyEmail: "", regionalEnvironmentalLeader: "", regionalEnvironmentalEmail: "", regionalOccupationalHealthLeader: "", regionalOccupationalHealthEmail: "",
   }, ownerRecords: [], masterRequirements: [], requirementAuditLog: [], importHistory: [], siteUsers: [], sites: [], notifications: [],
   assignedSite: { name: "", code: "", region: "", segment: "", updated: "" }, lastUpdated: new Date().toISOString(),
-  regions: [], segments: [],
+  regions: [], segments: [], masterSections: [], masterSubSections: [],
 };
 
 const apiApplicationRepository: AppDataRepository = {

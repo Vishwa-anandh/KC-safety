@@ -91,6 +91,10 @@ interface ApplicationDataValue extends PersistedState {
   removeRegion: (region: string) => void;
   addSegment: (segment: string) => void;
   removeSegment: (segment: string) => void;
+  addMasterSection: (section: string) => void;
+  removeMasterSection: (section: string) => void;
+  addMasterSubSection: (subsection: string) => void;
+  removeMasterSubSection: (subsection: string) => void;
   notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
   markNotificationRead: (id: string, role: SiteUserRole) => void;
   markAllNotificationsRead: (role: SiteUserRole) => void;
@@ -483,6 +487,22 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     touch((current) => ({ ...current, segments: current.segments.filter((item) => item !== segment) }));
   }
 
+  function addMasterSection(section: string) {
+    touch((current) => current.masterSections.includes(section) ? current : { ...current, masterSections: [...current.masterSections, section].sort() });
+  }
+
+  function removeMasterSection(section: string) {
+    touch((current) => ({ ...current, masterSections: current.masterSections.filter((item) => item !== section) }));
+  }
+
+  function addMasterSubSection(subsection: string) {
+    touch((current) => current.masterSubSections.includes(subsection) ? current : { ...current, masterSubSections: [...current.masterSubSections, subsection].sort() });
+  }
+
+  function removeMasterSubSection(subsection: string) {
+    touch((current) => ({ ...current, masterSubSections: current.masterSubSections.filter((item) => item !== subsection) }));
+  }
+
   function addSiteUser(user: SiteUser) {
     touch((current) => ({ ...current, siteUsers: [user, ...current.siteUsers] }));
   }
@@ -544,6 +564,10 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     removeRegion,
     addSegment,
     removeSegment,
+    addMasterSection,
+    removeMasterSection,
+    addMasterSubSection,
+    removeMasterSubSection,
     notify,
     markNotificationRead,
     markAllNotificationsRead,

@@ -154,12 +154,10 @@ export interface MasterRequirement {
   id: string;
   title: string;
   section: string;
+  subsection: string;
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;
-  /** Revision number from the import workbook's Version column. Defaults to "1" on first import;
-   * an admin bumps it when re-importing a revision of an already-published requirement. */
-  version?: string;
   questions: MasterQuestion[];
 }
 

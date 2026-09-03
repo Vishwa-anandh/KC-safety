@@ -62,6 +62,11 @@ export interface AppSnapshot {
   /** Admin-curated dropdown values shown on the site form — see the Config screen. */
   regions: string[];
   segments: string[];
+  /** Admin-curated Section/Sub-Section values for master requirements — shown on the create/edit
+   *  form and validated against on import. Named distinctly from `sections` (SectionSummary[]
+   *  dashboard rollups) above, which is a different, unrelated concept. */
+  masterSections: string[];
+  masterSubSections: string[];
 }
 
 export type DataSourceKind = "demo" | "api";
