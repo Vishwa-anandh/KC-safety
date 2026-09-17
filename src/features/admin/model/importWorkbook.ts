@@ -1,5 +1,10 @@
 import * as XLSX from "xlsx";
-import type { MasterQuestion, MasterRequirement } from "../../../shared/types";
+import type { MasterQuestion, MasterRequirement, RequirementPriority } from "../../../shared/types";
+
+const priorityValues: RequirementPriority[] = ["High", "Medium", "Low"];
+function normalizePriority(value: string): RequirementPriority | undefined {
+  return priorityValues.find((priority) => priority.toLowerCase() === value.trim().toLowerCase());
+}
 
 export type RequirementImportMode = "new" | "update";
 export type ImportIssueSeverity = "error" | "warning";
@@ -34,7 +39,7 @@ export interface RequirementImportPlan {
   rows: ImportTemplateRow[];
 }
 
-export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement"] as const;
+export const importTemplateColumns = ["Section", "Sub-Section", "Requirement ID", "Requirement Text", "Priority", "Question ID", "Question / How to Meet Requirement", "Evidence Requirement"] as const;
 type ImportTemplateColumn = (typeof importTemplateColumns)[number];
 export type ImportTemplateRow = Record<ImportTemplateColumn, string> & { rowNumber: number };
 const columns = importTemplateColumns;
@@ -89,6 +94,8 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     const section = row.Section;
     const subsection = row["Sub-Section"];
     const title = row["Requirement Text"];
+    const priorityRaw = row.Priority;
+    const priority = normalizePriority(priorityRaw);
     let requirementId = row["Requirement ID"];
     if (!requirementId && mode === "new") requirementId = `REQ-${String(++generatedRequirement).padStart(3, "0")}`;
     const questionText = row["Question / How to Meet Requirement"];
@@ -101,6 +108,8 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     else if (!knownSections.has(section.toLowerCase())) issues.push({ severity: "error", row: row.rowNumber, field: "Section", message: `Unknown section "${section}". Add it from Administration > Config first.` });
     if (!subsection) issues.push({ severity: "error", row: row.rowNumber, field: "Sub-Section", message: "Sub-Section is required." });
     else if (!knownSubSections.has(subsection.toLowerCase())) issues.push({ severity: "error", row: row.rowNumber, field: "Sub-Section", message: `Unknown sub-section "${subsection}". Add it from Administration > Config first.` });
+    if (!priorityRaw) issues.push({ severity: "error", row: row.rowNumber, field: "Priority", message: "Priority is required." });
+    else if (!priority) issues.push({ severity: "error", row: row.rowNumber, field: "Priority", message: `Unknown priority "${priorityRaw}". Use High, Medium, or Low.` });
     if (!questionText && mode === "new") issues.push({ severity: "error", row: row.rowNumber, field: "Question / How to Meet Requirement", message: "Question text is required for a new requirement." });
     if (seenQuestions.has(pair)) issues.push({ severity: "error", row: row.rowNumber, field: "Question ID", message: `Duplicate requirement/question ID pair "${requirementId} / ${questionId}" in this workbook.` });
     seenQuestions.add(pair);
@@ -108,8 +117,9 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
 
     if (mode === "new") {
       if (existingRequirement) { issues.push({ severity: "error", row: row.rowNumber, field: "Requirement ID", message: `Requirement "${requirementId}" already exists. Use Update requirements.` }); return; }
-      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, subsection, status: "Draft" as const, siteIds, questions: [] };
+      const draft = upserts.get(requirementId) ?? { id: requirementId, title, section, subsection, priority, status: "Draft" as const, siteIds, questions: [] };
       if (draft.title && title && draft.title !== title) issues.push({ severity: "error", row: row.rowNumber, field: "Requirement Text", message: "Rows sharing a Requirement ID must use the same requirement text." });
+      if (draft.priority && priority && draft.priority !== priority) issues.push({ severity: "error", row: row.rowNumber, field: "Priority", message: "Rows sharing a Requirement ID must use the same priority." });
       if (!upserts.has(requirementId)) changes.push({ requirementId, kind: "create-requirement", field: "Requirement", after: title });
       const question: MasterQuestion = { id: questionId, number: String(draft.questions.length + 1), text: questionText, expectedEvidence: evidence(row["Evidence Requirement"]), evidenceRequired: evidence(row["Evidence Requirement"]).length > 0 };
       draft.questions.push(question); upserts.set(requirementId, draft);
@@ -135,6 +145,7 @@ export function planRequirementRows(mode: RequirementImportMode, fileName: strin
     if (title && title !== draft.title) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Requirement text", before: draft.title, after: title }); draft.title = title; }
     if (section && section !== draft.section) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Section", before: draft.section, after: section }); draft.section = section; }
     if (subsection && subsection !== draft.subsection) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Sub-Section", before: draft.subsection, after: subsection }); draft.subsection = subsection; }
+    if (priority && priority !== draft.priority) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Priority", before: draft.priority ?? "", after: priority }); draft.priority = priority; }
     const beforeScope = draft.siteIds.join(","); const afterScope = siteIds.join(",");
     if (beforeScope !== afterScope) { changes.push({ requirementId: draft.id, kind: "update-requirement", field: "Applicable sites", before: beforeScope || "All sites", after: afterScope || "All sites" }); draft.siteIds = siteIds; }
     draft.status = "Draft"; upserts.set(draft.id, draft);

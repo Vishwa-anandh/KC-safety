@@ -150,11 +150,14 @@ export interface MasterQuestion {
   evidenceRequired?: boolean;
 }
 
+export type RequirementPriority = "High" | "Medium" | "Low";
+
 export interface MasterRequirement {
   id: string;
   title: string;
   section: string;
   subsection: string;
+  priority?: RequirementPriority;
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;

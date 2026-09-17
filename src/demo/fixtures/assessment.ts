@@ -542,7 +542,7 @@ export const masterSubSections: Record<string, string[]> = {
 
 export const masterRequirements: MasterRequirement[] = [
   {
-    id: "OS 1.2.1", title: "Leadership commitment and accountability", section: "Leadership & Engagement", subsection: "1.2 Leadership commitment", status: "Published", siteIds: [],
+    id: "OS 1.2.1", title: "Leadership commitment and accountability", section: "Leadership & Engagement", subsection: "1.2 Leadership commitment", priority: "High", status: "Published", siteIds: [],
     questions: [
       { id: "q-1", number: "1", text: "Are site leadership EHS&S responsibilities documented and communicated to the people who hold them?", expectedEvidence: ["Current leadership accountability matrix.", "Communication records to newly appointed leaders."] },
       { id: "q-2", number: "2", text: "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?", expectedEvidence: ["Recent business operating review agenda.", "EHS&S objectives tracking sheet."] },
@@ -550,28 +550,28 @@ export const masterRequirements: MasterRequirement[] = [
     ],
   },
   {
-    id: "OS 2.1.3", title: "Risks, opportunities, and planning controls", section: "Planning", subsection: "2.1 Risks and opportunities", status: "Published", siteIds: [],
+    id: "OS 2.1.3", title: "Risks, opportunities, and planning controls", section: "Planning", subsection: "2.1 Risks and opportunities", priority: "Medium", status: "Published", siteIds: [],
     questions: [
       { id: "planning-q-1", number: "1", text: "Is the site risk and opportunity register current and approved?", expectedEvidence: ["Current risk and opportunity register.", "Approval sign-off record."] },
       { id: "planning-q-2", number: "2", text: "Are measurable EHS&S objectives connected to the highest-priority risks?", expectedEvidence: ["Approved EHS&S objectives.", "Risk-to-objective traceability record."] },
     ],
   },
   {
-    id: "OS 4.3.2", title: "Management of operational change", section: "Operation", subsection: "4.3 Change management", status: "Published", siteIds: [],
+    id: "OS 4.3.2", title: "Management of operational change", section: "Operation", subsection: "4.3 Change management", priority: "High", status: "Published", siteIds: [],
     questions: [
       { id: "operation-q-1", number: "1", text: "Are operational changes reviewed for EHS&S risk before implementation?", expectedEvidence: ["Change request form.", "Pre-implementation risk review record."] },
       { id: "operation-q-2", number: "2", text: "Are temporary changes tracked through closure or permanent approval?", expectedEvidence: ["Temporary change tracking log.", "Closure or permanent approval record."] },
     ],
   },
   {
-    id: "PS 7.2.1", title: "Machine safeguarding verification", section: "Machine Safety", subsection: "7.2 Safeguarding", status: "Draft", siteIds: [],
+    id: "PS 7.2.1", title: "Machine safeguarding verification", section: "Machine Safety", subsection: "7.2 Safeguarding", priority: "High", status: "Draft", siteIds: [],
     questions: [
       { id: "machine-q-1", number: "1", text: "Are safeguarding assessments current for machines in scope?", expectedEvidence: ["Machine safeguarding assessment.", "Machine inventory list."] },
       { id: "machine-q-2", number: "2", text: "Are safeguard inspections recorded at the required frequency?", expectedEvidence: ["Guard inspection log.", "Inspection frequency schedule."] },
     ],
   },
   {
-    id: "OH 3.1.4", title: "Occupational exposure assessment", section: "Occupational Health", subsection: "3.1 Exposure assessment", status: "Published", siteIds: [],
+    id: "OH 3.1.4", title: "Occupational exposure assessment", section: "Occupational Health", subsection: "3.1 Exposure assessment", priority: "Medium", status: "Published", siteIds: [],
     questions: [
       { id: "occupational-q-1", number: "1", text: "Is the occupational exposure inventory current?", expectedEvidence: ["Current exposure inventory.", "Similar exposure group list."] },
       { id: "occupational-q-2", number: "2", text: "Are exposure assessments current for all priority similar exposure groups?", expectedEvidence: ["Sampling reports.", "Exposure assessment schedule."] },

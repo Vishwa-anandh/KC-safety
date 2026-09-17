@@ -795,6 +795,7 @@ export function AdminImportBatchPreviewScreen() {
               <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
                 <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
                 <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{item.title}</span></div>
+                {item.priority && <span className={cx(pillBaseClass, pillTone.neutral)}>{item.priority} priority</span>}
                 <span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span>
               </div>
               <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
@@ -843,7 +844,7 @@ export function AdminImportBatchPreviewScreen() {
 // less room than the free-text columns; Section/Sub-Section values are short phrases that were
 // already wrapping onto two lines at the wider size. Trimming both keeps the "Workbook rows"
 // table from needing a horizontal scrollbar at a normal admin viewport width.
-const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID"]);
+const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID", "Priority"]);
 const mediumWorkbookColumns = new Set<string>(["Section", "Sub-Section"]);
 function workbookColumnWidthClass(column: string) {
   if (compactWorkbookColumns.has(column)) return "min-w-16";
@@ -1362,6 +1363,8 @@ export function AdminRequirementAuditScreen() {
   );
 }
 
+const priorityOptions = ["High", "Medium", "Low"].map((value) => ({ value, label: value }));
+
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
@@ -1371,7 +1374,7 @@ export function AdminRequirementDetailScreen() {
   const defaultSection = masterSections[0] ?? "";
   const defaultSubSection = masterSubSections[defaultSection]?.[0] ?? "";
   const siteOptions = buildSiteOptions(sites);
-  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
+  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, priority: "Medium", status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -1380,7 +1383,7 @@ export function AdminRequirementDetailScreen() {
   // from the route record keeps the header and fields in lockstep after a
   // requirement is selected from the list.
   useEffect(() => {
-    setDraft(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
+    setDraft(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, priority: "Medium", status: "Draft", siteIds: [], questions: [] });
     setSubmitted(false);
     setPendingNavigation(null);
   }, [defaultSection, defaultSubSection, existing, requirementId]);
@@ -1461,6 +1464,7 @@ export function AdminRequirementDetailScreen() {
               />
               <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
               <Select label="Sub-Section" value={draft.subsection} onChange={(value) => update("subsection", value)} options={subSectionOptions} />
+              <Select label="Priority" value={draft.priority ?? "Medium"} onChange={(value) => update("priority", value)} options={priorityOptions} />
             </div>
             <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
               <div className={cx("min-w-0 md:flex-1")}>
