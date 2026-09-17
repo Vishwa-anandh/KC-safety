@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -569,10 +569,22 @@ export default function RequirementWorkspace() {
   const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
   const [evidenceRemoving, setEvidenceRemoving] = useState<EvidenceItem | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Responses/actions edit this local draft instead of writing straight to the store, so the site
+  // user reviews their answers and commits them with an explicit Save (or Save & Next) rather than
+  // every keystroke silently autosaving. Evidence attachments still commit immediately — each has
+  // its own explicit save step in its dialog, so there's no separate "unsaved" state to track there.
+  const [draftQuestions, setDraftQuestions] = useState<AssessmentQuestion[]>(requirement?.questions ?? []);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setDraftQuestions(requirement?.questions ?? []);
+    setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requirement?.id]);
 
   const currentIndex = requirement ? requirements.findIndex((item) => item.id === requirement.id) : -1;
-  const performance = useMemo(() => rollupPerformance(requirement?.questions.map((question) => question.response) ?? []), [requirement]);
-  const answered = requirement?.questions.filter((question) => question.response).length ?? 0;
+  const performance = useMemo(() => rollupPerformance(draftQuestions.map((question) => question.response)), [draftQuestions]);
+  const answered = draftQuestions.filter((question) => question.response).length;
 
   if (!requirement) return <Navigate to="/assessment" replace />;
 
@@ -583,15 +595,23 @@ export default function RequirementWorkspace() {
   }
 
   function changeQuestion(questionId: string, update: Partial<AssessmentQuestion>) {
-    updateQuestion(requirement!.id, questionId, update, user?.name);
+    setDraftQuestions((current) => current.map((question) => question.id === questionId ? { ...question, ...update } : question));
+    setDirty(true);
+  }
+
+  function saveDraft() {
+    draftQuestions.forEach((question) => updateQuestion(requirement!.id, question.id, { response: question.response, action: question.action }, user?.name));
+    setDirty(false);
     queueSavedState();
   }
 
   // Every requirement is always reachable — from the navigator, Next incomplete, or Previous/Next
   // requirement — regardless of whether the current requirement's action details are complete.
   // Incomplete No/Partial actions still surface as gaps elsewhere (Actions summary, dashboard),
-  // they just no longer block moving around the assessment.
+  // they just no longer block moving around the assessment. Leaving with unsaved answers still
+  // saves them first — only the mid-editing autosave went away, not the safety net.
   function moveTo(target: Requirement) {
+    if (dirty) saveDraft();
     setNavigatorOpen(false);
     setGuidanceOpen(false);
     navigate(requirementRoute(target));
@@ -647,7 +667,7 @@ export default function RequirementWorkspace() {
               <span className={questionCountClass}>{requirement.questions.length} questions</span>
             </div>
             <div className="question-list grid gap-4">
-              {requirement.questions.map((question) => (
+              {draftQuestions.map((question) => (
                 <article className="question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm max-md:p-3.5 dark:border-slate-700 dark:bg-slate-900" key={question.id} id={`question-${question.id}`}>
                   <div className="question-card__header flex flex-wrap items-start gap-3">
                     <span className={questionNumberClass}>{question.number}</span>
@@ -678,7 +698,7 @@ export default function RequirementWorkspace() {
             </div>
           </section>
           <footer
-            className="requirement-footer sticky bottom-18 z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-2.5 shell:bottom-3 shell:flex shell:justify-between shell:gap-3.5"
+            className="requirement-footer sticky bottom-18 z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-3 shell:bottom-3 shell:flex shell:justify-between shell:gap-3.5 shell:p-3.5"
             style={{
               borderColor: "var(--border-translucent)",
               background: "var(--surface-translucent)",
@@ -692,9 +712,10 @@ export default function RequirementWorkspace() {
             }}
           >
             <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
-            <div className="flex items-center gap-3.5 max-md:w-full">
-              <SaveStatus state={saveState} />
-              <Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Next requirement</Button>
+            <div className="flex items-center gap-2.5 max-md:w-full max-md:justify-end">
+              <span className="max-sm:hidden"><SaveStatus state={saveState} /></span>
+              <Button variant="secondary" disabled={!dirty} onClick={saveDraft} icon={<Check size={18} />}>Save</Button>
+              <Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Save &amp; next</Button>
             </div>
           </footer>
         </div>
@@ -736,7 +757,7 @@ export default function RequirementWorkspace() {
       )}
       {evidenceEditor && <EvidenceDialog
         item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item}
-        response={requirement.questions.find((question) => question.id === (evidenceEditor.mode === "new" ? evidenceEditor.questionId : evidenceEditor.item.questionId))?.response ?? null}
+        response={draftQuestions.find((question) => question.id === (evidenceEditor.mode === "new" ? evidenceEditor.questionId : evidenceEditor.item.questionId))?.response ?? null}
         onClose={() => setEvidenceEditor(null)} onSave={(item) => {
         if (evidenceEditor.mode === "new") addEvidence(requirement.id, { ...item, questionId: evidenceEditor.questionId }, user?.name); else updateEvidence(requirement.id, item, user?.name);
         setEvidenceEditor(null);
