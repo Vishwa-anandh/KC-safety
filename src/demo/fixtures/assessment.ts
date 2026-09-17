@@ -529,7 +529,16 @@ export const segments: string[] = ["Family Care", "Personal Care", "Professional
  * the corresponding live `requirements` records above, so both stay consistent on first load.
  */
 export const masterSections: string[] = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation", "Improvement", "Machine Safety", "Occupational Health"];
-export const masterSubSections: string[] = ["1.2 Leadership commitment", "2.1 Risks and opportunities", "3.2 Competence", "4.3 Change management", "5.1 Performance monitoring", "6.1 Improvement actions", "7.2 Safeguarding", "3.1 Exposure assessment"];
+export const masterSubSections: Record<string, string[]> = {
+  "Leadership & Engagement": ["1.2 Leadership commitment"],
+  Planning: ["2.1 Risks and opportunities"],
+  Support: ["3.2 Competence"],
+  Operation: ["4.3 Change management"],
+  "Performance Evaluation": ["5.1 Performance monitoring"],
+  Improvement: ["6.1 Improvement actions"],
+  "Machine Safety": ["7.2 Safeguarding"],
+  "Occupational Health": ["3.1 Exposure assessment"],
+};
 
 export const masterRequirements: MasterRequirement[] = [
   {

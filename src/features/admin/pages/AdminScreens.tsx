@@ -548,7 +548,162 @@ function ConfigListCard({
   );
 }
 
-type ConfigListKey = "regions" | "segments" | "sections" | "subsections";
+/** Sections and their nested sub-sections, managed together in a 2-column layout: pick a section
+ * on the left, manage its sub-sections on the right. Sub-sections belong to exactly one section. */
+function SectionConfigCard({
+  sections,
+  subSectionsBySection,
+  onAddSection,
+  onRemoveSection,
+  onAddSubSection,
+  onRemoveSubSection,
+}: {
+  sections: string[];
+  subSectionsBySection: Record<string, string[]>;
+  onAddSection: (section: string) => void;
+  onRemoveSection: (section: string) => void;
+  onAddSubSection: (section: string, subsection: string) => void;
+  onRemoveSubSection: (section: string, subsection: string) => void;
+}) {
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [sectionDraft, setSectionDraft] = useState("");
+  const [subsectionDraft, setSubsectionDraft] = useState("");
+  const [removingSection, setRemovingSection] = useState<string | null>(null);
+  const [removingSubsection, setRemovingSubsection] = useState<string | null>(null);
+
+  const activeSection = selectedSection && sections.includes(selectedSection) ? selectedSection : (sections[0] ?? null);
+  const activeSubSections = activeSection ? (subSectionsBySection[activeSection] ?? []) : [];
+  const sectionDuplicate = sections.some((section) => section.toLowerCase() === sectionDraft.trim().toLowerCase());
+  const subsectionDuplicate = activeSubSections.some((subsection) => subsection.toLowerCase() === subsectionDraft.trim().toLowerCase());
+  const totalSubsections = Object.values(subSectionsBySection).reduce((total, list) => total + list.length, 0);
+
+  function handleAddSection(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = sectionDraft.trim();
+    if (!trimmed || sectionDuplicate) return;
+    onAddSection(trimmed);
+    setSelectedSection(trimmed);
+    setSectionDraft("");
+  }
+
+  function handleAddSubsection(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = subsectionDraft.trim();
+    if (!trimmed || subsectionDuplicate || !activeSection) return;
+    onAddSubSection(activeSection, trimmed);
+    setSubsectionDraft("");
+  }
+
+  return (
+    <section className={cx(tableCardClass)}>
+      <div className={cx(tableCardHeaderStartClass)}>
+        <div>
+          <p className={cx(eyebrowClasses)}>Dropdown values</p>
+          <h2 className={cx(tableCardHeaderTitleClass)}>Sections &amp; Sub-Sections</h2>
+          <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Shown in the Section and Sub-Section fields when creating or editing a master requirement, and validated against on import. Each section holds its own list of sub-sections.</p>
+        </div>
+        <span className={cx(tableCardHeaderCountClass)}>{sections.length} section{sections.length === 1 ? "" : "s"} · {totalSubsections} sub-section{totalSubsections === 1 ? "" : "s"}</span>
+      </div>
+      <div className={cx("grid gap-4 p-4 md:grid-cols-2")}>
+        <div className={cx("grid min-w-0 content-start gap-3")}>
+          <h3 className={cx("m-0 text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Sections</h3>
+          <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAddSection}>
+            <input className={cx(fieldInputClass, "flex-1")} value={sectionDraft} onChange={(event) => setSectionDraft(event.target.value)} placeholder="For example, Leadership & Engagement" aria-label="New section value" />
+            <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!sectionDraft.trim() || sectionDuplicate}>Add</Button>
+          </form>
+          {sectionDuplicate && <small className={cx(fieldErrorClass)}>That section already exists.</small>}
+          {sections.length === 0 ? (
+            <EmptyState icon={<ListTree size={24} />} title="No sections yet" description="Add the first section above." />
+          ) : (
+            <ul className={cx("m-0 grid gap-1 p-0 list-none")}>
+              {sections.map((section) => {
+                const active = section === activeSection;
+                const count = subSectionsBySection[section]?.length ?? 0;
+                return (
+                  <li key={section}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSection(section)}
+                      className={cx(
+                        "flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
+                        active && "border-kc-blue-200 bg-kc-blue-50 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+                      )}
+                    >
+                      <span className={cx("min-w-0 flex-1 truncate")}>{section}</span>
+                      <span className={cx(pillBaseClass, pillTone.neutral, "flex-none")}>{count}</span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Remove ${section}`}
+                        className={cx("grid size-6 flex-none place-items-center rounded-full bg-transparent hover:bg-slate-200 dark:hover:bg-slate-700")}
+                        onClick={(event) => { event.stopPropagation(); setRemovingSection(section); }}
+                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); setRemovingSection(section); } }}
+                      >
+                        <X size={13} />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        <div className={cx("grid min-w-0 content-start gap-3 md:border-l md:border-slate-200 md:pl-4 dark:md:border-slate-700")}>
+          <h3 className={cx("m-0 text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>{activeSection ? `Sub-sections of "${activeSection}"` : "Sub-sections"}</h3>
+          {activeSection ? (
+            <>
+              <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAddSubsection}>
+                <input className={cx(fieldInputClass, "flex-1")} value={subsectionDraft} onChange={(event) => setSubsectionDraft(event.target.value)} placeholder="For example, 1.2 Leadership commitment" aria-label={`New sub-section value for ${activeSection}`} />
+                <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!subsectionDraft.trim() || subsectionDuplicate}>Add</Button>
+              </form>
+              {subsectionDuplicate && <small className={cx(fieldErrorClass)}>That sub-section already exists under this section.</small>}
+              {activeSubSections.length === 0 ? (
+                <EmptyState icon={<Rows3 size={24} />} title="No sub-sections yet" description={`Add the first sub-section for ${activeSection} above.`} />
+              ) : (
+                <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
+                  {activeSubSections.map((subsection) => (
+                    <li key={subsection} className={cx(pillBaseClass, pillTone.neutral, "py-0.5 pr-1")}>
+                      {subsection}
+                      <button type="button" className={cx("grid size-5 place-items-center rounded-full border-0 bg-transparent p-0 hover:bg-slate-200 dark:hover:bg-slate-700")} aria-label={`Remove ${subsection}`} onClick={() => setRemovingSubsection(subsection)}>
+                        <X size={13} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <EmptyState icon={<Rows3 size={24} />} title="No section selected" description="Add a section on the left to manage its sub-sections." />
+          )}
+        </div>
+      </div>
+      {removingSection && (
+        <ConfirmDialog
+          eyebrow="Config"
+          title={`Remove "${removingSection}"?`}
+          body={`This removes the section and its ${subSectionsBySection[removingSection]?.length ?? 0} sub-section(s) from the dropdowns. Master requirements that already use them keep their current value.`}
+          confirmLabel="Remove section"
+          cancelLabel="Keep section"
+          onCancel={() => setRemovingSection(null)}
+          onConfirm={() => { onRemoveSection(removingSection); setRemovingSection(null); }}
+        />
+      )}
+      {removingSubsection && activeSection && (
+        <ConfirmDialog
+          eyebrow="Config"
+          title={`Remove "${removingSubsection}"?`}
+          body="This removes the value from the dropdown. Master requirements that already use it keep their current value."
+          confirmLabel="Remove value"
+          cancelLabel="Keep value"
+          onCancel={() => setRemovingSubsection(null)}
+          onConfirm={() => { onRemoveSubSection(activeSection, removingSubsection); setRemovingSubsection(null); }}
+        />
+      )}
+    </section>
+  );
+}
+
+type ConfigListKey = "regions" | "segments" | "sections";
 
 export function AdminConfigScreen() {
   const {
@@ -568,11 +723,7 @@ export function AdminConfigScreen() {
     },
     sections: {
       label: "Sections", icon: ListTree, count: masterSections.length,
-      card: <ConfigListCard title="Sections" description="Shown in the Section field when creating or editing a master requirement, and validated against on import." placeholder="For example, Leadership & Engagement" values={masterSections} onAdd={addMasterSection} onRemove={removeMasterSection} removalNote="Master requirements that already use it keep their current value." />,
-    },
-    subsections: {
-      label: "Sub-Sections", icon: Rows3, count: masterSubSections.length,
-      card: <ConfigListCard title="Sub-Sections" description="Shown in the Sub-Section field when creating or editing a master requirement, and validated against on import." placeholder="For example, 1.2 Leadership commitment" values={masterSubSections} onAdd={addMasterSubSection} onRemove={removeMasterSubSection} removalNote="Master requirements that already use it keep their current value." />,
+      card: <SectionConfigCard sections={masterSections} subSectionsBySection={masterSubSections} onAddSection={addMasterSection} onRemoveSection={removeMasterSection} onAddSubSection={addMasterSubSection} onRemoveSubSection={removeMasterSubSection} />,
     },
   };
 
@@ -703,6 +854,7 @@ function workbookColumnWidthClass(column: string) {
 export function AdminImportsScreen() {
   const navigate = useNavigate();
   const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify, masterSections, masterSubSections } = useAdministration();
+  const flatSubSections = Object.values(masterSubSections).flat();
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<RequirementImportMode | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -744,13 +896,13 @@ export function AdminImportsScreen() {
     if (!mode) { setFileError("Choose New requirements or Update requirements before uploading a workbook."); return; }
     if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setPlan(null); setFileError("Choose the EHS360 Excel .xlsx import template."); return; }
     if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The import file must be 25 MB or smaller."); return; }
-    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds, masterSections, masterSubSections); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
+    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds, masterSections, flatSubSections); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
     catch (error) { setFile(null); setPlan(null); setFileError(error instanceof Error ? error.message : "The workbook could not be read."); }
   }
   function updatePreviewRows(nextRows: ImportTemplateRow[]) {
     setEditableRows(nextRows);
     if (!mode || !file) return;
-    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds, masterSections, masterSubSections);
+    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds, masterSections, flatSubSections);
     setPlan(nextPlan);
     setSelectedRowNumbers((current) => mode === "new"
       ? nextPlan.rows.map((row) => row.rowNumber)
@@ -840,13 +992,13 @@ export function AdminImportsScreen() {
     if (step === 3) {
       // Site selection applies as one shared scope for the whole batch — every requirement in
       // this import gets the same siteIds, not a per-row workbook value.
-      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds, masterSections, masterSubSections));
+      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds, masterSections, flatSubSections));
       setStep(4);
       return;
     }
     if (step === 4 && selectedPlan && !selectedPlan.issues.some((issue) => issue.severity === "error")) {
       const selected = new Set(selectedRowNumbers);
-      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, masterSubSections);
+      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, flatSubSections);
       const record = submitImportBatch(stagedPlan);
       notify({
         title: `${record.fileName} imported`,
@@ -863,7 +1015,7 @@ export function AdminImportsScreen() {
     setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setSiteScope("all"); setScopedSiteIds([]); setResult(null);
   }
   const selectedPlan = mode && file
-    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, masterSubSections)
+    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, flatSubSections)
     : plan;
   // Continue is blocked while any *selected* row has an error — but with nothing shown near the
   // table, that block was silent (the user could select every row and still not know why the
@@ -1069,7 +1221,7 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
             <div className={cx("question-card__header flex flex-wrap items-start gap-3 md:flex-nowrap")}>
               <span className={cx(questionNumberClass)}>{index + 1}</span>
               <div className={cx("min-w-0 flex-1")}>
-                <p className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {index + 1}</p>
+                <p className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {index + 1} <span className={cx("font-mono font-normal text-slate-400 dark:text-slate-500")}>· ID: {question.id}</span></p>
                 <textarea rows={2} className={cx("question-text-input mt-1 w-full max-w-195 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-base leading-relaxed text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
                 {invalid && <small className={cx(fieldErrorClass)}>Enter the question text.</small>}
               </div>
@@ -1217,7 +1369,7 @@ export function AdminRequirementDetailScreen() {
   const isNew = !requirementId;
   const existing = requirementId ? masterRequirements.find((item) => item.id === requirementId) : undefined;
   const defaultSection = masterSections[0] ?? "";
-  const defaultSubSection = masterSubSections[0] ?? "";
+  const defaultSubSection = masterSubSections[defaultSection]?.[0] ?? "";
   const siteOptions = buildSiteOptions(sites);
   const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
@@ -1247,7 +1399,7 @@ export function AdminRequirementDetailScreen() {
   // Union the draft's current value in, same as the site form does for Region/Segment — editing
   // an older requirement whose section was since removed from Config shouldn't silently blank it.
   const sectionOptions = [...new Set([...masterSections, ...(draft.section ? [draft.section] : [])])].map((value) => ({ value, label: value }));
-  const subSectionOptions = [...new Set([...masterSubSections, ...(draft.subsection ? [draft.subsection] : [])])].map((value) => ({ value, label: value }));
+  const subSectionOptions = [...new Set([...(masterSubSections[draft.section] ?? []), ...(draft.subsection ? [draft.subsection] : [])])].map((value) => ({ value, label: value }));
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
 
   function requestNavigation(target: MasterRequirement | "list") {

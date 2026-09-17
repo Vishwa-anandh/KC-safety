@@ -93,8 +93,8 @@ interface ApplicationDataValue extends PersistedState {
   removeSegment: (segment: string) => void;
   addMasterSection: (section: string) => void;
   removeMasterSection: (section: string) => void;
-  addMasterSubSection: (subsection: string) => void;
-  removeMasterSubSection: (subsection: string) => void;
+  addMasterSubSection: (section: string, subsection: string) => void;
+  removeMasterSubSection: (section: string, subsection: string) => void;
   notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
   markNotificationRead: (id: string, role: SiteUserRole) => void;
   markAllNotificationsRead: (role: SiteUserRole) => void;
@@ -488,19 +488,29 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
   }
 
   function addMasterSection(section: string) {
-    touch((current) => current.masterSections.includes(section) ? current : { ...current, masterSections: [...current.masterSections, section].sort() });
+    touch((current) => current.masterSections.includes(section)
+      ? current
+      : { ...current, masterSections: [...current.masterSections, section].sort(), masterSubSections: { ...current.masterSubSections, [section]: current.masterSubSections[section] ?? [] } });
   }
 
   function removeMasterSection(section: string) {
-    touch((current) => ({ ...current, masterSections: current.masterSections.filter((item) => item !== section) }));
+    touch((current) => {
+      const masterSubSections = { ...current.masterSubSections };
+      delete masterSubSections[section];
+      return { ...current, masterSections: current.masterSections.filter((item) => item !== section), masterSubSections };
+    });
   }
 
-  function addMasterSubSection(subsection: string) {
-    touch((current) => current.masterSubSections.includes(subsection) ? current : { ...current, masterSubSections: [...current.masterSubSections, subsection].sort() });
+  function addMasterSubSection(section: string, subsection: string) {
+    touch((current) => {
+      const existing = current.masterSubSections[section] ?? [];
+      if (existing.includes(subsection)) return current;
+      return { ...current, masterSubSections: { ...current.masterSubSections, [section]: [...existing, subsection].sort() } };
+    });
   }
 
-  function removeMasterSubSection(subsection: string) {
-    touch((current) => ({ ...current, masterSubSections: current.masterSubSections.filter((item) => item !== subsection) }));
+  function removeMasterSubSection(section: string, subsection: string) {
+    touch((current) => ({ ...current, masterSubSections: { ...current.masterSubSections, [section]: (current.masterSubSections[section] ?? []).filter((item) => item !== subsection) } }));
   }
 
   function addSiteUser(user: SiteUser) {
