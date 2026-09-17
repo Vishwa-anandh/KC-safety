@@ -22,7 +22,6 @@ import {
   MapPin,
   Rows3,
   MoreHorizontal,
-  Menu,
   Paperclip,
   Pencil,
   Plus,
@@ -40,7 +39,7 @@ import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
 import type { DashboardSite, MasterQuestion, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, ProgressBar, Select } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -98,7 +97,7 @@ const dataTableRowClass = "block w-full min-w-0 overflow-hidden rounded-xl borde
 const dataTableRowLinkClass = "data-table__row--link cursor-pointer hover:bg-kc-blue-50 dark:hover:bg-kc-blue-950 shell:hover:bg-kc-blue-50 dark:shell:hover:bg-kc-blue-950";
 const dataTableCellClass = "flex min-h-12 w-full min-w-0 items-center gap-3 border-b border-slate-200 px-3.5 py-3 text-left align-middle wrap-anywhere dark:border-slate-700 shell:table-cell shell:min-h-0 shell:px-4";
 /** Last cell of each stacked card: right-aligned actions, its own footer tint. */
-const dataTableLastCellClass = "flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere border-slate-200 dark:border-slate-700 dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-start shell:bg-transparent shell:px-4";
+const dataTableLastCellClass = "flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere border-b border-slate-200 dark:border-slate-700 dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-start shell:bg-transparent shell:px-4";
 const dataTableCellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
 const rowActionsClass = "row-actions flex items-center gap-0.5 justify-end shell:justify-start";
 const rowMenuClass = "row-menu absolute top-full right-0 z-20 mt-1 grid w-40 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900";
@@ -274,19 +273,8 @@ const inspectionTileClass = "grid gap-0.5 rounded-xl border border-slate-200 bg-
 const resultStateClass = "result-state mx-auto grid max-w-160 justify-items-center py-12 text-center";
 const importCardFooterClass = "import-card__footer flex flex-col items-stretch justify-between gap-3 border-t border-slate-200 p-3.5 md:flex-row md:items-center dark:border-slate-700";
 
-/** Off-canvas "sheet" overlay (mobile requirement navigator). Mirrors the ConfirmDialog layer
- * recipe: a fixed backdrop plus a panel, here anchored to the left edge instead of centered. */
-const sheetLayerClass = "sheet-layer fixed inset-0 z-100 grid place-items-center shell:hidden";
-const sheetBackdropClass = "sheet-backdrop absolute inset-0 border-0 bg-slate-950/50 backdrop-blur-sm";
-const sheetClass = "sheet absolute inset-y-0 left-0 right-4 max-w-97.5 w-full overflow-x-hidden overflow-y-auto bg-white shadow-2xl dark:bg-slate-900";
-
 const requirementMobileToolbarClass = "requirement-mobile-toolbar admin-requirement-mobile-toolbar flex sticky z-8 justify-between gap-2.5 border-b border-slate-200 p-2.5 backdrop-blur-md shell:hidden dark:border-slate-700";
-// The navigator and editor deliberately use a 30/70 desktop grid. This gives long requirement
-// names enough room in the navigator without making the edit canvas feel detached or oversized.
-const requirementLayoutClass = "requirement-layout requirement-layout--admin-editor grid w-full min-w-0 shell:grid-cols-[minmax(18rem,3fr)_minmax(0,7fr)]";
-// Hidden below `shell` (the mobile toolbar + off-canvas sheet take over there). Above that
-// breakpoint the navigator starts at the top of its column; it never reserves mobile-toolbar space.
-const requirementNavigatorWrapClass = "requirement-layout__navigator hidden shell:sticky shell:block shell:min-w-0 shell:w-full shell:self-start";
+const requirementLayoutClass = "requirement-layout requirement-layout--admin-editor grid w-full min-w-0";
 // Horizontal padding comes from an inline style (var(--page-gutter), a fluid clamp already
 // responsive on its own — see the page-container divs elsewhere in this file for the same pattern).
 const requirementMainClass = "requirement-main min-w-0 pt-4 pb-12 md:pt-6 md:pb-16";
@@ -1113,70 +1101,6 @@ function QuestionsEditor({ questions, onChange, requirementId, submitted }: { qu
   );
 }
 
-function AdminRequirementNavigator({
-  requirements,
-  current,
-  onNavigate,
-  onViewAll,
-  onClose,
-}: {
-  requirements: MasterRequirement[];
-  current: MasterRequirement;
-  onNavigate: (requirement: MasterRequirement) => void;
-  onViewAll: () => void;
-  onClose?: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const filtered = requirements.filter((requirement) =>
-    `${requirement.id} ${requirement.title} ${requirement.section}`.toLowerCase().includes(query.toLowerCase()),
-  );
-  const published = requirements.filter((requirement) => requirement.status === "Published").length;
-
-  return (
-    <aside className={cx("assessment-navigator admin-requirement-navigator flex h-full flex-col overflow-x-hidden overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900")} aria-label="Master requirement navigator">
-      <div className={cx("assessment-navigator__header mb-4 flex items-start justify-between gap-3")}>
-        <div><p className={cx(eyebrowClasses)}>Master content</p><h2 className={cx("mt-0.5 text-base font-bold text-slate-900 dark:text-slate-100")}>Requirements</h2></div>
-        {onClose && <IconButton label="Close requirement navigator" onClick={onClose}><X size={19} /></IconButton>}
-      </div>
-      <ProgressBar value={requirements.length ? Math.round((published / requirements.length) * 100) : 0} label="Requirements published" />
-      <label className={cx("navigator-search my-4 flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-2.5 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:text-slate-400 dark:focus-within:ring-kc-blue-900")}>
-        <Search size={17} />
-        <input className={cx("min-w-0 flex-1 border-0 bg-transparent text-sm outline-none")} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
-      </label>
-      <div className={cx("navigator-group flex-1")}>
-        <div className={cx("navigator-group__trigger flex w-full items-center gap-2 border-0 bg-transparent px-1.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-300")} aria-expanded="true"><ChevronDown size={17} /><span>Master requirements</span><small className={cx("ml-auto font-medium text-slate-500 dark:text-slate-400")}>{published} of {requirements.length}</small></div>
-        <div className={cx("navigator-items mt-1 grid gap-0.5")}>
-          {filtered.map((requirement) => {
-            const isCurrent = requirement.id === current.id;
-            return (
-              <button
-                className={cx(
-                  "navigator-item flex min-h-13 w-full items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
-                  isCurrent && "navigator-item--current border-kc-blue-200 border-l-4 border-l-kc-blue-600 bg-kc-blue-100 pl-1.5 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:border-l-kc-blue-500 dark:bg-kc-blue-900 dark:text-kc-blue-100",
-                )}
-                key={requirement.id}
-                onClick={() => onNavigate(requirement)}
-              >
-                {isCurrent ? (
-                  <span className={cx("nav-state nav-state--current grid size-5 flex-none place-items-center rounded-full bg-kc-blue-600 text-white ring-3 ring-kc-blue-200 dark:ring-kc-blue-800")}><Circle size={12} fill="currentColor" /></span>
-                ) : requirement.status === "Published" ? (
-                  <CheckCircle2 size={17} className={cx("nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300")} />
-                ) : (
-                  <Circle size={16} className={cx("nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500")} />
-                )}
-                <span className={cx("grid min-w-0 flex-1 gap-0.5 text-sm font-semibold leading-tight")}><small className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>{requirement.id} · {requirement.section}</small>{requirement.title}</span>
-                <ChevronRight size={16} className={cx("flex-none text-slate-400 dark:text-slate-500")} />
-              </button>
-            );
-          })}
-          {!filtered.length && <p className={cx("navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400")}>No requirements match your search.</p>}
-        </div>
-      </div>
-      <Button className={cx("next-incomplete mt-4 w-full")} variant="secondary" icon={<ListChecks size={18} />} onClick={onViewAll}>All requirements</Button>
-    </aside>
-  );
-}
-
 const auditChangeBoxClass = "min-w-0 flex-1 rounded-lg bg-slate-50 p-2.5 dark:bg-slate-900";
 const auditChangeLabelClass = "text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400";
 const auditChangeValueClass = "mt-1 text-sm leading-snug wrap-anywhere text-slate-800 dark:text-slate-200";
@@ -1297,13 +1221,12 @@ export function AdminRequirementDetailScreen() {
   const siteOptions = buildSiteOptions(sites);
   const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
   const [submitted, setSubmitted] = useState(false);
-  const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // React reuses this route component when only :requirementId changes. Resetting the editor
-  // from the route record keeps the header, fields, and left navigator in lockstep after a
-  // requirement is selected from the navigator.
+  // from the route record keeps the header and fields in lockstep after a
+  // requirement is selected from the list.
   useEffect(() => {
     setDraft(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, status: "Draft", siteIds: [], questions: [] });
     setSubmitted(false);
@@ -1326,10 +1249,8 @@ export function AdminRequirementDetailScreen() {
   const sectionOptions = [...new Set([...masterSections, ...(draft.section ? [draft.section] : [])])].map((value) => ({ value, label: value }));
   const subSectionOptions = [...new Set([...masterSubSections, ...(draft.subsection ? [draft.subsection] : [])])].map((value) => ({ value, label: value }));
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
-  const navigatorCurrent = masterRequirements.find((item) => item.id === requirementId) ?? draft;
 
   function requestNavigation(target: MasterRequirement | "list") {
-    setNavigatorOpen(false);
     if (target === "list" || target.id !== draft.id) {
       if (hasUnsavedChanges) { setPendingNavigation(target); return; }
       navigate(target === "list" ? "/admin/requirements" : `/admin/requirements/${target.id}`);
@@ -1367,13 +1288,9 @@ export function AdminRequirementDetailScreen() {
   return (
     <div className={cx("requirement-page admin-requirement-page min-w-0")}>
       <div className={cx(requirementMobileToolbarClass)} style={{ top: "var(--content-offset)", background: "var(--surface-mobile-bar)" }}>
-        <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
         <Button variant="secondary" onClick={() => requestNavigation("list")}>All requirements</Button>
       </div>
       <div className={cx(requirementLayoutClass)} style={{ minHeight: "calc(100vh - var(--content-offset))" }}>
-        <div className={cx(requirementNavigatorWrapClass)} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
-          <AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} />
-        </div>
         <div className={cx(requirementMainClass)} style={{ paddingInline: "var(--page-gutter)" }}>
           <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbsLinkClass)} to="/admin/requirements">Master requirements</Link><ChevronRight size={15} /><span aria-current="page">{isNew ? "New requirement" : draft.id}</span></nav>
           <header className={cx("requirement-header rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-5 dark:border-slate-700 dark:bg-slate-900")}>
@@ -1448,14 +1365,6 @@ export function AdminRequirementDetailScreen() {
           </footer>
         </div>
       </div>
-      {navigatorOpen && (
-        <div className={cx(sheetLayerClass)}>
-          <button className={cx(sheetBackdropClass)} aria-label="Close requirement navigator" onClick={() => setNavigatorOpen(false)} />
-          <div className={cx(sheetClass, "sheet--left")}>
-            <AdminRequirementNavigator requirements={masterRequirements} current={navigatorCurrent} onNavigate={requestNavigation} onViewAll={() => requestNavigation("list")} onClose={() => setNavigatorOpen(false)} />
-          </div>
-        </div>
-      )}
       {pendingNavigation && <ConfirmDialog eyebrow="Unsaved changes" title="Leave this requirement without saving?" body="Your changes to this requirement will be discarded. Save changes before continuing if you want to keep them." confirmLabel="Leave without saving" cancelLabel="Keep editing" onCancel={() => setPendingNavigation(null)} onConfirm={confirmNavigation} />}
       {deleteConfirmOpen && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${draft.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleteConfirmOpen(false)} onConfirm={() => { removeMasterRequirement(draft.id); navigate("/admin/requirements", { state: { feedback: `${draft.id} was deleted.` } }); }} />}
     </div>
