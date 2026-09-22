@@ -74,32 +74,37 @@ export interface AssessmentHistoryEntry {
   evidence: EvidenceItem[];
 }
 
-export interface AssessmentQuestion {
-  id: string;
-  number: string;
-  text: string;
-  response: ResponseValue;
-  period: AssessmentPeriod;
-  respondedAt?: string;
-  respondedBy?: string;
-  action?: ActionItem;
-  expectedEvidence?: string[];
-  evidenceRequired?: boolean;
-  /** Append-only snapshots used by the enterprise question history timeline. */
-  history?: AssessmentHistoryEntry[];
-}
-
+/**
+ * A requirement IS a single question — there is no separate nested question list. `id` is the
+ * one stable identity for the whole record (what a response, evidence item, or audit entry keyed
+ * on the old, separate `AssessmentQuestion.id` now keys on directly). `requirementId` is purely
+ * the grouping label carried over from the source workbook's "Requirement ID" column (e.g. several
+ * rows all reading "LET-01") — it clusters related requirement-questions for display, but no
+ * longer merges them into one record with many questions.
+ */
 export interface Requirement {
   id: string;
+  requirementId: string;
   number: string;
   title: string;
   sectionId: string;
   sectionName: string;
   subsection: string;
   requirementText: string;
+  text: string;
+  /** "How to meet this requirement" steps shown inline under the question — set by an
+   *  administrator (imported from a workbook or typed in Master requirements) and carried
+   *  through from the matching `MasterRequirement` by shared/domain/requirement-sync.ts. */
   guidance: string[];
   expectedEvidence: string[];
-  questions: AssessmentQuestion[];
+  evidenceRequired?: boolean;
+  response: ResponseValue;
+  period: AssessmentPeriod;
+  respondedAt?: string;
+  respondedBy?: string;
+  action?: ActionItem;
+  /** Append-only snapshots used by the enterprise question history timeline. */
+  history?: AssessmentHistoryEntry[];
   evidence: EvidenceItem[];
 }
 
@@ -142,26 +147,35 @@ export interface SiteContacts {
   regionalOccupationalHealthEmail: string;
 }
 
-export interface MasterQuestion {
-  id: string;
-  number: string;
-  text: string;
-  expectedEvidence: string[];
-  evidenceRequired?: boolean;
-}
-
-export type RequirementPriority = "High" | "Medium" | "Low";
-
+/**
+ * A master requirement IS a single question — there is no separate nested question list (see
+ * the matching note on `Requirement`). `id` is the one stable identity admins manage it by
+ * (what used to be the separate question id). `requirementId` is the grouping label carried over
+ * from the source workbook's "Requirement ID" column.
+ */
 export interface MasterRequirement {
   id: string;
+  requirementId: string;
+  number: string;
   title: string;
+  text: string;
+  /** "How to meet this requirement" steps shown inline under the question on the site assessment
+   *  — set by an administrator, either imported (the workbook's "How to Meet Requirement" column,
+   *  its lines after the first, which becomes `text`) or typed directly in Master requirements.
+   *  Optional so snapshots saved before this field existed still load. */
+  guidance?: string[];
   section: string;
   subsection: string;
-  priority?: RequirementPriority;
   status: "Published" | "Draft";
   siteIds: string[];
   importBatchId?: string;
-  questions: MasterQuestion[];
+  expectedEvidence: string[];
+  evidenceRequired?: boolean;
+  /** 1 = highest. Rank within the question's own section (Operating System section, or
+   *  Performance Standard) — the only priority Performance Standard imports provide. */
+  sectionPriority?: number;
+  /** 1 = highest. Rank across the whole import batch — only Operating System imports provide this. */
+  overallPriority?: number;
 }
 
 export type RequirementAuditAction = "baseline" | "created" | "updated" | "deleted" | "imported" | "published";

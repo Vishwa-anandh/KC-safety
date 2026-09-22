@@ -4,8 +4,6 @@ import {
   dashboardSites,
   initialSiteContacts,
   masterRequirements,
-  masterSections,
-  masterSubSections,
   notifications,
   ownerRecords,
   regions,
@@ -16,18 +14,21 @@ import {
 } from "../fixtures/assessment";
 import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts";
 import { createdRequirementAuditChanges } from "../../shared/domain/requirement-audit";
-import type { ActionItem, AssessmentHistoryEntry, AssessmentQuestion, EvidenceItem, MasterRequirement, RequirementAuditEntry } from "../../shared/types";
+import type { ActionItem, AssessmentHistoryEntry, EvidenceItem, MasterRequirement, Requirement, RequirementAuditEntry } from "../../shared/types";
 
-const STORAGE_KEY = "ehss-phase-one-state-v1";
+// Bumped alongside the requirement/question data-model flatten (a requirement is now a single
+// question, not a nested list) — old snapshots under the previous key are simply left alone and
+// a fresh one is seeded, rather than migrating an incompatible shape in place.
+const STORAGE_KEY = "ehss-phase-one-state-v2";
 
-function seededQuestionHistory(question: AssessmentQuestion, action: ActionItem | undefined, evidence: EvidenceItem[]): AssessmentHistoryEntry[] {
-  if (!question.response) return [];
-  const responseAt = new Date(question.respondedAt ?? "2026-08-01T09:00:00.000Z").getTime();
+function seededQuestionHistory(requirement: Requirement, action: ActionItem | undefined, evidence: EvidenceItem[]): AssessmentHistoryEntry[] {
+  if (!requirement.response) return [];
+  const responseAt = new Date(requirement.respondedAt ?? "2026-08-01T09:00:00.000Z").getTime();
   const timestamp = (daysAfterResponse: number, hoursAfterResponse = 0, minutesAfterResponse = 0) => new Date(responseAt + ((daysAfterResponse * 24 + hoursAfterResponse) * 60 + minutesAfterResponse) * 60 * 1000).toISOString();
-  const responseActor = question.respondedBy ?? "Maya Patel";
-  const initialResponse = !action && !evidence.length && question.response === "yes" ? "partial" : question.response;
+  const responseActor = requirement.respondedBy ?? "Maya Patel";
+  const initialResponse = !action && !evidence.length && requirement.response === "yes" ? "partial" : requirement.response;
   const entries: AssessmentHistoryEntry[] = [{
-    id: `${question.id}-demo-response-recorded`,
+    id: `${requirement.id}-demo-response-recorded`,
     event: "Response recorded",
     recordedAt: timestamp(0),
     recordedBy: responseActor,
@@ -37,11 +38,11 @@ function seededQuestionHistory(question: AssessmentQuestion, action: ActionItem 
 
   if (action) {
     entries.push({
-      id: `${question.id}-demo-action-added`,
+      id: `${requirement.id}-demo-action-added`,
       event: "Action added",
       recordedAt: timestamp(2, 3, 30),
       recordedBy: action.createdBy ?? responseActor,
-      response: question.response,
+      response: requirement.response,
       action: { ...action },
       evidence: [],
     });
@@ -49,21 +50,21 @@ function seededQuestionHistory(question: AssessmentQuestion, action: ActionItem 
 
   if (evidence.length) {
     entries.push({
-      id: `${question.id}-demo-evidence-added`,
+      id: `${requirement.id}-demo-evidence-added`,
       event: "Evidence added",
       recordedAt: action ? timestamp(4, 7, 15) : timestamp(2, 4, 20),
       recordedBy: evidence.at(-1)?.uploadedBy ?? responseActor,
-      response: question.response,
+      response: requirement.response,
       action: action ? { ...action } : undefined,
       evidence: evidence.map((item) => ({ ...item })),
     });
   } else if (!action) {
     entries.push({
-      id: `${question.id}-demo-response-changed`,
+      id: `${requirement.id}-demo-response-changed`,
       event: "Response changed",
       recordedAt: timestamp(2, 5, 45),
       recordedBy: responseActor,
-      response: question.response,
+      response: requirement.response,
       evidence: [],
     });
   }
@@ -72,41 +73,38 @@ function seededQuestionHistory(question: AssessmentQuestion, action: ActionItem 
 }
 
 function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
-  return records.map((requirement) => ({
-    ...requirement,
-    questions: requirement.questions.map((question) => {
-      const action = question.action ?? (question.response === "no" || question.response === "partial"
-        ? { description: "", owner: "", status: "Open" as const, followUp: "" }
-        : undefined);
-      const responseHistory = question.response ? {
-        respondedAt: question.respondedAt ?? "2026-08-01T09:00:00.000Z",
-        respondedBy: question.respondedBy ?? "Maya Patel",
-      } : {};
-      const normalizedAction = action ? {
-        ...action,
-        status: action.status ?? "Open",
-        followUp: action.followUp ?? "",
-        createdAt: action.createdAt ?? "2026-08-01T09:00:00.000Z",
-        createdBy: action.createdBy ?? "Maya Patel",
-        updatedAt: action.updatedAt ?? "2026-08-01T09:00:00.000Z",
-        updatedBy: action.updatedBy ?? "Maya Patel",
-      } : undefined;
-      const evidence = requirement.evidence.filter((item) => item.questionId === question.id).map((item) => ({ ...item }));
-      const existingHistory = question.history ?? [];
-      const isGeneratedEntry = (entry: AssessmentHistoryEntry) => entry.id === `${question.id}-seed-response` || entry.id.startsWith(`${question.id}-demo-`);
-      const hasGeneratedHistory = existingHistory.some(isGeneratedEntry);
-      const recordedHistory = existingHistory.filter((entry) => !isGeneratedEntry(entry));
-      const history = question.response && (!existingHistory.length || hasGeneratedHistory)
-        ? [...seededQuestionHistory(question, normalizedAction, evidence), ...recordedHistory]
-        : existingHistory;
-      return {
-        ...question,
-        ...responseHistory,
-        action: normalizedAction,
-        history,
-      };
-    }),
-  }));
+  return records.map((requirement) => {
+    const action = requirement.action ?? (requirement.response === "no" || requirement.response === "partial"
+      ? { description: "", owner: "", status: "Open" as const, followUp: "" }
+      : undefined);
+    const responseHistory = requirement.response ? {
+      respondedAt: requirement.respondedAt ?? "2026-08-01T09:00:00.000Z",
+      respondedBy: requirement.respondedBy ?? "Maya Patel",
+    } : {};
+    const normalizedAction = action ? {
+      ...action,
+      status: action.status ?? "Open",
+      followUp: action.followUp ?? "",
+      createdAt: action.createdAt ?? "2026-08-01T09:00:00.000Z",
+      createdBy: action.createdBy ?? "Maya Patel",
+      updatedAt: action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+      updatedBy: action.updatedBy ?? "Maya Patel",
+    } : undefined;
+    const evidence = requirement.evidence.map((item) => ({ ...item }));
+    const existingHistory = requirement.history ?? [];
+    const isGeneratedEntry = (entry: AssessmentHistoryEntry) => entry.id === `${requirement.id}-seed-response` || entry.id.startsWith(`${requirement.id}-demo-`);
+    const hasGeneratedHistory = existingHistory.some(isGeneratedEntry);
+    const recordedHistory = existingHistory.filter((entry) => !isGeneratedEntry(entry));
+    const history = requirement.response && (!existingHistory.length || hasGeneratedHistory)
+      ? [...seededQuestionHistory(requirement, normalizedAction, evidence), ...recordedHistory]
+      : existingHistory;
+    return {
+      ...requirement,
+      ...responseHistory,
+      action: normalizedAction,
+      history,
+    };
+  });
 }
 
 function requirementAuditBaseline(requirementsToRecord: MasterRequirement[]): RequirementAuditEntry[] {
@@ -124,11 +122,14 @@ function requirementAuditBaseline(requirementsToRecord: MasterRequirement[]): Re
 }
 
 function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): RequirementAuditEntry[] {
-  const knownRequirements = new Map([...masterRequirements, ...requirementsToRecord].map((requirement) => [requirement.id, requirement]));
-  const requirement = (id: string) => knownRequirements.get(id);
-  const title = (id: string, fallback: string) => requirement(id)?.title ?? fallback;
-  const question = (id: string, index: number, fallback: string) => requirement(id)?.questions[index]?.text ?? fallback;
-  const evidence = (id: string, index: number, fallback: string) => requirement(id)?.questions[index]?.expectedEvidence.join("; ") || fallback;
+  const knownById = new Map([...masterRequirements, ...requirementsToRecord].map((requirement) => [requirement.id, requirement]));
+  const knownRequirements = [...knownById.values()];
+  // `id` below is the flattened requirement-question's own id (e.g. "q-1"); `groupTitle` looks up
+  // by the shared "Requirement ID" grouping label (e.g. "OS 1.2.1") since several flattened items
+  // can share one requirement's title.
+  const groupTitle = (requirementGroupId: string, fallback: string) => knownRequirements.find((item) => item.requirementId === requirementGroupId)?.title ?? fallback;
+  const questionText = (id: string, fallback: string) => knownById.get(id)?.text ?? fallback;
+  const evidenceText = (id: string, fallback: string) => knownById.get(id)?.expectedEvidence.join("; ") || fallback;
   const rachel = { id: "demo-rachel-morgan", name: "Rachel Morgan", email: "rachel.morgan@demo.kc", role: "administrator" as const };
   const jordan = { id: "demo-jordan-reed", name: "Jordan Reed", email: "jordan.reed@demo.kc", role: "administrator" as const };
 
@@ -136,48 +137,48 @@ function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): 
     {
       id: "audit-demo-import-os-1-2-1",
       requirementId: "OS 1.2.1",
-      requirementTitle: title("OS 1.2.1", "Leadership commitment and accountability"),
+      requirementTitle: groupTitle("OS 1.2.1", "Leadership commitment and accountability"),
       action: "imported",
       summary: "Requirement imported with assessment questions and expected evidence.",
       recordedAt: "2026-08-04T09:15:00.000Z",
       recordedBy: rachel,
       batchId: "IMP-2026-450497",
       changes: [
-        { kind: "added", target: "requirement", label: "Requirement imported", after: title("OS 1.2.1", "Leadership commitment and accountability") },
-        { kind: "added", target: "question", label: "Question 1 added", after: question("OS 1.2.1", 0, "Are site leadership responsibilities documented and communicated?") },
-        { kind: "added", target: "evidence", label: "Expected evidence added to Question 1", after: evidence("OS 1.2.1", 0, "Leadership accountability matrix") },
+        { kind: "added", target: "requirement", label: "Requirement imported", after: groupTitle("OS 1.2.1", "Leadership commitment and accountability") },
+        { kind: "added", target: "question", label: "Question 1 added", after: questionText("q-1", "Are site leadership responsibilities documented and communicated?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added to Question 1", after: evidenceText("q-1", "Leadership accountability matrix") },
       ],
     },
     {
       id: "audit-demo-edit-os-1-2-1",
       requirementId: "OS 1.2.1",
-      requirementTitle: title("OS 1.2.1", "Leadership commitment and accountability"),
+      requirementTitle: groupTitle("OS 1.2.1", "Leadership commitment and accountability"),
       action: "updated",
       summary: "Question wording and expected evidence edited.",
       recordedAt: "2026-08-07T14:40:00.000Z",
       recordedBy: jordan,
       changes: [
-        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are EHS&S objectives reviewed during business meetings?", after: question("OS 1.2.1", 1, "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?") },
-        { kind: "updated", target: "evidence", label: "Expected evidence edited for Question 2", before: "EHS&S scorecard.", after: evidence("OS 1.2.1", 1, "Business review agenda; objectives tracking sheet") },
+        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are EHS&S objectives reviewed during business meetings?", after: questionText("q-2", "Are EHS&S objectives and results reviewed as part of the site's normal business operating rhythm?") },
+        { kind: "updated", target: "evidence", label: "Expected evidence edited for Question 2", before: "EHS&S scorecard.", after: evidenceText("q-2", "Business review agenda; objectives tracking sheet") },
       ],
     },
     {
       id: "audit-demo-add-question-os-2-1-3",
       requirementId: "OS 2.1.3",
-      requirementTitle: title("OS 2.1.3", "Risks, opportunities, and planning controls"),
+      requirementTitle: groupTitle("OS 2.1.3", "Risks, opportunities, and planning controls"),
       action: "updated",
       summary: "A new assessment question and its evidence requirements were added.",
       recordedAt: "2026-08-10T11:20:00.000Z",
       recordedBy: rachel,
       changes: [
-        { kind: "added", target: "question", label: "Question 2 added", after: question("OS 2.1.3", 1, "Are measurable EHS&S objectives connected to the highest-priority risks?") },
-        { kind: "added", target: "evidence", label: "Expected evidence added to Question 2", after: evidence("OS 2.1.3", 1, "Approved objectives; risk-to-objective traceability") },
+        { kind: "added", target: "question", label: "Question 2 added", after: questionText("planning-q-2", "Are measurable EHS&S objectives connected to the highest-priority risks?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added to Question 2", after: evidenceText("planning-q-2", "Approved objectives; risk-to-objective traceability") },
       ],
     },
     {
       id: "audit-demo-remove-question-os-4-3-2",
       requirementId: "OS 4.3.2",
-      requirementTitle: title("OS 4.3.2", "Management of operational change"),
+      requirementTitle: groupTitle("OS 4.3.2", "Management of operational change"),
       action: "updated",
       summary: "An obsolete question and its expected evidence were removed.",
       recordedAt: "2026-08-12T16:05:00.000Z",
@@ -190,7 +191,7 @@ function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): 
     {
       id: "audit-demo-publish-os-2-1-3",
       requirementId: "OS 2.1.3",
-      requirementTitle: title("OS 2.1.3", "Risks, opportunities, and planning controls"),
+      requirementTitle: groupTitle("OS 2.1.3", "Risks, opportunities, and planning controls"),
       action: "published",
       summary: "Requirement published for site assessments.",
       recordedAt: "2026-08-13T10:30:00.000Z",
@@ -200,7 +201,7 @@ function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): 
     {
       id: "audit-demo-remove-evidence-ps-7-2-1",
       requirementId: "PS 7.2.1",
-      requirementTitle: title("PS 7.2.1", "Machine safeguarding verification"),
+      requirementTitle: groupTitle("PS 7.2.1", "Machine safeguarding verification"),
       action: "updated",
       summary: "Outdated expected evidence was removed from a question.",
       recordedAt: "2026-08-15T13:10:00.000Z",
@@ -224,28 +225,28 @@ function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): 
     {
       id: "audit-demo-create-oh-3-1-4",
       requirementId: "OH 3.1.4",
-      requirementTitle: title("OH 3.1.4", "Occupational exposure assessment"),
+      requirementTitle: groupTitle("OH 3.1.4", "Occupational exposure assessment"),
       action: "created",
       summary: "New occupational health requirement added.",
       recordedAt: "2026-08-18T09:25:00.000Z",
       recordedBy: jordan,
       changes: [
-        { kind: "added", target: "requirement", label: "Requirement added", after: title("OH 3.1.4", "Occupational exposure assessment") },
-        { kind: "added", target: "question", label: "Question 1 added", after: question("OH 3.1.4", 0, "Is the occupational exposure inventory current?") },
-        { kind: "added", target: "evidence", label: "Expected evidence added", after: evidence("OH 3.1.4", 0, "Current exposure inventory; similar exposure group list") },
+        { kind: "added", target: "requirement", label: "Requirement added", after: groupTitle("OH 3.1.4", "Occupational exposure assessment") },
+        { kind: "added", target: "question", label: "Question 1 added", after: questionText("occupational-q-1", "Is the occupational exposure inventory current?") },
+        { kind: "added", target: "evidence", label: "Expected evidence added", after: evidenceText("occupational-q-1", "Current exposure inventory; similar exposure group list") },
       ],
     },
     {
       id: "audit-demo-edit-ps-7-2-1",
       requirementId: "PS 7.2.1",
-      requirementTitle: title("PS 7.2.1", "Machine safeguarding verification"),
+      requirementTitle: groupTitle("PS 7.2.1", "Machine safeguarding verification"),
       action: "updated",
       summary: "Requirement title and inspection question edited.",
       recordedAt: "2026-08-20T12:35:00.000Z",
       recordedBy: rachel,
       changes: [
-        { kind: "updated", target: "requirement", label: "Requirement title edited", before: "Machine safeguarding checks", after: title("PS 7.2.1", "Machine safeguarding verification") },
-        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are safeguards inspected regularly?", after: question("PS 7.2.1", 1, "Are safeguard inspections recorded at the required frequency?") },
+        { kind: "updated", target: "requirement", label: "Requirement title edited", before: "Machine safeguarding checks", after: groupTitle("PS 7.2.1", "Machine safeguarding verification") },
+        { kind: "updated", target: "question", label: "Question 2 edited", before: "Are safeguards inspected regularly?", after: questionText("machine-q-2", "Are safeguard inspections recorded at the required frequency?") },
       ],
     },
   ];
@@ -268,30 +269,17 @@ function freshSnapshot(): AppSnapshot {
     lastUpdated: new Date().toISOString(),
     regions: structuredClone(regions),
     segments: structuredClone(segments),
-    masterSections: structuredClone(masterSections),
-    masterSubSections: structuredClone(masterSubSections),
   };
 }
 
 function restoreMasterRequirements(records: AppSnapshot["masterRequirements"] | undefined, fallback: AppSnapshot["masterRequirements"]) {
   if (!records?.length) return fallback;
-  const fixtureById = new Map(fallback.map((requirement) => [requirement.id, requirement]));
-  return records.map((requirement) => {
-    const fixture = fixtureById.get(requirement.id);
-    // Older persisted demo snapshots stored the master list before its question/evidence content
-    // existed. Hydrate only those seeded records from the current fixture; administrator-created
-    // drafts (which do not have a fixture match) retain their intentionally empty question list.
-    const questions = requirement.questions?.length ? requirement.questions : fixture?.questions ?? [];
-    return {
-      ...requirement,
-      siteIds: requirement.siteIds ?? [],
-      questions: questions.map((question) => ({
-        ...question,
-        expectedEvidence: question.expectedEvidence ?? [],
-        evidenceRequired: question.evidenceRequired ?? question.expectedEvidence?.length > 0,
-      })),
-    };
-  });
+  return records.map((requirement) => ({
+    ...requirement,
+    siteIds: requirement.siteIds ?? [],
+    expectedEvidence: requirement.expectedEvidence ?? [],
+    evidenceRequired: requirement.evidenceRequired ?? (requirement.expectedEvidence?.length ?? 0) > 0,
+  }));
 }
 
 function restoreSnapshot(): AppSnapshot {
@@ -307,38 +295,26 @@ function restoreSnapshot(): AppSnapshot {
       requirements: parsed.requirements?.length
         ? normalizeActionMetadata(parsed.requirements.map((requirement) => {
           const fallbackRequirement = fallback.requirements.find((item) => item.id === requirement.id);
-          const questions: AssessmentQuestion[] = requirement.questions.map((question) => {
-            const fallbackQuestion = fallbackRequirement?.questions.find((item) => item.id === question.id);
-            const expectedEvidence = question.expectedEvidence ?? fallbackQuestion?.expectedEvidence ?? [];
-            return {
-              ...question,
-              expectedEvidence,
-              evidenceRequired: question.evidenceRequired ?? fallbackQuestion?.evidenceRequired ?? expectedEvidence.length > 0,
-              period: question.period ?? currentAssessmentPeriod,
-              respondedAt: question.response ? question.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
-              respondedBy: question.response ? question.respondedBy ?? "Maya Patel" : undefined,
-              action: question.action ? {
-                ...question.action,
-                status: question.action.status ?? "Open",
-                followUp: question.action.followUp ?? "",
-                createdAt: question.action.createdAt ?? "2026-08-01T09:00:00.000Z",
-                createdBy: question.action.createdBy ?? "Maya Patel",
-                updatedAt: question.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
-                updatedBy: question.action.updatedBy ?? "Maya Patel",
-              } : question.response === "no" || question.response === "partial"
-                ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
-                : undefined,
-            };
-          });
+          const expectedEvidence = requirement.expectedEvidence ?? fallbackRequirement?.expectedEvidence ?? [];
           return {
             ...requirement,
-            questions,
-            // Requirement-level evidence was the original demo shape. Preserve it by associating
-            // old records with the first question that requests evidence.
-            evidence: (requirement.evidence ?? []).map((evidence) => evidence.questionId ? evidence : {
-              ...evidence,
-              questionId: questions.find((question) => question.evidenceRequired ?? question.expectedEvidence?.length)?.id ?? questions[0]?.id,
-            }),
+            expectedEvidence,
+            evidenceRequired: requirement.evidenceRequired ?? fallbackRequirement?.evidenceRequired ?? expectedEvidence.length > 0,
+            period: requirement.period ?? currentAssessmentPeriod,
+            respondedAt: requirement.response ? requirement.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
+            respondedBy: requirement.response ? requirement.respondedBy ?? "Maya Patel" : undefined,
+            evidence: (requirement.evidence ?? []).map((item) => ({ ...item })),
+            action: requirement.action ? {
+              ...requirement.action,
+              status: requirement.action.status ?? "Open",
+              followUp: requirement.action.followUp ?? "",
+              createdAt: requirement.action.createdAt ?? "2026-08-01T09:00:00.000Z",
+              createdBy: requirement.action.createdBy ?? "Maya Patel",
+              updatedAt: requirement.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+              updatedBy: requirement.action.updatedBy ?? "Maya Patel",
+            } : requirement.response === "no" || requirement.response === "partial"
+              ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
+              : undefined,
           };
         }))
         : fallback.requirements,

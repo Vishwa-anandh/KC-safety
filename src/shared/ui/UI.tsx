@@ -563,7 +563,7 @@ export function CheckboxList({
           const showGroupHeading = option.group && option.group !== filtered[index - 1]?.group;
           return (
             <Fragment key={option.value}>
-              {showGroupHeading && <p className={cx("checkbox-list__group m-0 border-b border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold tracking-wider text-slate-500 uppercase dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>{option.group}</p>}
+              {showGroupHeading && <p className={cx("checkbox-list__group m-0 border-b border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>{option.group}</p>}
               <label className={cx("checkbox-list__row flex cursor-pointer items-center gap-3 border-b border-slate-200 px-3.5 py-3 last:border-b-0 hover:bg-kc-blue-50 dark:border-slate-700 dark:hover:bg-kc-blue-950", checked && "checkbox-list__row--checked bg-kc-blue-50 dark:bg-kc-blue-950")}>
                 {/* size-5 keeps a fixed square box; flex-none stops the flex row stretching it. */}
                 <input className={cx("size-5 flex-none accent-kc-blue-600")} type="checkbox" checked={checked} onChange={() => toggle(option.value)} />

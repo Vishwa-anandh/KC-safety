@@ -6,7 +6,6 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Circle,
   ExternalLink,
@@ -17,8 +16,6 @@ import {
   Paperclip,
   Pencil,
   Plus,
-  Search,
-  ShieldCheck,
   Trash2,
   Upload,
   UserRound,
@@ -27,10 +24,9 @@ import {
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../model/useAssessment";
 import { useAuth } from "../../auth";
-import { actionComplete, performanceForResponse, rollupPerformance } from "../../../shared/domain/assessment";
-import { requirementRoute } from "../../../app/router/links";
-import type { ActionItem, AssessmentQuestion, EvidenceItem, Requirement, ResponseValue } from "../../../shared/types";
-import { Button, ConfirmDialog, eyebrowClasses, IconButton, InlineMessage, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
+import { actionComplete, performanceForResponse } from "../../../shared/domain/assessment";
+import type { ActionItem, EvidenceItem, Requirement, ResponseValue } from "../../../shared/types";
+import { Button, ConfirmDialog, eyebrowClasses, IconButton, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 // ---------------------------------------------------------------------------------------------
@@ -69,103 +65,134 @@ const dialogHeaderTitleClass = "mt-0.5 text-xl font-bold text-slate-900 dark:tex
 const dialogFormClass = "dialog-form grid gap-4 p-4.5";
 const dialogFooterClass = "dialog__footer flex flex-col-reverse items-stretch gap-4 border-t border-slate-200 p-4 max-md:items-stretch md:flex-row md:items-center md:justify-end dark:border-slate-700";
 
-/** Off-canvas "sheet" overlay (mobile requirement navigator / guidance). Mirrors ConfirmDialog's
- * layer recipe: a fixed backdrop plus a panel, anchored to an edge instead of centered. */
+/** Off-canvas "sheet" overlay (mobile requirement navigator). Mirrors ConfirmDialog's layer
+ * recipe: a fixed backdrop plus a panel, anchored to an edge instead of centered. */
 const sheetLayerClass = "sheet-layer fixed inset-0 z-100 grid place-items-center wide:hidden";
 const sheetBackdropClass = "sheet-backdrop absolute inset-0 border-0 bg-slate-950/50 backdrop-blur-sm";
 const sheetClass = "sheet absolute inset-y-0 max-w-97.5 w-full overflow-x-hidden overflow-y-auto bg-white shadow-2xl dark:bg-slate-900";
 
-const requirementMobileToolbarClass = "requirement-mobile-toolbar sticky z-8 flex justify-between gap-2.5 border-b border-slate-200 p-2.5 backdrop-blur-md wide:hidden shell:justify-end dark:border-slate-700";
+const requirementMobileToolbarClass = "requirement-mobile-toolbar sticky z-8 flex justify-end gap-2.5 border-b border-slate-200 p-2.5 backdrop-blur-md wide:hidden dark:border-slate-700";
 const requirementNavigatorWrapClass = "requirement-layout__navigator hidden shell:sticky shell:block shell:w-100 shell:flex-none shell:self-start";
 
-const questionEvidenceTitleClass = "question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300";
+const questionEvidenceTitleClass = "question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300";
 const questionEvidenceNoticeClass = "question-evidence grid gap-2 mt-3.5 rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800";
 const questionNumberClass = "question-number grid size-8 flex-none place-items-center rounded-lg bg-kc-blue-50 text-sm font-extrabold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200";
-const questionCountClass = "question-count flex-none rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300";
 
 const dropzoneClass = "dropzone grid min-h-42 w-full place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
 const dropzoneIconClass = "dropzone__icon grid size-12 place-items-center rounded-xl bg-white text-kc-blue-700 shadow-sm dark:bg-slate-800 dark:text-kc-blue-300";
 
-function requirementState(requirement: Requirement, currentId: string) {
-  if (requirement.id === currentId) return "current";
-  if (requirement.questions.every((question) => actionComplete(question.response, question.action))) return "complete";
-  if (requirement.questions.some((question) => question.response === "no" || question.response === "partial")) return "gap";
+/** Completed/total count for the navigator's section/sub-section rows — just the figure, no bar;
+ * the check/warning/circle state icon next to it already carries the at-a-glance signal. */
+function NavProgress({ completed, total }: { completed: number; total: number }) {
+  return <small className="nav-progress flex-none text-xs font-semibold whitespace-nowrap text-slate-500 tabular-nums dark:text-slate-400">{completed}/{total}</small>;
+}
+
+/** Rollup state for a group of requirements (a section or sub-section), reusing the same
+ * complete/gap/incomplete vocabulary the old per-item navigator used. */
+function groupState(items: Requirement[]) {
+  if (items.every((item) => actionComplete(item.response, item.action))) return "complete";
+  if (items.some((item) => item.response === "no" || item.response === "partial")) return "gap";
   return "incomplete";
 }
 
 function NavigatorState({ state }: { state: string }) {
-  if (state === "complete") return <CheckCircle2 size={17} className="nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300" />;
-  if (state === "gap") return <AlertTriangle size={17} className="nav-state nav-state--gap flex-none text-amber-700 dark:text-amber-300" />;
-  if (state === "current") return <span className="nav-state nav-state--current grid size-5 flex-none place-items-center rounded-full bg-kc-blue-600 text-white ring-3 ring-kc-blue-200 dark:ring-kc-blue-800"><Circle size={12} fill="currentColor" /></span>;
-  return <Circle size={16} className="nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500" />;
+  if (state === "complete") return <CheckCircle2 size={16} className="nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300" />;
+  if (state === "gap") return <AlertTriangle size={16} className="nav-state nav-state--gap flex-none text-amber-700 dark:text-amber-300" />;
+  return <Circle size={15} className="nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500" />;
 }
 
 function AssessmentNavigator({
   requirements,
-  current,
+  currentSectionId,
+  currentSubsection,
   onNavigate,
   onClose,
 }: {
   requirements: Requirement[];
-  current: Requirement;
+  currentSectionId: string;
+  currentSubsection?: string;
   onNavigate: (requirement: Requirement) => void;
   onClose?: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const filtered = requirements.filter((requirement) =>
-    `${requirement.number} ${requirement.title} ${requirement.sectionName}`.toLowerCase().includes(query.toLowerCase()),
-  );
-  const completed = requirements.filter((requirement) => requirement.questions.every((question) => actionComplete(question.response, question.action))).length;
-  const isIncomplete = (requirement: Requirement) => requirement.questions.some((question) => !actionComplete(question.response, question.action));
-  const currentIndex = requirements.findIndex((requirement) => requirement.id === current.id);
-  const ordered = [...requirements.slice(currentIndex + 1), ...requirements.slice(0, currentIndex + 1)];
-  const nextIncomplete = ordered.find((requirement) => requirement.id !== current.id && isIncomplete(requirement));
+  // Sections nest sub-sections, which nest their requirement-questions. The navigator only ever
+  // surfaces the section/sub-section names and a rollup progress — the individual questions
+  // themselves are read from the main panel now, which lists every one of them in place.
+  const sectionGroups = useMemo(() => {
+    const bySection = new Map<string, { sectionId: string; subsections: Map<string, Requirement[]> }>();
+    requirements.forEach((requirement) => {
+      const section = bySection.get(requirement.sectionName) ?? { sectionId: requirement.sectionId, subsections: new Map<string, Requirement[]>() };
+      const items = section.subsections.get(requirement.subsection) ?? [];
+      items.push(requirement);
+      section.subsections.set(requirement.subsection, items);
+      bySection.set(requirement.sectionName, section);
+    });
+    return [...bySection.entries()].map(([sectionName, section]) => ({
+      sectionName,
+      sectionId: section.sectionId,
+      items: [...section.subsections.values()].flat(),
+      subsections: [...section.subsections.entries()].map(([subsection, items]) => ({ subsection, items })),
+    }));
+  }, [requirements]);
+  const completed = requirements.filter((requirement) => actionComplete(requirement.response, requirement.action)).length;
+  const isIncomplete = (requirement: Requirement) => !actionComplete(requirement.response, requirement.action);
+  const currentSectionIndex = requirements.findIndex((requirement) => requirement.sectionId === currentSectionId);
+  const ordered = [...requirements.slice(currentSectionIndex + 1), ...requirements.slice(0, currentSectionIndex + 1)];
+  const nextIncomplete = ordered.find(isIncomplete);
   // Rendered both as the sticky desktop rail (no onClose) and inside the mobile sheet (onClose
   // supplied) — the sheet already draws its own edge, so the rail-only border is dropped there.
   const inSheet = Boolean(onClose);
+  const currentSection = sectionGroups.find((section) => section.sectionId === currentSectionId);
 
   return (
     <aside className={cx("assessment-navigator flex h-full flex-col overflow-x-hidden overflow-y-auto bg-white p-4 dark:bg-slate-900", !inSheet && "border-r border-slate-200 dark:border-slate-700")} aria-label="Assessment navigator">
       <div className="assessment-navigator__header mb-4 flex items-start justify-between gap-3">
         <div>
           <p className={eyebrowClasses}>Current section</p>
-          <h2 className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">{current.sectionName}</h2>
+          <h2 className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">{currentSection?.sectionName ?? "Assessment"}</h2>
         </div>
         {onClose && <IconButton label="Close assessment navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
       <ProgressBar value={Math.round((completed / requirements.length) * 100)} label="Requirements complete" />
-      <label className="navigator-search my-4 flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 px-2.5 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:text-slate-400 dark:focus-within:ring-kc-blue-900">
-        <Search size={17} />
-        <input className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a requirement" />
-      </label>
-      <div className="navigator-group flex-1">
-        <div className="navigator-group__trigger flex w-full items-center gap-2 border-0 bg-transparent px-1.5 py-2 text-left text-xs font-bold text-slate-700 dark:text-slate-300" aria-expanded="true">
-          <ChevronDown size={17} />
-          <span>Assessment requirements</span>
-          <small className="ml-auto font-medium text-slate-500 dark:text-slate-400">{completed} of {requirements.length}</small>
-        </div>
-        <div className="navigator-items mt-1 grid gap-0.5">
-          {filtered.map((requirement) => {
-            const state = requirementState(requirement, current.id);
+      <div className="navigator-group mt-4 flex-1">
+        <div className="navigator-items grid gap-1">
+          {sectionGroups.map((section) => {
+            const sectionCompleted = section.items.filter((item) => actionComplete(item.response, item.action)).length;
+            const sectionActive = section.sectionId === currentSectionId;
             return (
-              <button
-                key={requirement.id}
-                className={cx(
-                  "navigator-item flex min-h-13 w-full items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-left text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
-                  state === "current" && "navigator-item--current border-kc-blue-200 border-l-4 border-l-kc-blue-600 bg-kc-blue-100 pl-1.5 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:border-l-kc-blue-500 dark:bg-kc-blue-900 dark:text-kc-blue-100",
-                )}
-                onClick={() => onNavigate(requirement)}
-              >
-                <NavigatorState state={state} />
-                <span className="grid min-w-0 flex-1 gap-0.5 text-sm font-semibold leading-tight">
-                  <small className="text-xs font-semibold text-slate-500 dark:text-slate-400">{requirement.number} · {requirement.sectionName}</small>
-                  {requirement.title}
-                </span>
-                <ChevronRight size={16} className="flex-none text-slate-400 dark:text-slate-500" />
-              </button>
+              <div key={section.sectionId} className="navigator-section grid gap-0.5">
+                <button
+                  type="button"
+                  className="navigator-section__trigger flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => onNavigate(section.items[0])}
+                >
+                  <NavigatorState state={groupState(section.items)} />
+                  <span className={cx("min-w-0 flex-1 truncate text-[11px] font-normal tracking-wide", sectionActive ? "text-kc-blue-700 dark:text-kc-blue-300" : "text-slate-500 dark:text-slate-400")}>{section.sectionName}</span>
+                  <NavProgress completed={sectionCompleted} total={section.items.length} />
+                </button>
+                <div className="navigator-subgroup grid gap-0.5 pl-6.5">
+                  {section.subsections.map((sub) => {
+                    const subCompleted = sub.items.filter((item) => actionComplete(item.response, item.action)).length;
+                    const subActive = sectionActive && sub.subsection === currentSubsection;
+                    return (
+                      <button
+                        key={`${section.sectionId}::${sub.subsection}`}
+                        type="button"
+                        className={cx(
+                          "navigator-subgroup__trigger flex min-h-9.5 w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800",
+                          subActive && "navigator-subgroup__trigger--active border-kc-blue-300 bg-linear-to-r from-kc-blue-50 to-kc-blue-100 shadow-sm dark:border-kc-blue-600 dark:from-kc-blue-950 dark:to-kc-blue-900",
+                        )}
+                        onClick={() => onNavigate(sub.items[0])}
+                      >
+                        <NavigatorState state={groupState(sub.items)} />
+                        <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
+                        <NavProgress completed={subCompleted} total={sub.items.length} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
-          {!filtered.length && <p className="navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400">No requirements match your search.</p>}
         </div>
       </div>
       <Button className="next-incomplete mt-4 w-full" variant="secondary" icon={<ListChecks size={18} />} disabled={!nextIncomplete} onClick={() => nextIncomplete && onNavigate(nextIncomplete)}>
@@ -298,53 +325,6 @@ function ActionEditor({ action, response, onChange, onRemove }: { action?: Actio
   );
 }
 
-// Kept temporarily for backward-compatible component extraction; site-user rendering is now
-// question-scoped and does not invoke this legacy requirement-level panel.
-export function EvidencePanel({ evidence, onAdd, onView, onEdit, onDelete }: { evidence: EvidenceItem[]; onAdd: () => void; onView: (item: EvidenceItem) => void; onEdit: (item: EvidenceItem) => void; onDelete: (item: EvidenceItem) => void }) {
-  return (
-    <section className="evidence-card mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <div className={sectionTitleRowClass}>
-        <div>
-          <p className={eyebrowClasses}>Supporting material</p>
-          <h2 className={sectionTitleHeadingClass}>Attached evidence</h2>
-          <span className={sectionTitleCountClass}>{evidence.length} items connected to this requirement</span>
-        </div>
-        <Button variant="secondary" icon={<Plus size={17} />} onClick={onAdd}>Add evidence</Button>
-      </div>
-      {evidence.length ? (
-        <div className="evidence-list grid gap-2">
-          {evidence.map((item) => (
-            <article className="evidence-item flex flex-wrap items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900" key={item.id}>
-              <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                <div className={cx("evidence-item__icon grid size-10 flex-none place-items-center rounded-lg", item.type === "file" ? "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300" : "bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}>
-                  {item.type === "file" ? <FileText size={20} /> : <Link2 size={20} />}
-                </div>
-                <button className="evidence-item__copy grid min-w-0 flex-1 border-0 bg-transparent p-0 text-left text-slate-800 dark:text-slate-200" onClick={() => onView(item)}>
-                  <strong className="truncate text-sm text-slate-900 dark:text-slate-100">{item.title}</strong>
-                  <span className="truncate text-xs text-slate-500 dark:text-slate-400">{item.detail}</span>
-                  <small className="truncate text-xs text-slate-500 dark:text-slate-400">Added by {item.uploadedBy} · {item.uploadedAt}</small>
-                </button>
-              </div>
-              <div className="evidence-item__actions flex flex-none items-center gap-0.5 max-sm:w-full max-sm:justify-end">
-                <IconButton label={`Edit ${item.title}`} onClick={() => onEdit(item)}><Pencil size={17} /></IconButton>
-                <IconButton label={`Delete ${item.title}`} onClick={() => onDelete(item)}><Trash2 size={17} /></IconButton>
-                <IconButton label={`View ${item.title}`} onClick={() => onView(item)}><ExternalLink size={18} /></IconButton>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="evidence-empty grid min-h-38 place-items-center place-content-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400">
-          <Paperclip size={22} className="text-kc-blue-600 dark:text-kc-blue-400" />
-          <strong className="text-sm text-slate-800 dark:text-slate-200">No evidence attached yet</strong>
-          <span className="text-xs text-slate-500 dark:text-slate-400">Add a file or secure link to support this requirement.</span>
-        </div>
-      )}
-    </section>
-  );
-}
-
-
 function QuestionEvidenceAttachments({
   evidence,
   questionNumber,
@@ -361,7 +341,7 @@ function QuestionEvidenceAttachments({
   onDelete: (item: EvidenceItem) => void;
 }) {
   return (
-    <div className="question-evidence question-evidence--attachments grid gap-2 mt-3.5 rounded-md border border-slate-200 bg-kc-blue-50 p-3 px-3.5 dark:border-slate-700 dark:bg-kc-blue-950">
+    <div className="question-evidence question-evidence--attachments grid gap-2 mt-3.5 rounded-md border border-slate-200 bg-kc-blue-50 p-3.5 dark:border-slate-700 dark:bg-kc-blue-950">
       <div className="question-evidence__attachments-header flex flex-wrap items-center justify-between gap-2.5">
         <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence attached to Question {questionNumber}</span>
         <Button variant="tertiary" icon={<Plus size={15} />} onClick={onAdd}>Add evidence</Button>
@@ -386,42 +366,6 @@ function QuestionEvidenceAttachments({
         <p className="question-evidence__attachment-empty m-0 text-sm text-slate-500 dark:text-slate-400">No evidence attached yet. Add a file or secure link for this question.</p>
       )}
     </div>
-  );
-}
-
-function GuidancePanel({ requirement, onCollapse }: { requirement: Requirement; onCollapse?: () => void }) {
-  // Rendered both as the collapsible desktop rail (onCollapse supplied) and inside the mobile
-  // sheet (no onCollapse) — the sheet already draws its own edge and close control.
-  const isRail = Boolean(onCollapse);
-  return (
-    <aside className={cx("guidance-panel h-full overflow-x-hidden overflow-y-auto bg-linear-to-b from-kc-blue-50 to-white p-4.5 dark:from-kc-blue-950 dark:to-slate-900", isRail && "border-l border-slate-200 dark:border-slate-700")}>
-      <div className="guidance-panel__top flex items-start justify-between gap-2.5 mb-4 text-kc-blue-700 dark:text-kc-blue-300">
-        <div>
-          <p className={eyebrowClasses}>Read-only master content</p>
-          <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">How to meet</h2>
-        </div>
-        <div className="guidance-panel__top-actions flex items-center gap-1.5">
-          <BookOpen size={20} />
-          {onCollapse && <IconButton label="Minimize guidance panel" onClick={onCollapse}><ChevronRight size={18} /></IconButton>}
-        </div>
-      </div>
-      <ul className="guidance-list mt-4 grid gap-3 pl-4.5 text-sm leading-relaxed text-slate-700 marker:text-kc-blue-600 dark:text-slate-300 dark:marker:text-kc-blue-400">
-        {requirement.guidance.map((item) => <li key={item}>{item}</li>)}
-      </ul>
-      <div className="expected-evidence mt-5.5 rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="expected-evidence__title flex items-center gap-2 text-kc-blue-700 dark:text-kc-blue-300">
-          <Paperclip size={18} />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">Expected evidence</h3>
-        </div>
-        <ul className="mt-3 grid gap-2 pl-4.5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-          {requirement.expectedEvidence.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-      </div>
-      <div className="master-protection-note flex items-center gap-1.5 mt-4 text-xs text-slate-500 dark:text-slate-400">
-        <ShieldCheck size={17} /><span>Managed by KC administrators</span>
-      </div>
-      <InlineMessage className="mt-4" tone="info" title="How this result is calculated">The requirement result is the lowest response below. No maps to Initial, Partial to Emerging, and Yes to Performing.</InlineMessage>
-    </aside>
   );
 }
 
@@ -555,216 +499,222 @@ function EvidenceViewer({ item, onClose }: { item: EvidenceItem; onClose: () => 
   );
 }
 
-export default function RequirementWorkspace() {
-  const { sectionId, requirementId } = useParams();
-  const navigate = useNavigate();
-  const { requirements, updateQuestion, addEvidence, updateEvidence, removeEvidence } = useAssessment();
-  const { user } = useAuth();
-  const requirement = requirements.find((item) => item.id === requirementId && item.sectionId === sectionId);
-  const [saveState, setSaveState] = useState<"saving" | "saved" | "failed" | "attention">("saved");
-  const [navigatorOpen, setNavigatorOpen] = useState(false);
-  const [guidanceOpen, setGuidanceOpen] = useState(false);
-  const [guidanceMinimized, setGuidanceMinimized] = useState(true);
-  const [evidenceEditor, setEvidenceEditor] = useState<{ mode: "new"; questionId: string } | { mode: "edit"; item: EvidenceItem } | null>(null);
-  const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
-  const [evidenceRemoving, setEvidenceRemoving] = useState<EvidenceItem | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Responses/actions edit this local draft instead of writing straight to the store, so the site
-  // user reviews their answers and commits them with an explicit Save (or Save & Next) rather than
-  // every keystroke silently autosaving. Evidence attachments still commit immediately — each has
-  // its own explicit save step in its dialog, so there's no separate "unsaved" state to track there.
-  const [draftQuestions, setDraftQuestions] = useState<AssessmentQuestion[]>(requirement?.questions ?? []);
+/** One requirement's editable card in the section list. Owns its own response/action draft and
+ * save state so many of these can sit on the page at once without a single page-wide dirty flag —
+ * each card is reviewed and saved independently, matching the explicit Save model (no autosave). */
+function RequirementCard({
+  requirement,
+  highlighted,
+  onSave,
+  onAddEvidence,
+  onViewEvidence,
+  onEditEvidence,
+  onDeleteEvidence,
+}: {
+  requirement: Requirement;
+  highlighted: boolean;
+  onSave: (id: string, update: { response: ResponseValue; action?: ActionItem }) => void;
+  onAddEvidence: (requirementId: string) => void;
+  onViewEvidence: (item: EvidenceItem) => void;
+  onEditEvidence: (item: EvidenceItem) => void;
+  onDeleteEvidence: (item: EvidenceItem) => void;
+}) {
+  const [draft, setDraft] = useState(requirement);
   const [dirty, setDirty] = useState(false);
+  const [saveState, setSaveState] = useState<"saving" | "saved" | "failed" | "attention">("saved");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setDraftQuestions(requirement?.questions ?? []);
+    setDraft(requirement);
     setDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requirement?.id]);
+  }, [requirement.id]);
 
-  const currentIndex = requirement ? requirements.findIndex((item) => item.id === requirement.id) : -1;
-  const performance = useMemo(() => rollupPerformance(draftQuestions.map((question) => question.response)), [draftQuestions]);
-  const answered = draftQuestions.filter((question) => question.response).length;
+  function change(update: Partial<Requirement>) {
+    setDraft((current) => ({ ...current, ...update }));
+    setDirty(true);
+  }
 
-  if (!requirement) return <Navigate to="/assessment" replace />;
-
-  function queueSavedState() {
+  function save() {
+    onSave(draft.id, { response: draft.response, action: draft.action });
+    setDirty(false);
     setSaveState("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => setSaveState("saved"), 500);
   }
 
-  function changeQuestion(questionId: string, update: Partial<AssessmentQuestion>) {
-    setDraftQuestions((current) => current.map((question) => question.id === questionId ? { ...question, ...update } : question));
-    setDirty(true);
+  return (
+    <article
+      className={cx(
+        "question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm max-md:p-3.5 dark:border-slate-700 dark:bg-slate-900",
+        highlighted && "question-card--highlighted border-kc-blue-400 ring-3 ring-kc-blue-100 dark:border-kc-blue-500 dark:ring-kc-blue-900",
+      )}
+      id={`question-${requirement.id}`}
+    >
+      <div className="question-card__header flex flex-wrap items-start gap-3">
+        <span className={questionNumberClass}>{draft.number}</span>
+        <div className="min-w-0 flex-1">
+          <p className={eyebrowClasses}>{draft.requirementId}{draft.subsection ? ` · ${draft.subsection}` : ""}</p>
+          <h3 className="mt-1 max-w-195 text-base leading-relaxed whitespace-pre-line text-slate-900 dark:text-slate-100">{draft.text}</h3>
+        </div>
+        <PerformanceBadge performance={performanceForResponse(draft.response)} compact />
+      </div>
+      {Boolean(draft.guidance?.length) && (
+        <details className="how-to-meet mt-3.5 rounded-md border border-kc-blue-200 bg-kc-blue-50 px-3 py-2.5 dark:border-kc-blue-800 dark:bg-kc-blue-950">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300">
+            <BookOpen size={14} /> How to meet this requirement
+          </summary>
+          <ul className="m-0 mt-2 grid gap-1.5 pl-4.5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+            {draft.guidance.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        </details>
+      )}
+      {/* A "No" response means the requirement isn't in place yet, so there's nothing to attach
+          evidence of — the evidence panel only applies once a response of Partial or Yes claims
+          some level of implementation. */}
+      {Boolean(draft.evidenceRequired ?? draft.expectedEvidence?.length) && draft.response !== "no" && (
+        <>
+          <div className={questionEvidenceNoticeClass}>
+            <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence required <small className="ml-auto text-xs font-medium text-slate-500 normal-case tracking-normal dark:text-slate-400">Attach evidence even when the response is Partial or Yes, if it is available.</small></span>
+            <ul className="m-0 mt-2 grid gap-1.5 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              {(draft.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <QuestionEvidenceAttachments evidence={requirement.evidence} questionNumber={draft.number} onAdd={() => onAddEvidence(requirement.id)} onView={onViewEvidence} onEdit={onEditEvidence} onDelete={onDeleteEvidence} />
+        </>
+      )}
+      <ResponseSelector questionId={draft.id} value={draft.response} onChange={(response) => change({ response })} />
+      <ActionEditor action={draft.action} response={draft.response} onChange={(action) => change({ action })} onRemove={() => change({ action: undefined })} />
+      <div className="question-card__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <span>{draft.response ? "Answered" : "Not yet answered"}</span>
+        <span className="divider-dot size-1 rounded-full bg-slate-400 max-sm:hidden dark:bg-slate-500" />
+        <span className="max-sm:hidden"><SaveStatus state={saveState} /></span>
+        <Button className="ml-auto" variant="secondary" disabled={!dirty} onClick={save} icon={<Check size={16} />}>Save</Button>
+      </div>
+    </article>
+  );
+}
+
+export default function RequirementWorkspace() {
+  const { sectionId, requirementId } = useParams();
+  const navigate = useNavigate();
+  const { requirements, updateQuestion, addEvidence, updateEvidence, removeEvidence } = useAssessment();
+  const { user } = useAuth();
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [evidenceEditor, setEvidenceEditor] = useState<{ mode: "new"; requirementId: string } | { mode: "edit"; requirementId: string; item: EvidenceItem } | null>(null);
+  const [evidenceViewer, setEvidenceViewer] = useState<EvidenceItem | null>(null);
+  const [evidenceRemoving, setEvidenceRemoving] = useState<{ requirementId: string; item: EvidenceItem } | null>(null);
+
+  const sectionRequirements = useMemo(() => requirements.filter((item) => item.sectionId === sectionId), [requirements, sectionId]);
+  const highlighted = sectionRequirements.find((item) => item.id === requirementId) ?? sectionRequirements[0];
+  const subsectionGroups = useMemo(() => {
+    const bySubsection = new Map<string, Requirement[]>();
+    sectionRequirements.forEach((item) => {
+      const items = bySubsection.get(item.subsection) ?? [];
+      items.push(item);
+      bySubsection.set(item.subsection, items);
+    });
+    return [...bySubsection.entries()].map(([subsection, items]) => ({ subsection, items }));
+  }, [sectionRequirements]);
+
+  const sectionOrder = useMemo(() => [...new Set(requirements.map((item) => item.sectionId))], [requirements]);
+  const sectionIndex = sectionOrder.indexOf(sectionId ?? "");
+  const previousSectionId = sectionIndex > 0 ? sectionOrder[sectionIndex - 1] : undefined;
+  const nextSectionId = sectionIndex >= 0 && sectionIndex < sectionOrder.length - 1 ? sectionOrder[sectionIndex + 1] : undefined;
+  const firstInSection = (id: string) => requirements.find((item) => item.sectionId === id);
+
+  useEffect(() => {
+    if (!requirementId) return;
+    document.getElementById(`question-${requirementId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [sectionId, requirementId]);
+
+  if (!sectionRequirements.length) return <Navigate to="/assessment" replace />;
+
+  function saveRequirement(id: string, update: { response: ResponseValue; action?: ActionItem }) {
+    updateQuestion(id, update, user?.name);
   }
 
-  function saveDraft() {
-    draftQuestions.forEach((question) => updateQuestion(requirement!.id, question.id, { response: question.response, action: question.action }, user?.name));
-    setDirty(false);
-    queueSavedState();
-  }
-
-  // Every requirement is always reachable — from the navigator, Next incomplete, or Previous/Next
-  // requirement — regardless of whether the current requirement's action details are complete.
-  // Incomplete No/Partial actions still surface as gaps elsewhere (Actions summary, dashboard),
-  // they just no longer block moving around the assessment. Leaving with unsaved answers still
-  // saves them first — only the mid-editing autosave went away, not the safety net.
   function moveTo(target: Requirement) {
-    if (dirty) saveDraft();
     setNavigatorOpen(false);
-    setGuidanceOpen(false);
-    navigate(requirementRoute(target));
+    navigate(`/assessment/${target.sectionId}/${target.id}`);
   }
-
-  const previous = requirements[currentIndex - 1];
-  const next = requirements[currentIndex + 1];
 
   return (
     <div className="requirement-page min-w-0">
       <div className={requirementMobileToolbarClass} style={{ top: "var(--content-offset)", background: "var(--surface-mobile-bar)" }}>
         <Button variant="secondary" icon={<Menu size={18} />} onClick={() => setNavigatorOpen(true)}>Requirements</Button>
-        <Button variant="secondary" icon={<BookOpen size={18} />} onClick={() => setGuidanceOpen(true)}>Guidance</Button>
       </div>
       <div className="requirement-layout min-w-0 w-full shell:flex shell:items-stretch" style={{ minHeight: "calc(100vh - var(--content-offset))" }}>
         <div className={requirementNavigatorWrapClass} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
-          <AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} />
+          <AssessmentNavigator requirements={requirements} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} />
         </div>
         <div className="requirement-main min-w-0 pt-4 pb-12 shell:flex-1 md:pt-6 md:pb-16" style={{ paddingInline: "var(--page-gutter)" }}>
           <nav className={breadcrumbsClass} aria-label="Breadcrumb">
             <Link className={breadcrumbsLinkClass} to="/assessment">Self-assessment</Link>
             <ChevronRight size={15} />
-            <span>{requirement.sectionName}</span>
-            <ChevronRight size={15} />
-            <span aria-current="page">{requirement.number}</span>
+            <span aria-current="page">{sectionRequirements[0].sectionName}</span>
           </nav>
-          <header className="requirement-header rounded-xl border border-slate-200 bg-white p-5 shadow-sm max-md:p-4 dark:border-slate-700 dark:bg-slate-900">
-            <div className="requirement-header__meta flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="requirement-id rounded-full border border-kc-blue-200 bg-kc-blue-50 px-2 py-1 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">{requirement.number}</span>
-              <span>{requirement.subsection}</span>
-            </div>
-            <div className="requirement-header__title mt-3 flex items-start justify-between gap-4 max-md:grid">
-              <div className="min-w-0 flex-1">
-                <p className={eyebrowClasses}>Requirement</p>
-                <h1 className="mt-1 max-w-180 text-2xl font-extrabold text-slate-900 sm:text-3xl dark:text-slate-100">{requirement.title}</h1>
+          {subsectionGroups.map((group, groupIndex) => (
+            <section className={cx("questions-section", groupIndex === 0 ? "mt-2" : "mt-6")} aria-labelledby={`subsection-${group.subsection}`} key={group.subsection}>
+              <div className={sectionTitleRowClass}>
+                <div>
+                  <p className={eyebrowClasses}>Sub-section</p>
+                  <h2 className={sectionTitleHeadingClass} id={`subsection-${group.subsection}`}>{group.subsection || "General"}</h2>
+                </div>
+                <span className={sectionTitleCountClass}>{group.items.filter((item) => actionComplete(item.response, item.action)).length} of {group.items.length} answered</span>
               </div>
-              <PerformanceBadge performance={performance} />
-            </div>
-            <p className="requirement-text mt-3.5 max-w-205 text-base leading-relaxed text-slate-700 dark:text-slate-300">{requirement.requirementText}</p>
-            <div className="requirement-header__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              <span className="text-slate-500 dark:text-slate-400">{answered} of {requirement.questions.length} questions answered</span>
-              <span className="divider-dot size-1 rounded-full bg-slate-400 max-md:hidden dark:bg-slate-500" />
-              <span className="text-slate-500 dark:text-slate-400">Result uses the lowest question level</span>
-              <span className="requirement-save ml-auto max-md:hidden"><SaveStatus state={saveState} /></span>
-            </div>
-          </header>
-          <section className="questions-section mt-6" aria-labelledby="questions-title">
-            <div className={sectionTitleRowClass}>
-              <div>
-                <p className={eyebrowClasses}>Assessment questions</p>
-                <h2 className={sectionTitleHeadingClass} id="questions-title">Evaluate this requirement</h2>
+              <div className="question-list grid gap-4">
+                {group.items.map((item) => (
+                  <RequirementCard
+                    key={item.id}
+                    requirement={item}
+                    highlighted={item.id === highlighted?.id}
+                    onSave={saveRequirement}
+                    onAddEvidence={(id) => setEvidenceEditor({ mode: "new", requirementId: id })}
+                    onViewEvidence={setEvidenceViewer}
+                    onEditEvidence={(evidenceItem) => setEvidenceEditor({ mode: "edit", requirementId: item.id, item: evidenceItem })}
+                    onDeleteEvidence={(evidenceItem) => setEvidenceRemoving({ requirementId: item.id, item: evidenceItem })}
+                  />
+                ))}
               </div>
-              <span className={questionCountClass}>{requirement.questions.length} questions</span>
-            </div>
-            <div className="question-list grid gap-4">
-              {draftQuestions.map((question) => (
-                <article className="question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm max-md:p-3.5 dark:border-slate-700 dark:bg-slate-900" key={question.id} id={`question-${question.id}`}>
-                  <div className="question-card__header flex flex-wrap items-start gap-3">
-                    <span className={questionNumberClass}>{question.number}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Question {question.number}</p>
-                      <h3 className="mt-1 max-w-195 text-base leading-relaxed text-slate-900 dark:text-slate-100">{question.text}</h3>
-                    </div>
-                    <PerformanceBadge performance={performanceForResponse(question.response)} compact />
-                  </div>
-                  {/* A "No" response means the requirement isn't in place yet, so there's nothing
-                      to attach evidence of — the evidence panel only applies once a response of
-                      Partial or Yes claims some level of implementation. */}
-                  {Boolean(question.evidenceRequired ?? question.expectedEvidence?.length) && question.response !== "no" && (
-                    <>
-                      <div className={questionEvidenceNoticeClass}>
-                        <span className={questionEvidenceTitleClass}><Paperclip size={14} /> Evidence required <small className="ml-auto text-xs font-medium text-slate-500 normal-case tracking-normal dark:text-slate-400">Attach evidence even when the response is Partial or Yes, if it is available.</small></span>
-                        <ul className="m-0 mt-2 grid gap-1.5 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                          {(question.expectedEvidence ?? []).map((item) => <li key={item}>{item}</li>)}
-                        </ul>
-                      </div>
-                      <QuestionEvidenceAttachments evidence={requirement.evidence.filter((item) => item.questionId === question.id)} questionNumber={question.number} onAdd={() => setEvidenceEditor({ mode: "new", questionId: question.id })} onView={setEvidenceViewer} onEdit={(item) => setEvidenceEditor({ mode: "edit", item })} onDelete={setEvidenceRemoving} />
-                    </>
-                  )}
-                  <ResponseSelector questionId={question.id} value={question.response} onChange={(response) => changeQuestion(question.id, { response })} />
-                  <ActionEditor action={question.action} response={question.response} onChange={(action) => changeQuestion(question.id, { action })} onRemove={() => changeQuestion(question.id, { action: undefined })} />
-                </article>
-              ))}
-            </div>
-          </section>
+            </section>
+          ))}
           <footer
-            className="requirement-footer sticky bottom-18 z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-3 shell:bottom-3 shell:flex shell:justify-between shell:gap-3.5 shell:p-3.5"
+            className="requirement-footer sticky bottom-24 z-5 mt-6 flex w-full items-center justify-between gap-2.5 rounded-xl border p-3 shell:bottom-6 shell:p-3.5"
             style={{
               borderColor: "var(--border-translucent)",
               background: "var(--surface-translucent)",
               boxShadow: "0 12px 34px rgb(15 23 42 / 0.12)",
               backdropFilter: "blur(18px)",
-              // env() has no Tailwind scale token; kept as inline padding (rather than folded
-              // into the sticky `bottom` offset) specifically so the shell: breakpoint above can
-              // still override the position with a plain class — an inline style always wins over
-              // a class, so an arbitrary-value bottom offset could never be overridden responsively.
-              paddingBottom: "env(safe-area-inset-bottom)",
+              // Adds the device safe-area inset ON TOP of the padding the p-3/p-3.5 classes
+              // already set — a plain `env(safe-area-inset-bottom)` here would replace that
+              // padding outright (inline styles win over classes), collapsing it to 0 on any
+              // browser without a safe-area inset and pinning the buttons to the bottom edge.
+              paddingBottom: "calc(0.875rem + env(safe-area-inset-bottom))",
             }}
           >
-            <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previous} onClick={() => previous && moveTo(previous)}>Previous requirement</Button>
-            <div className="flex items-center gap-2.5 max-md:w-full max-md:justify-end">
-              <span className="max-sm:hidden"><SaveStatus state={saveState} /></span>
-              <Button variant="secondary" disabled={!dirty} onClick={saveDraft} icon={<Check size={18} />}>Save</Button>
-              <Button variant="primary" disabled={!next} onClick={() => next && moveTo(next)} icon={<ArrowRight size={18} />} iconPosition="end">Save &amp; next</Button>
-            </div>
+            <Button variant="secondary" icon={<ArrowLeft size={18} />} disabled={!previousSectionId} onClick={() => { const target = previousSectionId && firstInSection(previousSectionId); if (target) moveTo(target); }}>Previous section</Button>
+            <Button variant="primary" disabled={!nextSectionId} onClick={() => { const target = nextSectionId && firstInSection(nextSectionId); if (target) moveTo(target); }} icon={<ArrowRight size={18} />} iconPosition="end">Next section</Button>
           </footer>
-        </div>
-        <div className={cx("requirement-layout__guidance hidden wide:sticky wide:block wide:flex-none wide:self-start", guidanceMinimized ? "wide:w-14" : "wide:w-80")} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
-          {guidanceMinimized ? (
-            <button
-              type="button"
-              className="guidance-panel-restore flex h-full w-full cursor-pointer flex-col items-center gap-2.5 border-0 border-l border-slate-200 bg-linear-to-b from-kc-blue-50 to-white px-0 py-4 text-kc-blue-700 hover:bg-kc-blue-100 hover:text-kc-blue-800 focus-visible:relative focus-visible:z-1 focus-visible:outline-3 focus-visible:outline-sky-600/25 focus-visible:-outline-offset-3 dark:border-slate-700 dark:from-kc-blue-950 dark:to-slate-900 dark:text-kc-blue-300 dark:hover:text-kc-blue-200"
-              onClick={() => setGuidanceMinimized(false)}
-              aria-label="Expand guidance panel"
-            >
-              <BookOpen size={19} />
-              <span className="text-xs font-bold tracking-widest text-slate-700 dark:text-slate-300" style={{ writingMode: "vertical-rl" }}>Guidance</span>
-              <ChevronRight size={17} className="rotate-180" />
-            </button>
-          ) : (
-            <GuidancePanel requirement={requirement} onCollapse={() => setGuidanceMinimized(true)} />
-          )}
         </div>
       </div>
       {navigatorOpen && (
         <div className={sheetLayerClass}>
           <button className={sheetBackdropClass} aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} />
           <div className={cx(sheetClass, "sheet--left left-0 right-8")}>
-            <AssessmentNavigator requirements={requirements} current={requirement} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} />
-          </div>
-        </div>
-      )}
-      {guidanceOpen && (
-        <div className={sheetLayerClass}>
-          <button className={sheetBackdropClass} aria-label="Close guidance" onClick={() => setGuidanceOpen(false)} />
-          <div className={cx(sheetClass, "sheet--right right-0 left-8")}>
-            <div className="sheet__close flex justify-end p-2">
-              <IconButton label="Close guidance" onClick={() => setGuidanceOpen(false)}><X size={20} /></IconButton>
-            </div>
-            <GuidancePanel requirement={requirement} />
+            <AssessmentNavigator requirements={requirements} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} />
           </div>
         </div>
       )}
       {evidenceEditor && <EvidenceDialog
         item={evidenceEditor.mode === "new" ? undefined : evidenceEditor.item}
-        response={draftQuestions.find((question) => question.id === (evidenceEditor.mode === "new" ? evidenceEditor.questionId : evidenceEditor.item.questionId))?.response ?? null}
+        response={sectionRequirements.find((item) => item.id === evidenceEditor.requirementId)?.response ?? null}
         onClose={() => setEvidenceEditor(null)} onSave={(item) => {
-        if (evidenceEditor.mode === "new") addEvidence(requirement.id, { ...item, questionId: evidenceEditor.questionId }, user?.name); else updateEvidence(requirement.id, item, user?.name);
+        if (evidenceEditor.mode === "new") addEvidence(evidenceEditor.requirementId, { ...item, questionId: evidenceEditor.requirementId }, user?.name); else updateEvidence(evidenceEditor.requirementId, item, user?.name);
         setEvidenceEditor(null);
-        queueSavedState();
       }} />}
       {evidenceViewer && <EvidenceViewer item={evidenceViewer} onClose={() => setEvidenceViewer(null)} />}
-      {evidenceRemoving && <ConfirmDialog eyebrow="Evidence" title={`Delete ${evidenceRemoving.title}?`} body="This evidence record will be removed from this requirement. This cannot be undone." confirmLabel="Delete evidence" cancelLabel="Keep evidence" onCancel={() => setEvidenceRemoving(null)} onConfirm={() => { removeEvidence(requirement.id, evidenceRemoving.id, user?.name); queueSavedState(); setEvidenceRemoving(null); }} />}
+      {evidenceRemoving && <ConfirmDialog eyebrow="Evidence" title={`Delete ${evidenceRemoving.item.title}?`} body="This evidence record will be removed from this requirement. This cannot be undone." confirmLabel="Delete evidence" cancelLabel="Keep evidence" onCancel={() => setEvidenceRemoving(null)} onConfirm={() => { removeEvidence(evidenceRemoving.requirementId, evidenceRemoving.item.id, user?.name); setEvidenceRemoving(null); }} />}
     </div>
   );
 }

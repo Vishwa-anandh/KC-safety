@@ -29,7 +29,7 @@ import { useSites } from "../model/useSites";
 import { useAuth } from "../../auth";
 import { actionComplete, assessmentPeriods, responseLabel } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
-import type { ActionItem, AssessmentPeriod, AssessmentQuestion, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
+import type { ActionItem, AssessmentPeriod, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
 import { Button, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
@@ -150,9 +150,9 @@ function SectionCard({ section, requirement }: { section: SectionSummary; requir
 export function OverviewScreen() {
   const { requirements, sectionSummaries, overallCompletion, overallPerformance, gapCount, missingActionCount, lastUpdated } = useSites();
   const operating = sectionSummaries.filter((section) => section.kind === "operating-system");
-  const allQuestions = requirements.flatMap((requirement) => requirement.questions);
+  const allQuestions = requirements;
   const completeQuestions = allQuestions.filter((question) => actionComplete(question.response, question.action)).length;
-  const nextRequirement = requirements.find((requirement) => requirement.questions.some((question) => !actionComplete(question.response, question.action))) ?? requirements[0];
+  const nextRequirement = requirements.find((requirement) => !actionComplete(requirement.response, requirement.action)) ?? requirements[0];
   const nextRoute = nextRequirement ? requirementRoute(nextRequirement) : "/assessment";
   const nextCopy = missingActionCount > 0 ? "Complete corrective-action details" : "Continue unanswered assessment questions";
 
@@ -189,7 +189,7 @@ export function AssessmentHomeScreen() {
   });
   const operating = filtered.filter((section) => section.kind === "operating-system");
   const standards = filtered.filter((section) => section.kind === "performance-standard");
-  const next = requirements.find((requirement) => requirement.questions.some((question) => !actionComplete(question.response, question.action))) ?? requirements[0];
+  const next = requirements.find((requirement) => !actionComplete(requirement.response, requirement.action)) ?? requirements[0];
   return (
     <div className={cx(pageContainerClass)} style={pageContainerStyle}>
       <PageHeader eyebrow="Self-assessment" title="Assessment sections" description="Work through the Operating System, Health & Safety, and Occupational Health requirements for your assigned site." actions={next && <Link className={cx(primaryLinkButtonClass)} to={requirementRoute(next)} data-tour="assessment-next-incomplete"><BookOpenCheck size={18} /><span>Open next incomplete</span></Link>} />
@@ -377,7 +377,7 @@ export function OwnersScreen() {
   );
 }
 
-interface GapRow { requirement: Requirement; question: AssessmentQuestion }
+interface GapRow { requirement: Requirement; question: Requirement }
 
 function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => void; onSave: (action: ActionItem) => void }) {
   const [description, setDescription] = useState(row.question.action?.description ?? "");
@@ -397,9 +397,9 @@ function ActionDialog({ row, onClose, onSave }: { row: GapRow; onClose: () => vo
   </section></div>;
 }
 
-interface QuestionHistoryRow { requirement: Requirement; question: AssessmentQuestion }
+interface QuestionHistoryRow { requirement: Requirement; question: Requirement }
 
-function QuestionHistoryTimeline({ question }: { question: AssessmentQuestion }) {
+function QuestionHistoryTimeline({ question }: { question: Requirement }) {
   const entries = [...(question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
   return (
     <ol className={cx("response-history__timeline actions-response-history__timeline relative mt-0 grid gap-3 border-l-2 border-slate-200 py-0 pr-0 pl-4.5 ml-1.5 list-none dark:border-slate-700")}>
@@ -471,8 +471,8 @@ export function ActionsScreen() {
   const [historyPeriod, setHistoryPeriod] = useState<"all" | AssessmentPeriod>("all");
   const [editing, setEditing] = useState<GapRow | null>(null);
   const [saved, setSaved] = useState(false);
-  const actions = useMemo(() => requirements.flatMap((requirement) => requirement.questions.filter((question) => question.response === "no" || question.response === "partial").map((question) => ({ requirement, question }))), [requirements]);
-  const historyRows = useMemo<QuestionHistoryRow[]>(() => requirements.flatMap((requirement) => requirement.questions.map((question) => ({ requirement, question }))), [requirements]);
+  const actions = useMemo(() => requirements.filter((requirement) => requirement.response === "no" || requirement.response === "partial").map((requirement) => ({ requirement, question: requirement })), [requirements]);
+  const historyRows = useMemo<QuestionHistoryRow[]>(() => requirements.map((requirement) => ({ requirement, question: requirement })), [requirements]);
   const complete = actions.filter(({ question }) => (question.action?.status ?? "Open") === "Complete").length;
   const filtered = actions.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""} ${question.action?.followUp ?? ""}`.toLowerCase().includes(query.toLowerCase());
@@ -535,7 +535,7 @@ export function ActionsScreen() {
         {filteredHistoryRows.length ? <div className={cx("actions-response-history-list grid gap-3 p-4")}>{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} />)}</div> : <EmptyState icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
       </section>}
       {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
-        updateQuestion(editing.requirement.id, editing.question.id, { action }, user?.name);
+        updateQuestion(editing.requirement.id, { action }, user?.name);
         setEditing(null); setSaved(true);
       }} />}
     </div>

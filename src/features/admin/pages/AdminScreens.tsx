@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
+  BookOpen,
   Building2,
   Check,
   CheckCircle2,
@@ -18,9 +19,7 @@ import {
   History,
   Layers,
   ListChecks,
-  ListTree,
   MapPin,
-  Rows3,
   MoreHorizontal,
   Paperclip,
   Pencil,
@@ -38,7 +37,7 @@ import { importTemplateColumns, planRequirementImport, planRequirementRows, type
 import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
-import type { DashboardSite, MasterQuestion, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
+import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
 import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
@@ -548,168 +547,10 @@ function ConfigListCard({
   );
 }
 
-/** Sections and their nested sub-sections, managed together in a 2-column layout: pick a section
- * on the left, manage its sub-sections on the right. Sub-sections belong to exactly one section. */
-function SectionConfigCard({
-  sections,
-  subSectionsBySection,
-  onAddSection,
-  onRemoveSection,
-  onAddSubSection,
-  onRemoveSubSection,
-}: {
-  sections: string[];
-  subSectionsBySection: Record<string, string[]>;
-  onAddSection: (section: string) => void;
-  onRemoveSection: (section: string) => void;
-  onAddSubSection: (section: string, subsection: string) => void;
-  onRemoveSubSection: (section: string, subsection: string) => void;
-}) {
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [sectionDraft, setSectionDraft] = useState("");
-  const [subsectionDraft, setSubsectionDraft] = useState("");
-  const [removingSection, setRemovingSection] = useState<string | null>(null);
-  const [removingSubsection, setRemovingSubsection] = useState<string | null>(null);
-
-  const activeSection = selectedSection && sections.includes(selectedSection) ? selectedSection : (sections[0] ?? null);
-  const activeSubSections = activeSection ? (subSectionsBySection[activeSection] ?? []) : [];
-  const sectionDuplicate = sections.some((section) => section.toLowerCase() === sectionDraft.trim().toLowerCase());
-  const subsectionDuplicate = activeSubSections.some((subsection) => subsection.toLowerCase() === subsectionDraft.trim().toLowerCase());
-  const totalSubsections = Object.values(subSectionsBySection).reduce((total, list) => total + list.length, 0);
-
-  function handleAddSection(event: FormEvent) {
-    event.preventDefault();
-    const trimmed = sectionDraft.trim();
-    if (!trimmed || sectionDuplicate) return;
-    onAddSection(trimmed);
-    setSelectedSection(trimmed);
-    setSectionDraft("");
-  }
-
-  function handleAddSubsection(event: FormEvent) {
-    event.preventDefault();
-    const trimmed = subsectionDraft.trim();
-    if (!trimmed || subsectionDuplicate || !activeSection) return;
-    onAddSubSection(activeSection, trimmed);
-    setSubsectionDraft("");
-  }
-
-  return (
-    <section className={cx(tableCardClass)}>
-      <div className={cx(tableCardHeaderStartClass)}>
-        <div>
-          <p className={cx(eyebrowClasses)}>Dropdown values</p>
-          <h2 className={cx(tableCardHeaderTitleClass)}>Sections &amp; Sub-Sections</h2>
-          <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Shown in the Section and Sub-Section fields when creating or editing a master requirement, and validated against on import. Each section holds its own list of sub-sections.</p>
-        </div>
-        <span className={cx(tableCardHeaderCountClass)}>{sections.length} section{sections.length === 1 ? "" : "s"} · {totalSubsections} sub-section{totalSubsections === 1 ? "" : "s"}</span>
-      </div>
-      <div className={cx("grid gap-4 p-4 md:grid-cols-2")}>
-        <div className={cx("grid min-w-0 content-start gap-3")}>
-          <h3 className={cx("m-0 text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Sections</h3>
-          <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAddSection}>
-            <input className={cx(fieldInputClass, "flex-1")} value={sectionDraft} onChange={(event) => setSectionDraft(event.target.value)} placeholder="For example, Leadership & Engagement" aria-label="New section value" />
-            <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!sectionDraft.trim() || sectionDuplicate}>Add</Button>
-          </form>
-          {sectionDuplicate && <small className={cx(fieldErrorClass)}>That section already exists.</small>}
-          {sections.length === 0 ? (
-            <EmptyState icon={<ListTree size={24} />} title="No sections yet" description="Add the first section above." />
-          ) : (
-            <ul className={cx("m-0 grid gap-1 p-0 list-none")}>
-              {sections.map((section) => {
-                const active = section === activeSection;
-                const count = subSectionsBySection[section]?.length ?? 0;
-                return (
-                  <li key={section}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSection(section)}
-                      className={cx(
-                        "flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800",
-                        active && "border-kc-blue-200 bg-kc-blue-50 font-bold text-kc-blue-900 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
-                      )}
-                    >
-                      <span className={cx("min-w-0 flex-1 truncate")}>{section}</span>
-                      <span className={cx(pillBaseClass, pillTone.neutral, "flex-none")}>{count}</span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Remove ${section}`}
-                        className={cx("grid size-6 flex-none place-items-center rounded-full bg-transparent hover:bg-slate-200 dark:hover:bg-slate-700")}
-                        onClick={(event) => { event.stopPropagation(); setRemovingSection(section); }}
-                        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); setRemovingSection(section); } }}
-                      >
-                        <X size={13} />
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div className={cx("grid min-w-0 content-start gap-3 md:border-l md:border-slate-200 md:pl-4 dark:md:border-slate-700")}>
-          <h3 className={cx("m-0 text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>{activeSection ? `Sub-sections of "${activeSection}"` : "Sub-sections"}</h3>
-          {activeSection ? (
-            <>
-              <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAddSubsection}>
-                <input className={cx(fieldInputClass, "flex-1")} value={subsectionDraft} onChange={(event) => setSubsectionDraft(event.target.value)} placeholder="For example, 1.2 Leadership commitment" aria-label={`New sub-section value for ${activeSection}`} />
-                <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!subsectionDraft.trim() || subsectionDuplicate}>Add</Button>
-              </form>
-              {subsectionDuplicate && <small className={cx(fieldErrorClass)}>That sub-section already exists under this section.</small>}
-              {activeSubSections.length === 0 ? (
-                <EmptyState icon={<Rows3 size={24} />} title="No sub-sections yet" description={`Add the first sub-section for ${activeSection} above.`} />
-              ) : (
-                <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
-                  {activeSubSections.map((subsection) => (
-                    <li key={subsection} className={cx(pillBaseClass, pillTone.neutral, "py-0.5 pr-1")}>
-                      {subsection}
-                      <button type="button" className={cx("grid size-5 place-items-center rounded-full border-0 bg-transparent p-0 hover:bg-slate-200 dark:hover:bg-slate-700")} aria-label={`Remove ${subsection}`} onClick={() => setRemovingSubsection(subsection)}>
-                        <X size={13} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : (
-            <EmptyState icon={<Rows3 size={24} />} title="No section selected" description="Add a section on the left to manage its sub-sections." />
-          )}
-        </div>
-      </div>
-      {removingSection && (
-        <ConfirmDialog
-          eyebrow="Config"
-          title={`Remove "${removingSection}"?`}
-          body={`This removes the section and its ${subSectionsBySection[removingSection]?.length ?? 0} sub-section(s) from the dropdowns. Master requirements that already use them keep their current value.`}
-          confirmLabel="Remove section"
-          cancelLabel="Keep section"
-          onCancel={() => setRemovingSection(null)}
-          onConfirm={() => { onRemoveSection(removingSection); setRemovingSection(null); }}
-        />
-      )}
-      {removingSubsection && activeSection && (
-        <ConfirmDialog
-          eyebrow="Config"
-          title={`Remove "${removingSubsection}"?`}
-          body="This removes the value from the dropdown. Master requirements that already use it keep their current value."
-          confirmLabel="Remove value"
-          cancelLabel="Keep value"
-          onCancel={() => setRemovingSubsection(null)}
-          onConfirm={() => { onRemoveSubSection(activeSection, removingSubsection); setRemovingSubsection(null); }}
-        />
-      )}
-    </section>
-  );
-}
-
-type ConfigListKey = "regions" | "segments" | "sections";
+type ConfigListKey = "regions" | "segments";
 
 export function AdminConfigScreen() {
-  const {
-    regions, segments, addRegion, removeRegion, addSegment, removeSegment,
-    masterSections, masterSubSections, addMasterSection, removeMasterSection, addMasterSubSection, removeMasterSubSection,
-  } = useAdministration();
+  const { regions, segments, addRegion, removeRegion, addSegment, removeSegment } = useAdministration();
   const [activeKey, setActiveKey] = useState<ConfigListKey>("regions");
 
   const lists: Record<ConfigListKey, { label: string; icon: typeof MapPin; count: number; card: React.ReactNode }> = {
@@ -720,10 +561,6 @@ export function AdminConfigScreen() {
     segments: {
       label: "Segments", icon: Layers, count: segments.length,
       card: <ConfigListCard title="Segments" description="Shown in the Segment field when creating or editing a site." placeholder="For example, Family Care" values={segments} onAdd={addSegment} onRemove={removeSegment} removalNote="Sites that already use it keep their current value." />,
-    },
-    sections: {
-      label: "Sections", icon: ListTree, count: masterSections.length,
-      card: <SectionConfigCard sections={masterSections} subSectionsBySection={masterSubSections} onAddSection={addMasterSection} onRemoveSection={removeMasterSection} onAddSubSection={addMasterSubSection} onRemoveSubSection={removeMasterSubSection} />,
     },
   };
 
@@ -787,25 +624,31 @@ export function AdminImportBatchPreviewScreen() {
       />
       {published && <InlineMessage tone="success" title="Already published">This batch's requirements are live in the master requirements catalog.</InlineMessage>}
       {!rows.length && <EmptyState icon={<FileSpreadsheet size={28} />} title="No requirements in this batch" description="This import batch has no linked master requirement rows." />}
-      {sectionOrder.map((section) => (
-        <section className={cx(tableCardClass)} key={section}>
-          <div className={cx(tableCardHeaderStartClass)}><div><p className={cx(eyebrowClasses)}>Category</p><h2 className={cx(tableCardHeaderTitleClass)}>{section}</h2></div><span className={cx(tableCardHeaderCountClass)}>{grouped[section].length} requirement{grouped[section].length === 1 ? "" : "s"}</span></div>
-          <div className={cx(historyListClass)}>{grouped[section].map((item) => (
-            <article className={cx("import-preview-requirement overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900")} key={item.id}>
-              <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
-                <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
-                <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{item.title}</span></div>
-                {item.priority && <span className={cx(pillBaseClass, pillTone.neutral)}>{item.priority} priority</span>}
-                <span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span>
-              </div>
-              <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
-                <div className={cx("import-preview-questions__header flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4")}>
-                  <div><p className={cx(eyebrowClasses)}>Review questions</p><h3 className={cx("mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>Questions included with this requirement</h3></div>
-                  <span className={cx(questionCountClass)}>{item.questions.length} question{item.questions.length === 1 ? "" : "s"}</span>
+      {sectionOrder.map((section) => {
+        const byRequirement = new Map<string, MasterRequirement[]>();
+        grouped[section].forEach((item) => {
+          const list = byRequirement.get(item.requirementId) ?? [];
+          list.push(item);
+          byRequirement.set(item.requirementId, list);
+        });
+        const requirementGroups = [...byRequirement.entries()];
+        return (
+          <section className={cx(tableCardClass)} key={section}>
+            <div className={cx(tableCardHeaderStartClass)}><div><p className={cx(eyebrowClasses)}>Category</p><h2 className={cx(tableCardHeaderTitleClass)}>{section}</h2></div><span className={cx(tableCardHeaderCountClass)}>{requirementGroups.length} requirement{requirementGroups.length === 1 ? "" : "s"}</span></div>
+            <div className={cx(historyListClass)}>{requirementGroups.map(([requirementId, items]) => (
+              <article className={cx("import-preview-requirement overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900")} key={requirementId}>
+                <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
+                  <span className={cx(historyItemIconClass)}><FileText size={20} /></span>
+                  <div className={cx("import-preview-requirement__identity grid min-w-0 flex-1 gap-0.5")}><strong className={cx("text-slate-900 dark:text-slate-100")}>{requirementId}</strong><span className={cx("truncate text-xs text-slate-500 dark:text-slate-400")}>{items[0].title}</span></div>
+                  <span className={cx(publishBadgeClass, items[0].status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{items[0].status}</span>
                 </div>
-                {item.questions.length ? (
+                <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
+                  <div className={cx("import-preview-questions__header flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4")}>
+                    <div><p className={cx(eyebrowClasses)}>Review questions</p><h3 className={cx("mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>Questions included with this requirement</h3></div>
+                    <span className={cx(questionCountClass)}>{items.length} question{items.length === 1 ? "" : "s"}</span>
+                  </div>
                   <ol className={cx("import-preview-question-list m-0 mt-3 grid list-none gap-2.5 p-0")}>
-                    {item.questions.map((question, index) => {
+                    {items.map((question, index) => {
                       const questionNumber = question.number || index + 1;
                       const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
                       return (
@@ -814,9 +657,12 @@ export function AdminImportBatchPreviewScreen() {
                           <div className={cx("import-preview-question__content min-w-0 flex-1")}>
                             <div className={cx("import-preview-question__heading flex flex-col items-start gap-1 md:flex-row md:items-center md:justify-between md:gap-3")}>
                               <strong className={cx("block text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {questionNumber}</strong>
-                              <span className={cx("import-preview-question__evidence-status text-xs font-semibold whitespace-normal text-slate-500 md:whitespace-nowrap dark:text-slate-400")}>{evidenceRequired ? `${question.expectedEvidence.length} evidence item${question.expectedEvidence.length === 1 ? "" : "s"}` : "Evidence not required"}</span>
+                              <span className={cx("flex flex-wrap items-center gap-2")}>
+                                {question.sectionPriority !== undefined && <span className={cx(pillBaseClass, pillTone.neutral)}>Priority {question.sectionPriority}{question.overallPriority !== undefined ? ` · ${question.overallPriority} overall` : ""}</span>}
+                                <span className={cx("import-preview-question__evidence-status text-xs font-semibold whitespace-normal text-slate-500 md:whitespace-nowrap dark:text-slate-400")}>{evidenceRequired ? `${question.expectedEvidence.length} evidence item${question.expectedEvidence.length === 1 ? "" : "s"}` : "Evidence not required"}</span>
+                              </span>
                             </div>
-                            <p className={cx("import-preview-question__text mt-1 text-sm leading-relaxed text-slate-900 dark:text-slate-100")}>{question.text}</p>
+                            <p className={cx("import-preview-question__text mt-1 text-sm leading-relaxed whitespace-pre-line text-slate-900 dark:text-slate-100")}>{question.text}</p>
                             {evidenceRequired && (
                               <div className={cx("import-preview-evidence mt-2.5 rounded-lg bg-kc-blue-50 p-3 dark:bg-kc-blue-950")}>
                                 <p className={cx("import-preview-evidence__title m-0 flex items-center gap-1.5 text-xs font-bold text-kc-blue-800 dark:text-kc-blue-200")}><Paperclip size={14} />Expected evidence</p>
@@ -830,12 +676,12 @@ export function AdminImportBatchPreviewScreen() {
                       );
                     })}
                   </ol>
-                ) : <p className={cx("import-preview-questions__empty mt-3 rounded-lg border border-dashed border-slate-300 p-3 text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400")}>No review questions or expected evidence were included for this requirement.</p>}
-              </div>
-            </article>
-          ))}</div>
-        </section>
-      ))}
+                </div>
+              </article>
+            ))}</div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -844,7 +690,7 @@ export function AdminImportBatchPreviewScreen() {
 // less room than the free-text columns; Section/Sub-Section values are short phrases that were
 // already wrapping onto two lines at the wider size. Trimming both keeps the "Workbook rows"
 // table from needing a horizontal scrollbar at a normal admin viewport width.
-const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID", "Priority"]);
+const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID", "Section Priority", "Overall Priority"]);
 const mediumWorkbookColumns = new Set<string>(["Section", "Sub-Section"]);
 function workbookColumnWidthClass(column: string) {
   if (compactWorkbookColumns.has(column)) return "min-w-16";
@@ -854,8 +700,7 @@ function workbookColumnWidthClass(column: string) {
 
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify, masterSections, masterSubSections } = useAdministration();
-  const flatSubSections = Object.values(masterSubSections).flat();
+  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify } = useAdministration();
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<RequirementImportMode | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -897,13 +742,13 @@ export function AdminImportsScreen() {
     if (!mode) { setFileError("Choose New requirements or Update requirements before uploading a workbook."); return; }
     if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setPlan(null); setFileError("Choose the EHS360 Excel .xlsx import template."); return; }
     if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The import file must be 25 MB or smaller."); return; }
-    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds, masterSections, flatSubSections); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
+    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
     catch (error) { setFile(null); setPlan(null); setFileError(error instanceof Error ? error.message : "The workbook could not be read."); }
   }
   function updatePreviewRows(nextRows: ImportTemplateRow[]) {
     setEditableRows(nextRows);
     if (!mode || !file) return;
-    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds, masterSections, flatSubSections);
+    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds);
     setPlan(nextPlan);
     setSelectedRowNumbers((current) => mode === "new"
       ? nextPlan.rows.map((row) => row.rowNumber)
@@ -993,13 +838,13 @@ export function AdminImportsScreen() {
     if (step === 3) {
       // Site selection applies as one shared scope for the whole batch — every requirement in
       // this import gets the same siteIds, not a per-row workbook value.
-      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds, masterSections, flatSubSections));
+      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds));
       setStep(4);
       return;
     }
     if (step === 4 && selectedPlan && !selectedPlan.issues.some((issue) => issue.severity === "error")) {
       const selected = new Set(selectedRowNumbers);
-      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, flatSubSections);
+      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds);
       const record = submitImportBatch(stagedPlan);
       notify({
         title: `${record.fileName} imported`,
@@ -1016,7 +861,7 @@ export function AdminImportsScreen() {
     setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setSiteScope("all"); setScopedSiteIds([]); setResult(null);
   }
   const selectedPlan = mode && file
-    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds, masterSections, flatSubSections)
+    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds)
     : plan;
   // Continue is blocked while any *selected* row has an error — but with nothing shown near the
   // table, that block was silent (the user could select every row and still not know why the
@@ -1024,6 +869,7 @@ export function AdminImportsScreen() {
   const selectedErrorIssues = (selectedPlan?.issues ?? []).filter((issue) => issue.severity === "error");
   const selectedErrorRows = new Set(selectedErrorIssues.map((issue) => issue.row));
   const needsReview = selectedErrorIssues.length > 0;
+  const selectedWarningIssues = (selectedPlan?.issues ?? []).filter((issue) => issue.severity === "warning");
 
   return (
     <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
@@ -1079,7 +925,7 @@ export function AdminImportsScreen() {
               <div><p className={cx(eyebrowClasses)}>Step 3 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Review and edit imported requirements</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the parsed workbook data, deselect anything not ready to apply, or open a requirement to edit it.</p></div>
             </div>
             <div className={cx(inspectionGridClass, "mb-0")}>
-              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>1</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Import Template sheet read</span></div>
+              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{new Set(plan?.rows.map((row) => row.sheet)).size || 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Workbook sheet{new Set(plan?.rows.map((row) => row.sheet)).size === 1 ? "" : "s"} read</span></div>
               <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.sourceRows ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Source rows</span></div>
               <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.upserts.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Affected requirements</span></div>
               <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Validation findings</span></div>
@@ -1119,6 +965,16 @@ export function AdminImportsScreen() {
                   ))}
                 </ul>
                 {selectedErrorIssues.length > 5 && <p className={cx("mt-1.5 text-xs")}>+{selectedErrorIssues.length - 5} more issue{selectedErrorIssues.length - 5 === 1 ? "" : "s"}.</p>}
+              </InlineMessage>
+            )}
+            {selectedWarningIssues.length > 0 && (
+              <InlineMessage tone="warning" title={`${selectedWarningIssues.length} warning${selectedWarningIssues.length === 1 ? "" : "s"} — won't block this import`}>
+                <ul className={cx("m-0 grid list-disc gap-1 pl-4")}>
+                  {selectedWarningIssues.slice(0, 5).map((issue, index) => (
+                    <li key={index}>Row {editableRows.findIndex((row) => row.rowNumber === issue.row) + 1}{issue.field ? ` · ${issue.field}` : ""}: {issue.message}</li>
+                  ))}
+                </ul>
+                {selectedWarningIssues.length > 5 && <p className={cx("mt-1.5 text-xs")}>+{selectedWarningIssues.length - 5} more warning{selectedWarningIssues.length - 5 === 1 ? "" : "s"}.</p>}
               </InlineMessage>
             )}
           </>}
@@ -1189,73 +1045,84 @@ export function AdminImportsScreen() {
 // Rendered inline on AdminRequirementDetailScreen rather than in a dialog, styled like the site
 // contributor's assessment question cards (question-card / question-evidence) so an admin edits
 // questions in the same visual language a contributor sees them in.
-function QuestionsEditor({ questions, onChange, requirementId, submitted }: { questions: MasterQuestion[]; onChange: (questions: MasterQuestion[]) => void; requirementId: string; submitted: boolean }) {
-  function updateQuestion(id: string, patch: Partial<MasterQuestion>) {
-    onChange(questions.map((question) => question.id === id ? { ...question, ...patch } : question));
+// A master requirement IS the question (see the type-level note in shared/types.ts) — this edits
+// that single question directly on the requirement draft, rather than a list of many.
+function QuestionEditor({ draft, onChange, submitted }: { draft: MasterRequirement; onChange: (patch: Partial<MasterRequirement>) => void; submitted: boolean }) {
+  const invalid = submitted && !draft.text.trim();
+  const evidenceRequired = draft.evidenceRequired ?? draft.expectedEvidence.length > 0;
+  const guidance = draft.guidance ?? [];
+  function updateGuidanceItem(index: number, value: string) {
+    onChange({ guidance: guidance.map((item, itemIndex) => itemIndex === index ? value : item) });
   }
-  function removeQuestion(id: string) {
-    onChange(questions.filter((question) => question.id !== id));
+  function addGuidanceItem() {
+    onChange({ guidance: [...guidance, ""] });
   }
-  function updateEvidenceItem(question: MasterQuestion, index: number, value: string) {
-    const expectedEvidence = question.expectedEvidence.map((item, itemIndex) => itemIndex === index ? value : item);
-    updateQuestion(question.id, { expectedEvidence });
+  function removeGuidanceItem(index: number) {
+    onChange({ guidance: guidance.filter((_, itemIndex) => itemIndex !== index) });
   }
-  function addEvidenceItem(question: MasterQuestion) {
-    updateQuestion(question.id, { expectedEvidence: [...question.expectedEvidence, ""] });
+  function updateEvidenceItem(index: number, value: string) {
+    onChange({ expectedEvidence: draft.expectedEvidence.map((item, itemIndex) => itemIndex === index ? value : item) });
   }
-  function removeEvidenceItem(question: MasterQuestion, index: number) {
-    updateQuestion(question.id, { expectedEvidence: question.expectedEvidence.filter((_, itemIndex) => itemIndex !== index) });
+  function addEvidenceItem() {
+    onChange({ expectedEvidence: [...draft.expectedEvidence, ""] });
   }
-  function addQuestion() {
-    const id = `${requirementId || "draft"}-q-${Date.now().toString(36)}`;
-    const nextNumber = Math.max(0, ...questions.map((question) => Number(question.number) || 0)) + 1;
-    onChange([...questions, { id, number: String(nextNumber), text: "", expectedEvidence: [], evidenceRequired: false }]);
+  function removeEvidenceItem(index: number) {
+    onChange({ expectedEvidence: draft.expectedEvidence.filter((_, itemIndex) => itemIndex !== index) });
   }
   return (
-    <div className={cx("question-list grid gap-4")}>
-      {!questions.length && <p className={cx("question-editor-empty rounded-xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400")}>No assessment questions yet. Add the first one below.</p>}
-      {questions.map((question, index) => {
-        const invalid = submitted && !question.text.trim();
-        const evidenceRequired = question.evidenceRequired ?? question.expectedEvidence.length > 0;
-        return (
-          <article className={cx("question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm md:p-4.5", invalid && "question-card--invalid border-red-200 ring-3 ring-red-100 dark:border-red-800 dark:ring-red-950", "dark:border-slate-700 dark:bg-slate-900")} key={question.id}>
-            <div className={cx("question-card__header flex flex-wrap items-start gap-3 md:flex-nowrap")}>
-              <span className={cx(questionNumberClass)}>{index + 1}</span>
-              <div className={cx("min-w-0 flex-1")}>
-                <p className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Question {index + 1} <span className={cx("font-mono font-normal text-slate-400 dark:text-slate-500")}>· ID: {question.id}</span></p>
-                <textarea rows={2} className={cx("question-text-input mt-1 w-full max-w-195 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-base leading-relaxed text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
-                {invalid && <small className={cx(fieldErrorClass)}>Enter the question text.</small>}
+    <article className={cx("question-card rounded-xl border border-slate-200 bg-white p-4.5 shadow-sm md:p-4.5", invalid && "question-card--invalid border-red-200 ring-3 ring-red-100 dark:border-red-800 dark:ring-red-950", "dark:border-slate-700 dark:bg-slate-900")}>
+      <div className={cx("question-card__header flex flex-wrap items-start gap-3 md:flex-nowrap")}>
+        <span className={cx(questionNumberClass)}>{draft.number || 1}</span>
+        <div className={cx("min-w-0 flex-1")}>
+          <p className={cx("flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400")}>
+            <label className={cx("flex items-center gap-1 font-normal")}>Section priority
+              <input type="number" min={1} step={1} className={cx("min-h-6.5 w-14 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.sectionPriority ?? ""} onChange={(event) => onChange({ sectionPriority: event.target.value ? Number(event.target.value) : undefined })} aria-label="Section priority" />
+            </label>
+            <label className={cx("flex items-center gap-1 font-normal")}>Overall priority
+              <input type="number" min={1} step={1} className={cx("min-h-6.5 w-14 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.overallPriority ?? ""} onChange={(event) => onChange({ overallPriority: event.target.value ? Number(event.target.value) : undefined })} aria-label="Overall priority" />
+            </label>
+          </p>
+          <textarea rows={2} className={cx("question-text-input mt-1 w-full max-w-195 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-base leading-relaxed text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={draft.text} onChange={(event) => onChange({ text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
+          {invalid && <small className={cx(fieldErrorClass)}>Enter the question text.</small>}
+        </div>
+      </div>
+      <div className={cx("how-to-meet-editable mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900")}>
+        <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}><BookOpen size={14} /> How to meet this requirement</span>
+        <p className={cx("m-0 text-xs leading-relaxed text-slate-500 dark:text-slate-400")}>Shown to site users under the question. Imported from the workbook's "How to Meet Requirement" column (its lines after the question itself), or added here directly.</p>
+        <div className={cx("question-evidence__editor grid gap-2")}>
+          {guidance.map((item, guidanceIndex) => (
+            <div className={cx("question-evidence__item flex items-center gap-2")} key={`guidance-${guidanceIndex}`}>
+              <input className={cx("min-h-9.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={item} onChange={(event) => updateGuidanceItem(guidanceIndex, event.target.value)} placeholder="For example, Review the risk register at a defined cadence" aria-label={`Guidance step ${guidanceIndex + 1}`} />
+              <IconButton label={`Remove guidance step ${guidanceIndex + 1}`} onClick={() => removeGuidanceItem(guidanceIndex)}><Trash2 size={16} /></IconButton>
+            </div>
+          ))}
+          <Button variant="tertiary" icon={<Plus size={16} />} onClick={addGuidanceItem}>Add guidance step</Button>
+        </div>
+      </div>
+      <div className={cx("question-evidence question-evidence--editable mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900")}>
+        <label className={cx("question-evidence__toggle inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200")}>
+          <input className={cx("size-4.5 accent-kc-blue-600")} type="checkbox" checked={evidenceRequired} onChange={(event) => onChange({ evidenceRequired: event.target.checked })} /> <span>Evidence required for this question</span>
+        </label>
+        {evidenceRequired && <>
+          <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}><Paperclip size={14} /> Required evidence</span>
+          <p className={cx("m-0 text-xs leading-relaxed text-slate-500 dark:text-slate-400")}>For a Partial or Yes answer, the site must explain how each file or link they upload meets this requirement.</p>
+          <div className={cx("question-evidence__editor grid gap-2")}>
+            {draft.expectedEvidence.map((item, evidenceIndex) => (
+              <div className={cx("question-evidence__item flex items-center gap-2")} key={`evidence-${evidenceIndex}`}>
+                <input className={cx("min-h-9.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={item} onChange={(event) => updateEvidenceItem(evidenceIndex, event.target.value)} placeholder="For example, Current risk register" aria-label={`Evidence item ${evidenceIndex + 1}`} />
+                <IconButton label={`Remove evidence item ${evidenceIndex + 1}`} onClick={() => removeEvidenceItem(evidenceIndex)}><Trash2 size={16} /></IconButton>
               </div>
-              <IconButton label={`Delete question ${index + 1}`} onClick={() => removeQuestion(question.id)}><Trash2 size={17} /></IconButton>
-            </div>
-            <div className={cx("question-evidence question-evidence--editable mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900")}>
-              <label className={cx("question-evidence__toggle inline-flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200")}>
-                <input className={cx("size-4.5 accent-kc-blue-600")} type="checkbox" checked={evidenceRequired} onChange={(event) => updateQuestion(question.id, { evidenceRequired: event.target.checked })} /> <span>Evidence required for this question</span>
-              </label>
-              {evidenceRequired && <>
-                <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300")}><Paperclip size={14} /> Required evidence <small className={cx("ml-auto text-xs font-normal tracking-normal text-slate-500 normal-case dark:text-slate-400")}>Shown only with Question {index + 1}</small></span>
-                <p className={cx("m-0 text-xs leading-relaxed text-slate-500 dark:text-slate-400")}>For a Partial or Yes answer, the site must explain how each file or link they upload meets this requirement.</p>
-                <div className={cx("question-evidence__editor grid gap-2")}>
-                  {question.expectedEvidence.map((item, evidenceIndex) => (
-                    <div className={cx("question-evidence__item flex items-center gap-2")} key={`${question.id}-evidence-${evidenceIndex}`}>
-                      <input className={cx("min-h-9.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={item} onChange={(event) => updateEvidenceItem(question, evidenceIndex, event.target.value)} placeholder="For example, Current risk register" aria-label={`Evidence item ${evidenceIndex + 1} for question ${index + 1}`} />
-                      <IconButton label={`Remove evidence item ${evidenceIndex + 1} from question ${index + 1}`} onClick={() => removeEvidenceItem(question, evidenceIndex)}><Trash2 size={16} /></IconButton>
-                    </div>
-                  ))}
-                  <Button variant="tertiary" icon={<Plus size={16} />} onClick={() => addEvidenceItem(question)}>Add evidence item</Button>
-                </div>
-              </>}
-            </div>
-          </article>
-        );
-      })}
-      <Button variant="secondary" icon={<Plus size={17} />} onClick={addQuestion}>Add question</Button>
-    </div>
+            ))}
+            <Button variant="tertiary" icon={<Plus size={16} />} onClick={addEvidenceItem}>Add evidence item</Button>
+          </div>
+        </>}
+      </div>
+    </article>
   );
 }
 
 const auditChangeBoxClass = "min-w-0 flex-1 rounded-lg bg-slate-50 p-2.5 dark:bg-slate-900";
-const auditChangeLabelClass = "text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400";
+const auditChangeLabelClass = "text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400";
 const auditChangeValueClass = "mt-1 text-sm leading-snug wrap-anywhere text-slate-800 dark:text-slate-200";
 
 function RequirementAuditChangeDetail({ change }: { change: RequirementAuditChange }) {
@@ -1363,18 +1230,15 @@ export function AdminRequirementAuditScreen() {
   );
 }
 
-const priorityOptions = ["High", "Medium", "Low"].map((value) => ({ value, label: value }));
-
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
-  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites, masterSections, masterSubSections } = useAdministration();
+  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites } = useAdministration();
   const isNew = !requirementId;
   const existing = requirementId ? masterRequirements.find((item) => item.id === requirementId) : undefined;
-  const defaultSection = masterSections[0] ?? "";
-  const defaultSubSection = masterSubSections[defaultSection]?.[0] ?? "";
   const siteOptions = buildSiteOptions(sites);
-  const [draft, setDraft] = useState<MasterRequirement>(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, priority: "Medium", status: "Draft", siteIds: [], questions: [] });
+  const blankDraft = (): MasterRequirement => ({ id: "", requirementId: "", number: "1", title: "", text: "", guidance: [], section: "", subsection: "", status: "Draft", siteIds: [], expectedEvidence: [], evidenceRequired: false });
+  const [draft, setDraft] = useState<MasterRequirement>(existing ?? blankDraft());
   const [submitted, setSubmitted] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -1383,10 +1247,10 @@ export function AdminRequirementDetailScreen() {
   // from the route record keeps the header and fields in lockstep after a
   // requirement is selected from the list.
   useEffect(() => {
-    setDraft(existing ?? { id: "", title: "", section: defaultSection, subsection: defaultSubSection, priority: "Medium", status: "Draft", siteIds: [], questions: [] });
+    setDraft(existing ?? blankDraft());
     setSubmitted(false);
     setPendingNavigation(null);
-  }, [defaultSection, defaultSubSection, existing, requirementId]);
+  }, [existing, requirementId]);
 
   if (requirementId && !existing) {
     return (
@@ -1398,11 +1262,7 @@ export function AdminRequirementDetailScreen() {
   }
 
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.subsection.trim() && draft.questions.every((question) => question.text.trim()));
-  // Union the draft's current value in, same as the site form does for Region/Segment — editing
-  // an older requirement whose section was since removed from Config shouldn't silently blank it.
-  const sectionOptions = [...new Set([...masterSections, ...(draft.section ? [draft.section] : [])])].map((value) => ({ value, label: value }));
-  const subSectionOptions = [...new Set([...(masterSubSections[draft.section] ?? []), ...(draft.subsection ? [draft.subsection] : [])])].map((value) => ({ value, label: value }));
+  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.subsection.trim() && draft.text.trim());
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
 
   function requestNavigation(target: MasterRequirement | "list") {
@@ -1431,10 +1291,13 @@ export function AdminRequirementDetailScreen() {
     const cleaned: MasterRequirement = {
       ...draft,
       id: trimmedId,
+      requirementId: draft.requirementId.trim() || trimmedId,
       title: draft.title.trim(),
+      text: draft.text.trim(),
       section: draft.section.trim(),
       subsection: draft.subsection.trim(),
-      questions: draft.questions.map((question, index) => ({ ...question, number: String(index + 1), text: question.text.trim(), expectedEvidence: question.expectedEvidence.map((line) => line.trim()).filter(Boolean) })),
+      guidance: (draft.guidance ?? []).map((line) => line.trim()).filter(Boolean),
+      expectedEvidence: draft.expectedEvidence.map((line) => line.trim()).filter(Boolean),
     };
     if (isNew) addMasterRequirement(cleaned); else updateMasterRequirement(cleaned);
     navigate("/admin/requirements", { state: { feedback: `${cleaned.id} was ${isNew ? "added" : "updated"}.` } });
@@ -1459,12 +1322,21 @@ export function AdminRequirementDetailScreen() {
                 value={draft.id}
                 disabled={!isNew}
                 onChange={(event) => update("id", event.target.value)}
-                placeholder="For example, OS 2.4.1"
-                aria-label="Requirement ID"
+                placeholder="For example, LET-01-Q1"
+                aria-label="ID"
               />
-              <Select label="Section" value={draft.section} onChange={(value) => update("section", value)} options={sectionOptions} />
-              <Select label="Sub-Section" value={draft.subsection} onChange={(value) => update("subsection", value)} options={subSectionOptions} />
-              <Select label="Priority" value={draft.priority ?? "Medium"} onChange={(value) => update("priority", value)} options={priorityOptions} />
+              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
+                Requirement ID
+                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.requirementId} onChange={(event) => update("requirementId", event.target.value)} placeholder="For example, LET-01" aria-label="Requirement ID" />
+              </label>
+              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
+                Section
+                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.section} onChange={(event) => update("section", event.target.value)} placeholder="For example, Leadership & Engagement" aria-label="Section" />
+              </label>
+              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
+                Sub-Section
+                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.subsection} onChange={(event) => update("subsection", event.target.value)} placeholder="For example, 1.2 Leadership commitment" aria-label="Sub-Section" />
+              </label>
             </div>
             <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
               <div className={cx("min-w-0 md:flex-1")}>
@@ -1502,10 +1374,9 @@ export function AdminRequirementDetailScreen() {
           </header>
           <section className={cx("questions-section mt-6")} aria-labelledby="admin-questions-title">
             <div className={cx("section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between")}>
-              <div><p className={cx(eyebrowClasses)}>Assessment questions</p><h2 className={cx("mt-0.5 text-lg font-bold text-slate-900 dark:text-slate-100")} id="admin-questions-title">Add, edit, or remove questions</h2></div>
-              <span className={cx(questionCountClass)}>{draft.questions.length} questions</span>
+              <div><p className={cx(eyebrowClasses)}>Assessment question</p><h2 className={cx("mt-0.5 text-lg font-bold text-slate-900 dark:text-slate-100")} id="admin-questions-title">The question site users are asked</h2></div>
             </div>
-            <QuestionsEditor questions={draft.questions} onChange={(questions) => setDraft((current) => ({ ...current, questions }))} requirementId={draft.id} submitted={submitted} />
+            <QuestionEditor draft={draft} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} submitted={submitted} />
           </section>
           <footer
             className={cx("requirement-footer sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-5 mt-6 grid w-full grid-cols-2 items-center gap-2.5 rounded-xl border p-2 shell:bottom-4 shell:flex shell:justify-between shell:gap-3.5 shell:p-2.5")}
@@ -1530,7 +1401,8 @@ export function AdminRequirementDetailScreen() {
 export function AdminRequirementsScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites, masterSections } = useAdministration();
+  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const masterSections = [...new Set(masterRequirements.map((item) => item.section))].sort();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
   const [status, setStatus] = useState("Published and draft");

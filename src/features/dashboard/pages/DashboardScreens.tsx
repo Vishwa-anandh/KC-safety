@@ -22,7 +22,7 @@ import { useAuth } from "../../auth";
 import { useGuidedSetup } from "../../onboarding";
 import { performanceForResponse, performanceLabel, responseLabel } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
-import type { AssessmentQuestion, DashboardSite, Performance, Requirement, SectionSummary } from "../../../shared/types";
+import type { DashboardSite, Performance, Requirement, SectionSummary } from "../../../shared/types";
 import type { AssignedSite } from "../../../data-access/contracts";
 import { Button, CompletionBadge, EmptyState, eyebrowClasses, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, SiteUsersPanel } from "../../sites/components/SitePanels";
@@ -86,7 +86,7 @@ function DistributionBar({ label, value, total, tone }: { label: string; value: 
   );
 }
 
-function QuestionResponseHistory({ question }: { question: AssessmentQuestion }) {
+function QuestionResponseHistory({ question }: { question: Requirement }) {
   const [open, setOpen] = useState(false);
   const entries = [...(question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
   if (!entries.length) return null;
@@ -246,10 +246,9 @@ function downloadSiteExport(sites: DashboardSite[], fileName: string, focus = "A
   const columns = ["Record type", "Site", "Site code", "Region", "Segment", "Completion", "Performance", "Gaps", "Assessment area", "Last updated", "Requirement ID", "Requirement", "Question", "Evidence title", "Evidence type", "Evidence reference", "Uploaded by", "Uploaded at"];
   const escapeCell = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
   const rows = sites.map((site) => ["Site summary", site.name, site.code, site.region, site.segment, `${site.completion}%`, performanceLabel(site.performance), site.gaps, focus, site.updated, "", "", "", "", "", "", "", ""]);
-  const evidenceRows = assignedSite ? requirements.flatMap((requirement) => requirement.evidence.map((evidence) => {
-    const question = requirement.questions.find((item) => item.id === evidence.questionId);
-    return ["Evidence", assignedSite.name, assignedSite.code, assignedSite.region, assignedSite.segment, "", "", "", focus, "", requirement.number, requirement.title, question ? `${question.number}. ${question.text}` : "", evidence.title, evidence.type, evidence.detail, evidence.uploadedBy, evidence.uploadedAt];
-  })) : [];
+  const evidenceRows = assignedSite ? requirements.flatMap((requirement) => requirement.evidence.map((evidence) =>
+    ["Evidence", assignedSite.name, assignedSite.code, assignedSite.region, assignedSite.segment, "", "", "", focus, "", requirement.requirementId, requirement.title, `${requirement.number}. ${requirement.text}`, evidence.title, evidence.type, evidence.detail, evidence.uploadedBy, evidence.uploadedAt],
+  )) : [];
   const csv = [columns, ...rows, ...evidenceRows].map((row) => row.map(escapeCell).join(",")).join("\r\n");
   const blob = new Blob(["﻿", csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -394,7 +393,7 @@ export function SiteSectionDetailScreen() {
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
   const siteSections = site.id === "northstar" ? sectionSummaries : sections;
   const section = siteSections.find((item) => item.id === sectionId);
-  const requirement = requirementsForSite(site.id).find((item) => item.sectionId === sectionId);
+  const sectionRequirements = requirementsForSite(site.id).filter((item) => item.sectionId === sectionId);
 
   if (!section) {
     return (
@@ -426,11 +425,11 @@ export function SiteSectionDetailScreen() {
             <p className={cx(eyebrowClasses)}>Assessment questions</p>
             <h2 id="site-questions-title" className={cx("mt-1")}>Recorded responses</h2>
           </div>
-          {requirement && <span className={cx("question-count rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")}>{requirement.questions.length} questions</span>}
+          {sectionRequirements.length > 0 && <span className={cx("question-count rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300")}>{sectionRequirements.length} questions</span>}
         </div>
-        {requirement ? (
+        {sectionRequirements.length > 0 ? (
           <div className={cx("question-list grid gap-4")}>
-            {requirement.questions.map((question) => (
+            {sectionRequirements.map((question) => (
               <article className={cx("question-card rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm md:p-4.5 dark:border-slate-700 dark:bg-slate-900")} key={question.id}>
                 <div className={cx("question-card__header flex flex-wrap items-start gap-3.5")}>
                   <span className={cx("question-number inline-grid size-8 flex-none place-items-center rounded-lg bg-kc-blue-50 text-sm font-bold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{question.number}</span>
@@ -442,7 +441,7 @@ export function SiteSectionDetailScreen() {
                 </div>
                 {Boolean(question.expectedEvidence?.length) && (
                   <div className={cx("question-evidence mt-3.5 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-slate-700 dark:bg-slate-900")}>
-                    <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 uppercase dark:text-kc-blue-300")}><Paperclip size={14} /> Evidence required</span>
+                    <span className={cx("question-evidence__title flex items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300")}><Paperclip size={14} /> Evidence required</span>
                     <ul className={cx("m-0 grid gap-1 pl-4.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400")}>{question.expectedEvidence!.map((item) => <li key={item}>{item}</li>)}</ul>
                   </div>
                 )}
@@ -490,8 +489,8 @@ export function SiteDrilldownScreen() {
   const siteRequirements = requirementsForSite(site.id);
   const assessmentSections = siteSections.filter((section) => section.kind === "operating-system" || section.kind === "performance-standard");
   const assignedUsers = siteUsers.filter((user) => user.siteId === site.id);
-  const totalQuestions = siteRequirements.reduce((total, requirement) => total + requirement.questions.length, 0);
-  const responsesRecorded = siteRequirements.reduce((total, requirement) => total + requirement.questions.filter((question) => question.response !== null).length, 0);
+  const totalQuestions = siteRequirements.length;
+  const responsesRecorded = siteRequirements.filter((requirement) => requirement.response !== null).length;
   const needsAttention = assessmentSections.filter((section) => section.gaps > 0 || section.completion < 100);
   const completeSections = assessmentSections.filter((section) => section.gaps === 0 && section.completion === 100);
   const prioritySection = [...needsAttention].sort((left, right) => right.gaps - left.gaps || left.completion - right.completion)[0];
@@ -589,11 +588,11 @@ export function SiteDrilldownScreen() {
         {visibleSections.length ? (
           <>
             <div className={cx("site-assessment-area-columns hidden gap-6 border-b border-slate-200 bg-slate-50 px-4 py-2 lg:grid dark:border-slate-700 dark:bg-slate-900")} style={{ gridTemplateColumns: "var(--assessment-area-columns)" }} aria-hidden="true">
-              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Assessment area</span>
-              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Completion</span>
-              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Performance</span>
-              <span className={cx("text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Open gaps</span>
-              <span className={cx("justify-self-end text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-slate-400")}>Action</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400")}>Assessment area</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400")}>Completion</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400")}>Performance</span>
+              <span className={cx("text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400")}>Open gaps</span>
+              <span className={cx("justify-self-end text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400")}>Action</span>
             </div>
             <div className={cx("site-assessment-area-list grid")} data-tour="drilldown-sections">
               {visibleSections.map((section) => {

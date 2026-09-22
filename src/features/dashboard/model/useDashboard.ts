@@ -9,46 +9,40 @@ const responsePatterns: ResponseValue[][] = [
 ];
 
 function demoHistoryForSite(siteId: string, source: Requirement[], siteName: string, siteUserName: string) {
-  if (siteId === "harbor-point") return source.map((requirement) => ({ ...requirement, evidence: [], questions: requirement.questions.map((question) => ({ ...question, response: null, action: undefined, history: [] })) }));
+  if (siteId === "harbor-point") return source.map((requirement) => ({ ...requirement, evidence: [], response: null, action: undefined, history: [] }));
   const patternOffset = siteId.split("").reduce((total, character) => total + character.charCodeAt(0), 0) % responsePatterns.length;
   return source.map((requirement, requirementIndex) => {
     const siteEvidence = requirement.evidence.map((item) => ({ ...item, uploadedBy: siteUserName }));
+    const response = responsePatterns[(patternOffset + requirementIndex) % responsePatterns.length][requirementIndex % 3];
+    const isGap = response === "no" || response === "partial";
+    const firstResponse: ResponseValue = response === "yes" ? "partial" : response === "partial" ? "no" : "partial";
+    const makeAction = (value: ResponseValue, status: "Open" | "In progress", updatedAt: string) => value === "no" || value === "partial" ? {
+      description: value === "no" ? `Close the identified gap for ${siteName}.` : `Complete the remaining controls for ${siteName}.`,
+      owner: siteUserName,
+      status,
+      followUp: "Review progress in the next operating review.",
+      createdAt: "2026-08-05T09:00:00.000Z",
+      createdBy: siteUserName,
+      updatedAt,
+      updatedBy: siteUserName,
+    } : undefined;
+    const firstAction = makeAction(firstResponse, "Open", "2026-08-05T09:00:00.000Z");
+    const currentAction = isGap ? makeAction(response, response === "no" ? "Open" : "In progress", "2026-08-18T14:30:00.000Z") : undefined;
+    const history = [{
+      id: `${siteId}-${requirement.id}-history-1`, event: "Response recorded" as const, recordedAt: "2026-08-05T09:00:00.000Z", recordedBy: siteUserName, response: firstResponse, action: firstAction, evidence: siteEvidence,
+    }, ...(firstAction ? [{
+      id: `${siteId}-${requirement.id}-history-2`, event: "Action updated" as const, recordedAt: "2026-08-12T09:00:00.000Z", recordedBy: siteUserName, response: firstResponse, action: { ...firstAction, status: "In progress" as const, updatedAt: "2026-08-12T09:00:00.000Z" }, evidence: siteEvidence,
+    }] : []), {
+      id: `${siteId}-${requirement.id}-history-3`, event: "Response changed" as const, recordedAt: "2026-08-18T14:30:00.000Z", recordedBy: siteUserName, response, action: currentAction, evidence: siteEvidence,
+    }];
     return {
       ...requirement,
       evidence: siteEvidence,
-      questions: requirement.questions.map((question, questionIndex) => {
-      const response = responsePatterns[(patternOffset + requirementIndex) % responsePatterns.length][questionIndex % 3];
-      const isGap = response === "no" || response === "partial";
-      const firstResponse: ResponseValue = response === "yes" ? "partial" : response === "partial" ? "no" : "partial";
-      const questionEvidence = siteEvidence.filter((item) => item.questionId === question.id);
-      const makeAction = (value: ResponseValue, status: "Open" | "In progress", updatedAt: string) => value === "no" || value === "partial" ? {
-        description: value === "no" ? `Close the identified gap for ${siteName}.` : `Complete the remaining controls for ${siteName}.`,
-        owner: siteUserName,
-        status,
-        followUp: "Review progress in the next operating review.",
-        createdAt: "2026-08-05T09:00:00.000Z",
-        createdBy: siteUserName,
-        updatedAt,
-        updatedBy: siteUserName,
-      } : undefined;
-      const firstAction = makeAction(firstResponse, "Open", "2026-08-05T09:00:00.000Z");
-      const currentAction = isGap ? makeAction(response, response === "no" ? "Open" : "In progress", "2026-08-18T14:30:00.000Z") : undefined;
-      const history = [{
-        id: `${siteId}-${question.id}-history-1`, event: "Response recorded" as const, recordedAt: "2026-08-05T09:00:00.000Z", recordedBy: siteUserName, response: firstResponse, action: firstAction, evidence: questionEvidence,
-      }, ...(firstAction ? [{
-        id: `${siteId}-${question.id}-history-2`, event: "Action updated" as const, recordedAt: "2026-08-12T09:00:00.000Z", recordedBy: siteUserName, response: firstResponse, action: { ...firstAction, status: "In progress" as const, updatedAt: "2026-08-12T09:00:00.000Z" }, evidence: questionEvidence,
-      }] : []), {
-        id: `${siteId}-${question.id}-history-3`, event: "Response changed" as const, recordedAt: "2026-08-18T14:30:00.000Z", recordedBy: siteUserName, response, action: currentAction, evidence: questionEvidence,
-      }];
-      return {
-        ...question,
-        response,
-        respondedAt: response ? "2026-08-18T14:30:00.000Z" : undefined,
-        respondedBy: response ? siteUserName : undefined,
-        action: currentAction,
-        history,
-      };
-      }),
+      response,
+      respondedAt: response ? "2026-08-18T14:30:00.000Z" : undefined,
+      respondedBy: response ? siteUserName : undefined,
+      action: currentAction,
+      history,
     };
   });
 }
