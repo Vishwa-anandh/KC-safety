@@ -577,7 +577,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           aria-label={role === "site-contributor" ? `Current assigned site: ${assignedSite.name} · ${assignedSite.code}` : `Current authorized scope: ${profile.scope}`}
           data-tour="site-context"
         >
-          <ScopeIcon className={cx("text-kc-blue-700 dark:text-kc-blue-300")} size={17} />
+          <ScopeIcon className={cx("text-kc-blue-700 dark:text-kc-blue-300", !collapsed && "hidden")} size={17} />
           <div className={cx("grid", collapsed && "hidden")}>
             <span className={cx("text-xs leading-none text-slate-500 dark:text-white/65")}>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
             <strong className={cx("overflow-hidden text-sm leading-snug text-ellipsis whitespace-nowrap text-slate-900 dark:text-white")}>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
