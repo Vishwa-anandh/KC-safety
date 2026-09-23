@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Circle,
+  ClipboardCheck,
   Copy,
   ChevronDown,
   Download,
@@ -25,6 +26,7 @@ import {
   Pencil,
   Plus,
   Search,
+  ShieldCheck,
   Trash2,
   Target,
   Upload,
@@ -1471,10 +1473,11 @@ export function AdminRequirementsScreen() {
   const location = useLocation();
   const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites, sectionSummaries } = useAdministration();
   const sectionKindByName = new Map(sectionSummaries.map((item) => [item.name, item.kind]));
-  const masterSections = [...new Set(masterRequirements.map((item) => item.section))].sort();
+  const [activeFramework, setActiveFramework] = useState<"all" | SectionKind>("all");
+  const inFramework = (item: MasterRequirement) => activeFramework === "all" || sectionKindByName.get(item.section) === activeFramework;
+  const masterSections = [...new Set(masterRequirements.filter(inFramework).map((item) => item.section))].sort();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
-  const [framework, setFramework] = useState<"all" | SectionKind>("all");
   const [status, setStatus] = useState("Published and draft");
   const [siteFilter, setSiteFilter] = useState("all");
   const [menu, setMenu] = useState<string | null>(null);
@@ -1500,9 +1503,15 @@ export function AdminRequirementsScreen() {
   const rows = masterRequirements.filter((item) =>
     (`${item.title} ${item.id}`.toLowerCase().includes(query.toLowerCase())) &&
     (section === "All sections" || item.section === section) &&
-    (framework === "all" || sectionKindByName.get(item.section) === framework) &&
+    inFramework(item) &&
     (status === "Published and draft" || item.status === status) &&
     (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
+  const operatingSystemCount = masterRequirements.filter((item) => sectionKindByName.get(item.section) === "operating-system").length;
+  const performanceStandardCount = masterRequirements.filter((item) => sectionKindByName.get(item.section) === "performance-standard").length;
+  function switchFramework(next: "all" | SectionKind) {
+    setActiveFramework(next);
+    setSection("All sections");
+  }
   return (
     <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
       <PageHeader
@@ -1529,11 +1538,15 @@ export function AdminRequirementsScreen() {
         }
       />
       {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
-      <section className={cx(tableCardClass)}>
+      <div className={cx("master-data-tabs mt-5 inline-flex w-full gap-0 border-b border-slate-200 sm:w-auto sm:gap-5 dark:border-slate-700")} role="tablist" aria-label="Master data framework">
+        <button id="framework-tab-all" type="button" role="tab" aria-selected={activeFramework === "all"} aria-controls="master-data-panel" onClick={() => switchFramework("all")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "all" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><span>All requirements</span><small className={cx("inline text-xs", activeFramework === "all" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{masterRequirements.length}</small></button>
+        <button id="framework-tab-os" type="button" role="tab" aria-selected={activeFramework === "operating-system"} aria-controls="master-data-panel" onClick={() => switchFramework("operating-system")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "operating-system" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><ClipboardCheck size={17} /><span>Operating System</span><small className={cx("inline text-xs", activeFramework === "operating-system" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{operatingSystemCount}</small></button>
+        <button id="framework-tab-ps" type="button" role="tab" aria-selected={activeFramework === "performance-standard"} aria-controls="master-data-panel" onClick={() => switchFramework("performance-standard")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "performance-standard" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><ShieldCheck size={17} /><span>Performance Standard</span><small className={cx("inline text-xs", activeFramework === "performance-standard" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{performanceStandardCount}</small></button>
+      </div>
+      <section id="master-data-panel" role="tabpanel" aria-labelledby={activeFramework === "all" ? "framework-tab-all" : activeFramework === "operating-system" ? "framework-tab-os" : "framework-tab-ps"} className={cx(tableCardClass)}>
         <div className={cx(dashboardFilterBarClass)} data-tour="requirement-filters">
           <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
-          <Select label="Filter framework" icon={<Filter size={18} />} value={framework} onChange={(value) => setFramework(value as typeof framework)} options={[{ value: "all", label: "All frameworks" }, { value: "operating-system", label: "Operating System" }, { value: "performance-standard", label: "Performance Standard" }]} />
-          <Select label="Filter section" value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
+          <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
@@ -1552,7 +1565,7 @@ export function AdminRequirementsScreen() {
               <tbody className={cx(dataTableBodyClass)}>{rows.map((item) => (
                 <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={item.id} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
                   <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
-                  <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>Guidance and evidence requirements configured</span></span></td>
+                  <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.subsection}</strong><span className={cx("block truncate text-xs text-slate-500 dark:text-slate-400")}>{item.text}</span></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-1")}><span className={cx("block")}>{item.section}</span><FrameworkBadge kind={sectionKindByName.get(item.section) ?? "operating-system"} compact /></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
