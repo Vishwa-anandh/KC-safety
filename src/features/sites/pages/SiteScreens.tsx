@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
   ArrowRight,
-  BarChart3,
   BookOpenCheck,
-  Building2,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
@@ -14,24 +11,27 @@ import {
   Clock3,
   FileWarning,
   Filter,
+  HelpCircle,
   Mail,
-  MapPin,
   Paperclip,
   Pencil,
   Save,
   Search,
   ShieldCheck,
-  Target,
+  UserX,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useSites } from "../model/useSites";
 import { useAuth } from "../../auth";
-import { actionComplete, assessmentPeriods, responseLabel } from "../../../shared/domain/assessment";
+import { actionComplete, actionStatus, assessmentPeriods, currentAssessmentPeriod, isActionOpen, isActionMissingOwner, isActionMissingDescription, isGap, responseLabel, rollupPerformance } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
+import { appPaths } from "../../../app/router/route-manifest";
 import type { ActionItem, AssessmentPeriod, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
 import { Button, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
+import { AssessmentGlanceCard, EvidenceCoverageStrip, GapsBySectionChart, HeroStatCard, InlineBreakdown, InlineProgress, NeedsAttentionPanel, OpenActionsByOwnerChart, RecentChangesFeed } from "../components/OverviewCharts";
+import type { NeedsAttentionItem, OwnerActionRow, SectionGapRow } from "../components/OverviewCharts";
 
 const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -106,28 +106,6 @@ const responseTone: Record<"no" | "partial" | "yes" | "none", string> = {
 const responseChipClass = (response: string | null | undefined) => cx("response-chip", pillBase, responseTone[(response ?? "none") as keyof typeof responseTone]);
 const missingValueClass = "missing-value text-xs text-amber-700 italic dark:text-amber-300";
 
-function SiteContextCard({ updated }: { updated?: string }) {
-  const { assignedSite } = useSites();
-  const updatedLabel = updated
-    ? new Date(updated).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-    : assignedSite.updated;
-  return (
-    <section className={cx("site-identity-card relative mb-5 flex flex-wrap items-start gap-4 overflow-hidden rounded-2xl border border-kc-blue-200 bg-gradient-to-br from-kc-blue-50 to-white p-4 md:flex-nowrap md:items-center md:p-5 dark:border-kc-blue-800 dark:from-kc-blue-950 dark:to-slate-900")} style={{ boxShadow: "var(--shadow-1)" }} data-tour="site-context">
-      <div className={cx("site-identity-card__mark grid size-12 flex-none place-items-center rounded-2xl bg-kc-blue-600 text-white shadow-md md:size-13")}><Building2 size={27} /></div>
-      <div className={cx("site-identity-card__copy min-w-0 flex-1")}>
-        <p className={cx(eyebrowClasses)}>Assigned site</p>
-        <h2 className={cx("mt-1 text-xl font-bold text-slate-900 dark:text-slate-100")}>{assignedSite.name}</h2>
-        <div className={cx("mt-2 grid gap-1.5 sm:flex sm:flex-wrap sm:gap-x-5 sm:gap-y-2")}>
-          <span className={cx("inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400")}><ShieldCheck size={15} /> {assignedSite.code}</span>
-          <span className={cx("inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400")}><MapPin size={15} /> {assignedSite.region} · {assignedSite.segment}</span>
-          <span className={cx("inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400")}><CalendarClock size={15} /> Updated {updatedLabel}</span>
-        </div>
-      </div>
-      <span className={cx("fixed-context-badge w-full rounded-full border border-kc-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold whitespace-nowrap text-kc-blue-800 md:w-auto dark:border-kc-blue-800 dark:bg-slate-900 dark:text-kc-blue-200")}>Current site</span>
-    </section>
-  );
-}
-
 function SectionCard({ section, requirement }: { section: SectionSummary; requirement?: Requirement }) {
   const content = (
     <article className={cx("section-card flex min-h-0 flex-col rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition duration-150 hover:border-kc-blue-300 hover:-translate-y-0.5 hover:shadow-lg md:min-h-67 dark:border-slate-700 dark:bg-slate-900")}>
@@ -148,33 +126,203 @@ function SectionCard({ section, requirement }: { section: SectionSummary; requir
 }
 
 export function OverviewScreen() {
-  const { requirements, sectionSummaries, overallCompletion, overallPerformance, gapCount, missingActionCount, lastUpdated } = useSites();
-  const operating = sectionSummaries.filter((section) => section.kind === "operating-system");
-  const allQuestions = requirements;
-  const completeQuestions = allQuestions.filter((question) => actionComplete(question.response, question.action)).length;
+  const { requirements, assignedSite, lastUpdated } = useSites();
   const nextRequirement = requirements.find((requirement) => !actionComplete(requirement.response, requirement.action)) ?? requirements[0];
   const nextRoute = nextRequirement ? requirementRoute(nextRequirement) : "/assessment";
-  const nextCopy = missingActionCount > 0 ? "Complete corrective-action details" : "Continue unanswered assessment questions";
+
+  const openActions = useMemo(() => requirements.filter((requirement) => isGap(requirement.response) && isActionOpen(requirement.action)), [requirements]);
+  const unassignedOpenActions = useMemo(() => openActions.filter((requirement) => isActionMissingOwner(requirement.action)), [openActions]);
+  const completedActions = useMemo(() => requirements.filter((requirement) => isGap(requirement.response) && !isActionOpen(requirement.action)), [requirements]);
+  const unansweredQuestions = useMemo(() => requirements.filter((requirement) => requirement.response === null), [requirements]);
+
+  const sectionGroups = useMemo(() => {
+    const bySection = new Map<string, { name: string; items: Requirement[] }>();
+    requirements.forEach((requirement) => {
+      const entry = bySection.get(requirement.sectionId) ?? { name: requirement.sectionName, items: [] };
+      entry.items.push(requirement);
+      bySection.set(requirement.sectionId, entry);
+    });
+    return [...bySection.entries()].map(([id, { name, items }]) => ({ id, name, items }));
+  }, [requirements]);
+
+  const sectionRows = useMemo<SectionGapRow[]>(() => sectionGroups.map(({ id, name, items }) => {
+    const gapItem = items.find((requirement) => isGap(requirement.response));
+    const target = gapItem ?? items[0];
+    return {
+      id,
+      name,
+      total: items.length,
+      no: items.filter((requirement) => requirement.response === "no").length,
+      partial: items.filter((requirement) => requirement.response === "partial").length,
+      unanswered: items.filter((requirement) => requirement.response === null).length,
+      to: target ? requirementRoute(target) : appPaths.assessment,
+      cells: items.map((requirement) => ({ id: requirement.id, number: requirement.number, response: requirement.response, to: requirementRoute(requirement) })),
+    };
+  }), [sectionGroups]);
+
+  const completionStats = useMemo(() => ({
+    answered: requirements.filter((requirement) => requirement.response !== null).length,
+    total: requirements.length,
+  }), [requirements]);
+
+  const responseBreakdown = useMemo(() => ({
+    yes: requirements.filter((requirement) => requirement.response === "yes").length,
+    no: requirements.filter((requirement) => requirement.response === "no").length,
+    partial: requirements.filter((requirement) => requirement.response === "partial").length,
+    unanswered: requirements.filter((requirement) => requirement.response === null).length,
+    total: requirements.length,
+  }), [requirements]);
+
+  const sectionPerformance = useMemo(() => {
+    const counts = { initial: 0, emerging: 0, performing: 0, notAssessed: 0 };
+    sectionGroups.forEach(({ items }) => {
+      const performance = rollupPerformance(items.map((requirement) => requirement.response));
+      if (performance === "initial") counts.initial += 1;
+      else if (performance === "emerging") counts.emerging += 1;
+      else if (performance === "performing") counts.performing += 1;
+      else counts.notAssessed += 1;
+    });
+    return { ...counts, total: sectionGroups.length };
+  }, [sectionGroups]);
+
+  const evidenceCoverage = useMemo(() => {
+    let attached = 0;
+    let missing = 0;
+    let notRequired = 0;
+    requirements.forEach((requirement) => {
+      const required = requirement.evidenceRequired ?? requirement.expectedEvidence.length > 0;
+      if (!required) notRequired += 1;
+      else if (requirement.evidence.length > 0) attached += 1;
+      else missing += 1;
+    });
+    return { attached, missing, notRequired, total: requirements.length };
+  }, [requirements]);
+
+  const openActionsByResponse = useMemo(() => ({
+    no: openActions.filter((requirement) => requirement.response === "no").length,
+    partial: openActions.filter((requirement) => requirement.response === "partial").length,
+  }), [openActions]);
+
+  const unansweredSectionCount = useMemo(() => sectionGroups.filter(({ items }) => items.some((requirement) => requirement.response === null)).length, [sectionGroups]);
+
+  const closedGapPct = openActions.length + completedActions.length > 0 ? Math.round((completedActions.length / (openActions.length + completedActions.length)) * 100) : 0;
+
+  const ownerRows = useMemo<OwnerActionRow[]>(() => {
+    const byOwner = new Map<string, number>();
+    openActions.forEach((requirement) => {
+      const name = requirement.action?.owner?.trim() || "Unassigned";
+      byOwner.set(name, (byOwner.get(name) ?? 0) + 1);
+    });
+    return [...byOwner.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count, to: name === "Unassigned" ? appPaths.actions : `${appPaths.actions}?q=${encodeURIComponent(name)}` }));
+  }, [openActions]);
+
+  const needsAttentionItems = useMemo<NeedsAttentionItem[]>(() => {
+    const items: NeedsAttentionItem[] = [];
+    for (const requirement of requirements) {
+      if (items.length >= 5) break;
+      if (!isGap(requirement.response)) continue;
+      const missingOwner = isActionMissingOwner(requirement.action);
+      const missingDescription = isActionMissingDescription(requirement.action);
+      if (!missingOwner && !missingDescription) continue;
+      const what = missingOwner && missingDescription ? "no owner or description" : missingOwner ? "no owner assigned" : "no description";
+      items.push({ label: `${requirement.number} · ${requirement.title}`, detail: `Corrective action has ${what}`, to: requirementRoute(requirement) });
+    }
+    if (items.length < 5) {
+      for (const { items: sectionItems } of sectionGroups) {
+        if (items.length >= 5) break;
+        if (sectionItems.length > 0 && sectionItems.every((requirement) => requirement.response === null)) {
+          items.push({ label: sectionItems[0].sectionName, detail: `Not yet assessed · 0 of ${sectionItems.length} answered`, to: requirementRoute(sectionItems[0]) });
+        }
+      }
+    }
+    if (items.length < 5) {
+      const ranked = sectionRows.filter((section) => section.no + section.partial > 0).sort((a, b) => (b.no + b.partial) - (a.no + a.partial));
+      for (const section of ranked) {
+        if (items.length >= 5) break;
+        const gaps = section.no + section.partial;
+        items.push({ label: section.name, detail: `${gaps} No/Partial gap${gaps === 1 ? "" : "s"}`, to: section.to });
+      }
+    }
+    return items;
+  }, [requirements, sectionGroups, sectionRows]);
+
+  const recentChanges = useMemo(() => requirements
+    .flatMap((requirement) => (requirement.history ?? []).map((entry) => ({ entry, requirement })))
+    .sort((a, b) => b.entry.recordedAt.localeCompare(a.entry.recordedAt))
+    .slice(0, 8), [requirements]);
+
+  if (!requirements.length) {
+    return (
+      <div className={cx(pageContainerClass)} style={pageContainerStyle}>
+        <PageHeader eyebrow="Site workspace" title="Site overview" description="Review completion, gaps, and the work needed for your assigned site." />
+        <EmptyState icon={<Search size={27} />} title="No requirements yet" description="Published requirements for your site will appear here once they're available." />
+      </div>
+    );
+  }
 
   return (
     <div className={cx(pageContainerClass)} style={pageContainerStyle}>
-      <PageHeader eyebrow="Site workspace" title="Assessment overview" description="Review current completion, performance, and the next work needed for your assigned site." actions={<Link className={cx(primaryLinkButtonClass)} to={nextRoute} data-tour="continue-assessment"><span>Continue assessment</span><ArrowRight size={18} /></Link>} />
-      <SiteContextCard updated={lastUpdated} />
+      <PageHeader eyebrow="Site workspace" title="Site overview" description="Review completion, gaps, and the work needed for your assigned site." actions={<Link className={cx(primaryLinkButtonClass)} to={nextRoute} data-tour="continue-assessment"><span>Continue assessment</span><ArrowRight size={18} /></Link>} />
+      <p className="overview-meta -mt-5 mb-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+        <strong className="font-semibold text-slate-800 dark:text-slate-200">{assignedSite.name}</strong>
+        <span>· {assignedSite.code}</span>
+        <span>· {currentAssessmentPeriod}</span>
+        <span>· Updated {new Date(lastUpdated).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+      </p>
       <div className={cx(metricsGridClass)}>
-        <MetricCard label="Assessment completion" value={`${overallCompletion}%`} detail={`${completeQuestions} of ${allQuestions.length} questions complete`} icon={<Target size={21} />} tone="brand" />
-        <MetricCard label="Current self-assessed performance level" value={<span className={cx("metric-with-badge inline-flex min-h-8 items-center")}><PerformanceBadge performance={overallPerformance} /></span>} detail="Lowest roll-up across assessed sections" icon={<BarChart3 size={21} />} tone={overallPerformance === "performing" ? "success" : "danger"} />
-        <MetricCard label="Gaps requiring action" value={gapCount} detail={`${missingActionCount} actions are missing information`} icon={<FileWarning size={21} />} tone="warning" />
-        <MetricCard label="Last activity" value={new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} detail="Changes saved for the current site" icon={<Activity size={21} />} />
+        <HeroStatCard
+          label="Open actions"
+          value={openActions.length}
+          tone="warning"
+          icon={<FileWarning size={19} />}
+          footer={<InlineBreakdown items={[{ label: "No", value: openActionsByResponse.no, tone: "danger" }, { label: "Partial", value: openActionsByResponse.partial, tone: "warning" }]} />}
+        />
+        <HeroStatCard
+          label="Unassigned open actions"
+          value={unassignedOpenActions.length}
+          tone="danger"
+          icon={<UserX size={19} />}
+          footer={<InlineProgress value={unassignedOpenActions.length} total={openActions.length || 1} tone="danger" caption={`${unassignedOpenActions.length} of ${openActions.length} open actions have no owner`} />}
+        />
+        <HeroStatCard
+          label="Unanswered questions"
+          value={unansweredQuestions.length}
+          tone="neutral"
+          icon={<HelpCircle size={19} />}
+          footer={<p className="m-0 text-xs text-slate-500 dark:text-slate-400">Spread across {unansweredSectionCount} of {sectionGroups.length} sections</p>}
+        />
+        <HeroStatCard
+          label="Completed actions"
+          value={completedActions.length}
+          tone="success"
+          icon={<CheckCircle2 size={19} />}
+          footer={<span className={cx(pillBase, completedActions.length > 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300")}>{closedGapPct}% of gaps closed</span>}
+        />
       </div>
-      <div className={cx("overview-callout mt-5 flex flex-wrap items-center gap-4 rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 md:flex-nowrap dark:border-amber-800 dark:from-amber-950 dark:to-slate-900")}>
-        <div className={cx("overview-callout__icon grid size-11 flex-none place-items-center rounded-xl bg-white text-amber-700 dark:bg-slate-900 dark:text-amber-300")}><CircleAlert size={23} /></div>
-        <div className={cx("min-w-0 flex-1")}><p className={cx(eyebrowClasses)}>Recommended next step</p><h2 className={cx("mt-1 mb-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>{nextCopy}</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>{missingActionCount > 0 ? `${missingActionCount} No or Partial responses still need a complete description and owner.` : "Open the next requirement with unanswered questions and continue the assessment."}</p></div>
-        <Link className={cx(primaryLinkButtonClass, "w-full md:w-auto")} to={nextRoute}><span>Review requirement</span><ArrowRight size={18} /></Link>
+      <div className="mt-4">
+        <AssessmentGlanceCard completion={completionStats} responses={responseBreakdown} sectionPerformance={sectionPerformance} />
       </div>
-      <section className={cx(pageSectionClass)}>
-        <div className={cx(sectionTitleRowClass)}><div><p className={cx(eyebrowClasses)}>Six Operating System sections</p><h2 className={cx("mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100")}>Assessment progress</h2></div><Link className={cx("text-link inline-flex items-center gap-1.5 text-sm font-semibold text-kc-blue-700 hover:text-kc-blue-900 hover:underline hover:underline-offset-4 dark:text-kc-blue-300 dark:hover:text-kc-blue-100")} to="/assessment">View full assessment <ArrowRight size={16} /></Link></div>
-        <div className={cx(sectionCardGridClass)}>{operating.map((section) => <SectionCard section={section} requirement={requirements.find((item) => item.sectionId === section.id)} key={section.id} />)}</div>
-      </section>
+      <div className="overview-charts-row mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[2fr_1fr]">
+        <GapsBySectionChart sections={sectionRows} />
+        <NeedsAttentionPanel items={needsAttentionItems} viewAllTo={appPaths.actions} />
+      </div>
+      <div className="overview-charts-row mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <OpenActionsByOwnerChart owners={ownerRows} />
+        <div className="min-w-0">
+          <EvidenceCoverageStrip {...evidenceCoverage} to={appPaths.assessment} />
+        </div>
+      </div>
+      <div className="mt-4">
+        <RecentChangesFeed rows={recentChanges} />
+      </div>
+      <p className="overview-footer mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+        <span>{sectionGroups.length} sections</span>
+        <span>· {requirements.length} requirements</span>
+        <span>· {assignedSite.name}</span>
+        <span className="ml-auto">Last synced {new Date(lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+      </p>
     </div>
   );
 }
@@ -462,7 +610,8 @@ export function ActionsScreen() {
   const { requirements, updateQuestion } = useSites();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"actions" | "history">("actions");
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [status, setStatus] = useState<"all" | "Open" | "In progress" | "Complete">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
   const [period, setPeriod] = useState<"all" | AssessmentPeriod>("all");
@@ -473,7 +622,7 @@ export function ActionsScreen() {
   const [saved, setSaved] = useState(false);
   const actions = useMemo(() => requirements.filter((requirement) => requirement.response === "no" || requirement.response === "partial").map((requirement) => ({ requirement, question: requirement })), [requirements]);
   const historyRows = useMemo<QuestionHistoryRow[]>(() => requirements.map((requirement) => ({ requirement, question: requirement })), [requirements]);
-  const complete = actions.filter(({ question }) => (question.action?.status ?? "Open") === "Complete").length;
+  const complete = actions.filter(({ question }) => !isActionOpen(question.action)).length;
   const filtered = actions.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""} ${question.action?.followUp ?? ""}`.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (status === "all" || (question.action?.status ?? "Open") === status) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
@@ -509,7 +658,7 @@ export function ActionsScreen() {
           {filtered.length ? <div className={cx("data-table-wrap w-full max-w-full")} data-tour="actions-table"><table className={cx("data-table block w-full min-w-0 table-fixed border-collapse text-sm text-slate-900 shell:table dark:text-slate-100")}>
             <thead className={cx("block sr-only shell:not-sr-only shell:table-header-group")}><tr><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Requirement</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Response</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Action description</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Owner</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Status</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}>Follow-up</th><th className={cx("border-b border-slate-200 bg-slate-50 px-4 py-3 text-left align-middle text-xs font-bold tracking-wide wrap-anywhere text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400")}><span className={cx("sr-only")}>Actions</span></th></tr></thead>
             <tbody className={cx("grid w-full min-w-0 grid-cols-1 gap-3 p-3.5 md:grid-cols-2 shell:table-row-group shell:p-0")}>{filtered.map(({ requirement, question }) => {
-              const actionStatus = question.action?.status ?? "Open";
+              const currentActionStatus = actionStatus(question.action);
               const cellClass = "data-table__cell flex min-h-12 w-full min-w-0 items-center gap-3 border-b border-slate-200 px-3.5 py-3 text-left align-middle wrap-anywhere dark:border-slate-700 shell:table-cell shell:min-h-0 shell:px-4";
               const cellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
               const lastCellClass = "data-table__cell flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-normal shell:bg-transparent shell:px-4";
@@ -518,7 +667,7 @@ export function ActionsScreen() {
                 <td className={cellClass} data-label="Response"><span className={cx(cellLabelClass)}>Response</span><span className={cx(responseChipClass(question.response))}>{question.response === "no" ? "No" : "Partial"}</span></td>
                 <td className={cellClass} data-label="Action"><span className={cx(cellLabelClass)}>Action</span>{question.action?.description || <span className={cx(missingValueClass)}>Description not added</span>}</td>
                 <td className={cellClass} data-label="Owner"><span className={cx(cellLabelClass)}>Owner</span>{question.action?.owner ? <span className={cx("person-inline inline-flex items-center gap-2 whitespace-nowrap text-slate-700 dark:text-slate-300")}><span className={cx(avatarTinyClass)}>{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className={cx(missingValueClass)}>Owner not assigned</span>}</td>
-                <td className={cellClass} data-label="Status"><span className={cx(cellLabelClass)}>Status</span><span className={cx("detail-status inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-bold", actionStatus === "Complete" ? "detail-status--complete bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "detail-status--missing bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300")}>{actionStatus}</span></td>
+                <td className={cellClass} data-label="Status"><span className={cx(cellLabelClass)}>Status</span><span className={cx("detail-status inline-flex items-center rounded-full px-2.5 py-1.5 text-xs font-bold", currentActionStatus === "Complete" ? "detail-status--complete bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "detail-status--missing bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300")}>{currentActionStatus}</span></td>
                 <td className={cellClass} data-label="Follow-up"><span className={cx(cellLabelClass)}>Follow-up</span>{question.action?.followUp || <span className={cx(missingValueClass)}>No follow-up added</span>}</td>
                 <td className={lastCellClass} data-label=""><div className={cx("table-row-actions flex items-center gap-0.5")}><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className={cx("table-action inline-grid size-9 place-items-center rounded-md text-kc-blue-700 hover:bg-kc-blue-50 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td>
               </tr>;

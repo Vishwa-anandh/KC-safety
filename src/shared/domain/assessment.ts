@@ -5,6 +5,30 @@ export function actionComplete(response: ResponseValue, action?: ActionItem) {
   return Boolean(response);
 }
 
+/** A requirement is a "gap" once it has a No or Partial response — the one predicate every
+ *  gap-count/actions-list/chart in the app should share, rather than each re-deriving it. */
+export function isGap(response: ResponseValue) {
+  return response === "no" || response === "partial";
+}
+
+/** Every gap gets an auto-created action (see ApplicationDataProvider's updateQuestion), but its
+ *  `status` field itself stays optional — this is the one place that default lives. */
+export function actionStatus(action?: ActionItem) {
+  return action?.status ?? "Open";
+}
+
+export function isActionOpen(action?: ActionItem) {
+  return actionStatus(action) !== "Complete";
+}
+
+export function isActionMissingOwner(action?: ActionItem) {
+  return !action?.owner?.trim();
+}
+
+export function isActionMissingDescription(action?: ActionItem) {
+  return !action?.description?.trim();
+}
+
 export const assessmentPeriods = ["2026 Q1", "2026 Q2", "2026 Q3"] as const;
 export type AssessmentPeriodValue = (typeof assessmentPeriods)[number];
 export const currentAssessmentPeriod: AssessmentPeriodValue = "2026 Q3";

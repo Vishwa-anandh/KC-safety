@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { actionComplete, currentAssessmentPeriod, rollupPerformance } from "../../shared/domain/assessment";
+import { actionComplete, currentAssessmentPeriod, isActionMissingDescription, isActionMissingOwner, isGap, rollupPerformance } from "../../shared/domain/assessment";
 import { createdRequirementAuditChanges, deletedRequirementAuditChanges, updatedRequirementAuditChanges } from "../../shared/domain/requirement-audit";
 import { syncLiveRequirement, syncLiveRequirements, syncSections } from "../../shared/domain/requirement-sync";
 import { useDataSource } from "./DataSourceProvider";
@@ -160,15 +160,15 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
         completion: Math.round((completed / questions.length) * 100),
         performance: rollupPerformance(questions.map((question) => question.response)),
         questions: questions.length,
-        gaps: questions.filter((question) => question.response === "no" || question.response === "partial").length,
+        gaps: questions.filter((question) => isGap(question.response)).length,
       };
     });
     const allQuestions = state.requirements;
     const completed = allQuestions.filter((question) => actionComplete(question.response, question.action)).length;
     const overallCompletion = allQuestions.length ? Math.round((completed / allQuestions.length) * 100) : 0;
     const overallPerformance = rollupPerformance(allQuestions.map((question) => question.response));
-    const gapCount = allQuestions.filter((question) => question.response === "no" || question.response === "partial").length;
-    const missingActionCount = 0;
+    const gapCount = allQuestions.filter((question) => isGap(question.response)).length;
+    const missingActionCount = allQuestions.filter((question) => isGap(question.response) && (isActionMissingOwner(question.action) || isActionMissingDescription(question.action))).length;
     const dashboardSiteRows = state.sites.map((site) => site.id === "northstar" ? {
       ...site,
       completion: overallCompletion,
