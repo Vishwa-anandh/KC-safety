@@ -36,9 +36,10 @@ import { useAdministration } from "../model/useAdministration";
 import { importTemplateColumns, planRequirementImport, planRequirementRows, type ImportTemplateRow, type RequirementImportMode, type RequirementImportPlan } from "../model/importWorkbook";
 import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
+import type { SectionKind } from "../../../shared/domain/assessment";
 
 import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, FrameworkBadge, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -1468,10 +1469,12 @@ export function AdminRequirementDetailScreen() {
 export function AdminRequirementsScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const { masterRequirements, updateMasterRequirement, addMasterRequirement, removeMasterRequirement, sites, sectionSummaries } = useAdministration();
+  const sectionKindByName = new Map(sectionSummaries.map((item) => [item.name, item.kind]));
   const masterSections = [...new Set(masterRequirements.map((item) => item.section))].sort();
   const [query, setQuery] = useState("");
   const [section, setSection] = useState("All sections");
+  const [framework, setFramework] = useState<"all" | SectionKind>("all");
   const [status, setStatus] = useState("Published and draft");
   const [siteFilter, setSiteFilter] = useState("all");
   const [menu, setMenu] = useState<string | null>(null);
@@ -1497,6 +1500,7 @@ export function AdminRequirementsScreen() {
   const rows = masterRequirements.filter((item) =>
     (`${item.title} ${item.id}`.toLowerCase().includes(query.toLowerCase())) &&
     (section === "All sections" || item.section === section) &&
+    (framework === "all" || sectionKindByName.get(item.section) === framework) &&
     (status === "Published and draft" || item.status === status) &&
     (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
   return (
@@ -1528,7 +1532,8 @@ export function AdminRequirementsScreen() {
       <section className={cx(tableCardClass)}>
         <div className={cx(dashboardFilterBarClass)} data-tour="requirement-filters">
           <label className={cx(searchControlClass)}><Search size={18} /><input className={cx(searchControlInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ID or requirement" /></label>
-          <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
+          <Select label="Filter framework" icon={<Filter size={18} />} value={framework} onChange={(value) => setFramework(value as typeof framework)} options={[{ value: "all", label: "All frameworks" }, { value: "operating-system", label: "Operating System" }, { value: "performance-standard", label: "Performance Standard" }]} />
+          <Select label="Filter section" value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
         </div>
@@ -1548,7 +1553,7 @@ export function AdminRequirementsScreen() {
                 <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={item.id} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
                   <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
                   <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>Guidance and evidence requirements configured</span></span></td>
-                  <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span>{item.section}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-1")}><span className={cx("block")}>{item.section}</span><FrameworkBadge kind={sectionKindByName.get(item.section) ?? "operating-system"} compact /></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
                   <td className={cx(dataTableLastCellClass)} data-label="Actions">
