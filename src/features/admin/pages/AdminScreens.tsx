@@ -588,7 +588,7 @@ function SectionsConfigCard({ values, onAdd, onRemove }: { values: { name: strin
           <h2 className={cx(tableCardHeaderTitleClass)}>Sections</h2>
           <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Offered in the Section field when creating or editing a master requirement.</p>
         </div>
-        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} value{scoped.length === 1 ? "" : "s"}</span>
+        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} of {values.length} total shown</span>
       </div>
       <div className={cx("grid gap-3.5 p-4")}>
         <div className={cx("inline-flex w-fit rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-800")} role="radiogroup" aria-label="Framework">
@@ -674,7 +674,7 @@ function SubsectionsConfigCard({ sectionOptions, values, onAdd, onRemove }: { se
           <h2 className={cx(tableCardHeaderTitleClass)}>Sub-Sections</h2>
           <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Offered in the Sub-Section field when creating or editing a master requirement.</p>
         </div>
-        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} value{scoped.length === 1 ? "" : "s"}</span>
+        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} of {values.length} total shown</span>
       </div>
       <div className={cx("grid gap-3.5 p-4")}>
         {sectionOptions.length ? (
