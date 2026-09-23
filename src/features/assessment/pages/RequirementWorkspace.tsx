@@ -16,6 +16,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  Search,
   Trash2,
   Upload,
   UserRound,
@@ -133,6 +134,21 @@ function AssessmentNavigator({
       subsections: [...section.subsections.entries()].map(([subsection, items]) => ({ subsection, items })),
     }));
   }, [requirements]);
+  const [query, setQuery] = useState("");
+  const filteredSectionGroups = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return sectionGroups;
+    return sectionGroups
+      .map((section) => {
+        const sectionMatches = section.sectionName.toLowerCase().includes(needle);
+        const subsections = section.subsections.filter((sub) =>
+          sectionMatches
+          || sub.subsection.toLowerCase().includes(needle)
+          || sub.items.some((item) => `${item.requirementId} ${item.number} ${item.text}`.toLowerCase().includes(needle)));
+        return { ...section, subsections };
+      })
+      .filter((section) => section.subsections.length > 0);
+  }, [sectionGroups, query]);
   const completed = requirements.filter((requirement) => actionComplete(requirement.response, requirement.action)).length;
   const isIncomplete = (requirement: Requirement) => !actionComplete(requirement.response, requirement.action);
   const currentSectionIndex = requirements.findIndex((requirement) => requirement.sectionId === currentSectionId);
@@ -153,9 +169,22 @@ function AssessmentNavigator({
         {onClose && <IconButton label="Close assessment navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
       <ProgressBar value={Math.round((completed / requirements.length) * 100)} label="Requirements complete" />
-      <div className="navigator-group mt-4 flex-1">
+      <div className="navigator-search sticky top-0 z-10 -mx-4 mt-4 bg-white px-4 py-3 dark:bg-slate-900">
+        <label className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400">
+          <Search size={16} className="flex-none" />
+          <input
+            className="min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search sections and requirements"
+            aria-label="Search sections and requirements"
+          />
+        </label>
+      </div>
+      <div className="navigator-group flex-1">
         <div className="navigator-items grid gap-1">
-          {sectionGroups.map((section) => {
+          {filteredSectionGroups.map((section) => {
             const sectionCompleted = section.items.filter((item) => actionComplete(item.response, item.action)).length;
             const sectionActive = section.sectionId === currentSectionId;
             return (
@@ -193,6 +222,7 @@ function AssessmentNavigator({
               </div>
             );
           })}
+          {!filteredSectionGroups.length && <p className="navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400">No sections or requirements match "{query}".</p>}
         </div>
       </div>
       <Button className="next-incomplete mt-4 w-full" variant="secondary" icon={<ListChecks size={18} />} disabled={!nextIncomplete} onClick={() => nextIncomplete && onNavigate(nextIncomplete)}>
