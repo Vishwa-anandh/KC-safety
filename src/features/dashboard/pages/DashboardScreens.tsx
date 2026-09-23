@@ -24,7 +24,7 @@ import { performanceForResponse, performanceLabel, responseLabel } from "../../.
 import { requirementRoute } from "../../../app/router/links";
 import type { DashboardSite, Performance, Requirement, SectionSummary } from "../../../shared/types";
 import type { AssignedSite } from "../../../data-access/contracts";
-import { Button, CompletionBadge, EmptyState, eyebrowClasses, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
+import { Button, CompletionBadge, EmptyState, eyebrowClasses, FrameworkBadge, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { ContactsPanel, SiteUsersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -286,9 +286,11 @@ export function DashboardScreen() {
   const notStarted = dashboardSiteRows.filter((site) => site.completion === 0).length;
   const average = Math.round(dashboardSiteRows.reduce((sum, site) => sum + site.completion, 0) / total);
   const initialSites = dashboardSiteRows.filter((site) => site.performance === "initial").length;
-  // overallPriority only exists on Operating System content (see MasterRequirement's doc comment
-  // — Performance Standard imports only ever provide sectionPriority, which isn't comparable
-  // across sections), so this ranks strictly within that subset rather than mixing scales.
+  // overallPriority is typically only import-provided for Operating System content (see
+  // MasterRequirement's doc comment), but nothing stops it being set on Performance Standard
+  // content too (e.g. by hand in Master data) — so this ranks whichever requirements have one
+  // set, regardless of framework, and shows each row's framework since the list can mix both.
+  const sectionKindByName = new Map(sectionSummaries.map((section) => [section.name, section.kind]));
   const priorityRanked = useMemo(() => requirements.filter((requirement) => requirement.overallPriority !== undefined), [requirements]);
   const priorityOpen = useMemo(() => [...priorityRanked].filter((requirement) => requirement.response !== "yes").sort((a, b) => (a.overallPriority ?? 0) - (b.overallPriority ?? 0)), [priorityRanked]);
   const activeFilters = [region !== "All regions" && region, segment !== "All segments" && segment, performance !== "All levels" && performanceLabel(performance), completion !== "all" && completion.replace("-", " "), focus !== "All assessment areas" && focus].filter(Boolean) as string[];
@@ -350,6 +352,7 @@ export function DashboardScreen() {
                   <span className={cx("min-w-0 flex-1 grid gap-0.5")}>
                     <strong className={cx("truncate text-sm text-slate-900 dark:text-slate-100")}>{requirement.requirementId} · {requirement.title}</strong>
                     <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{requirement.sectionName} · Overall priority {requirement.overallPriority}</span>
+                    <FrameworkBadge kind={sectionKindByName.get(requirement.sectionName) ?? "operating-system"} compact />
                   </span>
                   <span className={cx(responseChipClass(requirement.response))}>{responseLabel(requirement.response)}</span>
                 </Link>
