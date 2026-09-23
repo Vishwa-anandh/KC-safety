@@ -618,7 +618,12 @@ export function CheckboxList({
 }
 
 export function KcLogo() {
-  return <img className={cx("kc-mark size-11 flex-none object-contain")} src="/brand/logo-mark.png" alt="EHS360" />;
+  return (
+    <>
+      <img className={cx("kc-mark size-11 flex-none object-contain dark:hidden")} src="/brand/logo-mark.png" alt="EHS360" />
+      <img className={cx("kc-mark hidden size-11 flex-none object-contain dark:block")} src="/brand/logo-mark-dark.png" alt="EHS360" />
+    </>
+  );
 }
 
 /**
