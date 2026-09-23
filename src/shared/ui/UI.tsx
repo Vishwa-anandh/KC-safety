@@ -518,9 +518,13 @@ export function SaveStatus({ state = "saved" }: { state?: "saving" | "saved" | "
   );
 }
 
-export function EmptyState({ icon, title, description, action }: { icon: ReactNode; title: string; description: string; action?: ReactNode }) {
+/** `bare` drops the border/background/shadow — use it whenever this renders inside a container
+ * that already has its own card chrome (a table card, a panel section), so the empty state
+ * doesn't show up as a card nested inside another card. Leave it on (the default) when this is
+ * the only thing on the page, e.g. a "not found" screen, where that chrome gives it visual weight. */
+export function EmptyState({ icon, title, description, action, bare = false }: { icon: ReactNode; title: string; description: string; action?: ReactNode; bare?: boolean }) {
   return (
-    <div className={cx("empty-state mx-auto grid w-full max-w-xl justify-items-center rounded-3xl border border-slate-200 bg-white px-4 py-6 text-center shadow-xl md:p-9 dark:border-slate-700 dark:bg-slate-900")}>
+    <div className={cx("empty-state mx-auto grid w-full max-w-xl justify-items-center px-4 py-6 text-center md:p-9", !bare && "rounded-3xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900")}>
       <div className={cx("empty-state__icon mb-4 grid size-18 place-items-center rounded-2xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}>{icon}</div>
       <h2 className={cx("text-2xl font-bold text-slate-900 dark:text-slate-100")}>{title}</h2>
       <p className={cx("mt-2.5 max-w-md text-sm text-slate-600 dark:text-slate-400")}>{description}</p>

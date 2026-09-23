@@ -324,7 +324,7 @@ export function AdminImportHistoryScreen() {
               <Link className={cx(linkButtonBaseClass, "min-h-8.5 px-2.5 py-1.5 text-sm bg-transparent text-kc-blue-700 hover:bg-kc-blue-50 hover:text-kc-blue-900 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={`/admin/imports/${record.id}/preview`}>Preview</Link>
             </span>
           </article>
-        ))}</div> : <EmptyState icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
+        ))}</div> : <EmptyState bare icon={<History size={28} />} title={importHistory.length ? "No imports match" : "No imports recorded"} description={importHistory.length ? "Try another file name, audit reference, or administrator." : "Completed imports will appear here with their audit reference."} />}
       </section>
     </div>
   );
@@ -475,7 +475,7 @@ export function AdminSitesScreen() {
               </tr>
             );
           })}</tbody>
-        </table></div> : <EmptyState icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
+        </table></div> : <EmptyState bare icon={<Search size={27} />} title="No sites match" description="Try another site name, code, or region." />}
       </section>
       {editing && <SiteDialog site={editing === "new" ? undefined : editing} existing={sites} regions={configRegions} segments={configSegments} onClose={() => setEditing(null)} onSave={(site) => {
         if (editing === "new") { addSite(site); setFeedback({ tone: "success", title: "Site created", body: `${site.name} (${site.code}) was added to the network.` }); }
@@ -533,7 +533,7 @@ function ConfigListCard({
         </form>
         {duplicate && <small className={cx(fieldErrorClass)}>That value already exists.</small>}
         {values.length === 0 ? (
-          <EmptyState icon={<ListChecks size={24} />} title="No values yet" description={`Add the first ${title.toLowerCase()} value above.`} />
+          <EmptyState bare icon={<ListChecks size={24} />} title="No values yet" description={`Add the first ${title.toLowerCase()} value above.`} />
         ) : (
           <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
             {values.map((value) => (
@@ -1243,7 +1243,7 @@ export function AdminRequirementAuditScreen() {
               );
             })}
           </div>
-        ) : <EmptyState icon={<Search size={28} />} title={allEntries.length ? "No audit entries match" : "No requirement changes recorded"} description={allEntries.length ? "Try another search or change-area filter." : "Future requirement, question, and expected-evidence changes will appear here."} />}
+        ) : <EmptyState bare icon={<Search size={28} />} title={allEntries.length ? "No audit entries match" : "No requirement changes recorded"} description={allEntries.length ? "Try another search or change-area filter." : "Future requirement, question, and expected-evidence changes will appear here."} />}
       </section>
     </div>
   );
@@ -1586,7 +1586,7 @@ export function AdminRequirementsScreen() {
               ))}</tbody>
             </table>
           </div>
-        ) : <EmptyState icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
+        ) : <EmptyState bare icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
       </section>
       {deleting && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${deleting.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleting(null)} onConfirm={() => { removeMasterRequirement(deleting.id); setFeedback(`${deleting.id} was deleted.`); setDeleting(null); }} />}
     </div>
@@ -1707,7 +1707,7 @@ export function AdminSiteDetailScreen() {
               })}</tbody>
             </table>
           </div>
-        ) : <EmptyState icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
+        ) : <EmptyState bare icon={<UsersRound size={27} />} title="No users assigned" description="Assign a user to give them access to this site's workspace." />}
       </section>
 
       <section className={cx("page-section mt-9")}>

@@ -423,7 +423,7 @@ export function DashboardScreen() {
           </div>
           <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>Showing {sites.length} of {total} sites</span>
         </div>
-        {sites.length ? <DashboardTable sites={sites} /> : <EmptyState icon={<Search size={27} />} title="No sites match this view" description="Adjust or clear the dashboard filters to see results." action={<Button variant="secondary" icon={<FilterX size={17} />} onClick={reset}>Clear filters</Button>} />}
+        {sites.length ? <DashboardTable sites={sites} /> : <EmptyState bare icon={<Search size={27} />} title="No sites match this view" description="Adjust or clear the dashboard filters to see results." action={<Button variant="secondary" icon={<FilterX size={17} />} onClick={reset}>Clear filters</Button>} />}
       </section>
     </div>
   );
@@ -677,7 +677,7 @@ export function SiteDrilldownScreen() {
             </div>
           </>
         ) : (
-          <EmptyState icon={<CheckCircle2 size={27} />} title="No assessment areas in this view" description="Choose another filter to review the site's assessment areas." />
+          <EmptyState bare icon={<CheckCircle2 size={27} />} title="No assessment areas in this view" description="Choose another filter to review the site's assessment areas." />
         )}
       </section>
 

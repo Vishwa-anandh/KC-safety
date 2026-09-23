@@ -676,7 +676,7 @@ export function ActionsScreen() {
                 <td className={lastCellClass} data-label=""><div className={cx("table-row-actions flex items-center gap-0.5")}><Button variant="tertiary" size="compact" icon={<Pencil size={15} />} onClick={() => setEditing({ requirement, question })}>Edit</Button><Link className={cx("table-action inline-grid size-9 place-items-center rounded-md text-kc-blue-700 hover:bg-kc-blue-50 dark:text-kc-blue-300 dark:hover:bg-kc-blue-950")} to={requirementRoute(requirement)} aria-label={`Open ${requirement.title}`}><ChevronRight size={18} /></Link></div></td>
               </tr>;
             })}</tbody>
-          </table></div> : <EmptyState icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
+          </table></div> : <EmptyState bare icon={<Search size={25} />} title="No actions match" description="Clear a filter or search for another requirement." />}
         </section>
       </div> : <section id="response-history-panel" role="tabpanel" aria-labelledby="response-history-tab" className={cx("table-card actions-response-history-panel overflow-hidden", cardClass)}>
         <div className={cx("table-card__header table-card__header--results", cardHeaderClass, "items-center")}><div><p className={cx(eyebrowClasses)}>Current site</p><h2 className={cx(cardHeaderTitleClass)}>Question response history</h2></div><span className={cx(cardHeaderDetailClass)}>{filteredHistoryRows.length} of {historyRows.length} questions · {historyEventCount} recorded events</span></div>
@@ -685,7 +685,7 @@ export function ActionsScreen() {
           <Select label="Filter current response" value={historyResponse} onChange={(value) => setHistoryResponse(value as typeof historyResponse)} options={[{ value: "all", label: "All responses" }, { value: "unanswered", label: "Not answered" }, { value: "no", label: "No" }, { value: "partial", label: "Partial" }, { value: "yes", label: "Yes" }]} />
           <Select label="Filter assessment period" icon={<CalendarClock size={17} />} value={historyPeriod} onChange={(value) => setHistoryPeriod(value as typeof historyPeriod)} options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]} />
         </div>
-        {filteredHistoryRows.length ? <div className={cx("actions-response-history-list grid gap-3 p-4")}>{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} kind={sectionKindById.get(row.requirement.sectionId) ?? "operating-system"} />)}</div> : <EmptyState icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
+        {filteredHistoryRows.length ? <div className={cx("actions-response-history-list grid gap-3 p-4")}>{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} kind={sectionKindById.get(row.requirement.sectionId) ?? "operating-system"} />)}</div> : <EmptyState bare icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
       </section>}
       {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
         updateQuestion(editing.requirement.id, { action }, user?.name);
