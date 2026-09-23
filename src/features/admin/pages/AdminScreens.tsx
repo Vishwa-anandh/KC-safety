@@ -606,8 +606,15 @@ export function AdminConfigScreen() {
                 type="button"
                 onClick={() => setActiveKey(key)}
                 className={cx(
-                  "config-index__item flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border border-transparent bg-white p-2 text-left text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-99 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
-                  active && "config-index__item--active border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+                  // bg-*/dark:bg-* live only in these two mutually-exclusive branches (never on
+                  // a shared base class) — Tailwind v4 orders generated utilities by
+                  // first-seen-in-source, not JSX order, so an always-on bg-slate-900 next to a
+                  // conditional bg-kc-blue-950 was a coin flip for which one painted, and it was
+                  // silently losing the active highlight to the plain surface color.
+                  "config-index__item flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border p-2 text-left transition-colors active:scale-99",
+                  active
+                    ? "config-index__item--active border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200"
+                    : "border-transparent bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
                 )}
                 aria-current={active ? "true" : undefined}
               >
