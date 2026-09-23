@@ -41,6 +41,8 @@ export function syncLiveRequirement(requirements: Requirement[], master: MasterR
       response: null,
       period: currentAssessmentPeriod,
       evidence: [],
+      sectionPriority: master.sectionPriority,
+      overallPriority: master.overallPriority,
     };
     return [...requirements, created];
   }
@@ -57,6 +59,8 @@ export function syncLiveRequirement(requirements: Requirement[], master: MasterR
     guidance: master.guidance ?? [],
     expectedEvidence: master.expectedEvidence,
     evidenceRequired: master.evidenceRequired ?? master.expectedEvidence.length > 0,
+    sectionPriority: master.sectionPriority,
+    overallPriority: master.overallPriority,
   });
 }
 

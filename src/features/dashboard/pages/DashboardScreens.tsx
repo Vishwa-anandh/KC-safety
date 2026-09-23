@@ -286,6 +286,11 @@ export function DashboardScreen() {
   const notStarted = dashboardSiteRows.filter((site) => site.completion === 0).length;
   const average = Math.round(dashboardSiteRows.reduce((sum, site) => sum + site.completion, 0) / total);
   const initialSites = dashboardSiteRows.filter((site) => site.performance === "initial").length;
+  // overallPriority only exists on Operating System content (see MasterRequirement's doc comment
+  // — Performance Standard imports only ever provide sectionPriority, which isn't comparable
+  // across sections), so this ranks strictly within that subset rather than mixing scales.
+  const priorityRanked = useMemo(() => requirements.filter((requirement) => requirement.overallPriority !== undefined), [requirements]);
+  const priorityOpen = useMemo(() => [...priorityRanked].filter((requirement) => requirement.response !== "yes").sort((a, b) => (a.overallPriority ?? 0) - (b.overallPriority ?? 0)), [priorityRanked]);
   const activeFilters = [region !== "All regions" && region, segment !== "All segments" && segment, performance !== "All levels" && performanceLabel(performance), completion !== "all" && completion.replace("-", " "), focus !== "All assessment areas" && focus].filter(Boolean) as string[];
 
   function reset() { setRegion("All regions"); setSegment("All segments"); setPerformance("All levels"); setCompletion("all"); setFocus("All assessment areas"); setQuery(""); }
@@ -325,6 +330,40 @@ export function DashboardScreen() {
           </section>
         </div>
       </div>
+      <section className={cx(tableCardClass)}>
+        <div className={cx(tableCardHeaderBaseClass, "table-card__header--results flex-row items-center")}>
+          <div>
+            <p className={cx(eyebrowClasses)}>Governed priority</p>
+            <h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Priority focus</h2>
+          </div>
+          <span className={cx("text-sm text-slate-500 dark:text-slate-400")}>{priorityOpen.length} of {priorityRanked.length} priority-ranked requirements open</span>
+        </div>
+        {priorityOpen.length ? (
+          <ul className={cx("m-0 grid list-none gap-2 p-4")}>
+            {priorityOpen.slice(0, 5).map((requirement, index) => (
+              <li key={requirement.id}>
+                <Link
+                  className={cx("flex min-w-0 items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-colors hover:border-kc-blue-300 hover:bg-kc-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-kc-blue-700 dark:hover:bg-kc-blue-950")}
+                  to={`/admin/requirements/${requirement.id}`}
+                >
+                  <span className={cx("grid size-7 flex-none place-items-center rounded-full bg-kc-blue-50 text-xs font-extrabold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{index + 1}</span>
+                  <span className={cx("min-w-0 flex-1 grid gap-0.5")}>
+                    <strong className={cx("truncate text-sm text-slate-900 dark:text-slate-100")}>{requirement.requirementId} · {requirement.title}</strong>
+                    <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{requirement.sectionName} · Overall priority {requirement.overallPriority}</span>
+                  </span>
+                  <span className={cx(responseChipClass(requirement.response))}>{responseLabel(requirement.response)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className={cx("p-4")}>
+            <InlineMessage tone="success" title="No open priority-ranked requirements">
+              {priorityRanked.length ? "Every priority-ranked requirement is currently answered Yes." : "No published requirements carry an overall priority rank yet — set one from Master data."}
+            </InlineMessage>
+          </div>
+        )}
+      </section>
       <section className={cx(tableCardClass)}>
         <div className={cx("dashboard-filter-bar dashboard-filter-bar--expanded flex flex-col flex-wrap items-stretch gap-3 border-b border-slate-200 px-4 py-3.5 md:flex-row shell:items-center dark:border-slate-700")} data-tour="dashboard-filters">
           <label className={cx("search-control flex min-h-10 w-full min-w-0 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-500 focus-within:border-kc-blue-600 focus-within:ring-3 focus-within:ring-kc-blue-100 shell:w-105 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:focus-within:ring-kc-blue-900")}>

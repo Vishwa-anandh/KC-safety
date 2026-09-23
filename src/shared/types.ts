@@ -106,6 +106,10 @@ export interface Requirement {
   /** Append-only snapshots used by the enterprise question history timeline. */
   history?: AssessmentHistoryEntry[];
   evidence: EvidenceItem[];
+  /** Carried over from the matching MasterRequirement by shared/domain/requirement-sync.ts — see
+   *  the doc comments on MasterRequirement.sectionPriority/overallPriority for what these rank. */
+  sectionPriority?: number;
+  overallPriority?: number;
 }
 
 export interface DashboardSite {
