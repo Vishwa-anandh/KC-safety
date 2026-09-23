@@ -38,7 +38,7 @@ import { useAdministration } from "../model/useAdministration";
 import { importTemplateColumns, planRequirementImport, planRequirementRows, type ImportTemplateRow, type RequirementImportMode, type RequirementImportPlan } from "../model/importWorkbook";
 import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
-import type { SectionKind } from "../../../shared/domain/assessment";
+import { frameworkLabel, type SectionKind } from "../../../shared/domain/assessment";
 
 import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
 import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
@@ -562,15 +562,175 @@ function ConfigListCard({
   );
 }
 
+/** Sections are declared under a framework — the toggle picks which one, and the list/add form
+ *  below only ever shows/creates sections for that framework, matching how a section is scoped
+ *  everywhere else it appears (the Master data tabs, FrameworkBadge, etc). */
+function SectionsConfigCard({ values, onAdd, onRemove }: { values: { name: string; kind: SectionKind }[]; onAdd: (name: string, kind: SectionKind) => void; onRemove: (name: string) => void }) {
+  const [kind, setKind] = useState<SectionKind>("operating-system");
+  const [draft, setDraft] = useState("");
+  const [removing, setRemoving] = useState<string | null>(null);
+  const scoped = values.filter((item) => item.kind === kind);
+  const duplicate = values.some((item) => item.name.toLowerCase() === draft.trim().toLowerCase());
+
+  function handleAdd(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = draft.trim();
+    if (!trimmed || duplicate) return;
+    onAdd(trimmed, kind);
+    setDraft("");
+  }
+
+  return (
+    <section className={cx(tableCardClass)}>
+      <div className={cx(tableCardHeaderStartClass)}>
+        <div>
+          <p className={cx(eyebrowClasses)}>Dropdown values</p>
+          <h2 className={cx(tableCardHeaderTitleClass)}>Sections</h2>
+          <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Offered in the Section field when creating or editing a master requirement.</p>
+        </div>
+        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} value{scoped.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className={cx("grid gap-3.5 p-4")}>
+        <div className={cx("inline-flex w-fit rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-800")} role="radiogroup" aria-label="Framework">
+          {(["operating-system", "performance-standard"] as SectionKind[]).map((option) => {
+            const Icon = option === "operating-system" ? ClipboardCheck : ShieldCheck;
+            const active = kind === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setKind(option)}
+                className={cx(
+                  "flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-bold transition-colors",
+                  active ? "bg-kc-blue-50 text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200" : "bg-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100",
+                )}
+              >
+                <Icon size={16} />{frameworkLabel(option)}
+              </button>
+            );
+          })}
+        </div>
+        <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAdd}>
+          <input className={cx(fieldInputClass, "flex-1")} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="For example, Leadership & Engagement" aria-label="New section name" />
+          <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!draft.trim() || duplicate}>Add</Button>
+        </form>
+        {duplicate && <small className={cx(fieldErrorClass)}>That value already exists.</small>}
+        {scoped.length === 0 ? (
+          <EmptyState bare icon={<ListChecks size={24} />} title="No sections yet" description={`Add the first ${frameworkLabel(kind)} section above.`} />
+        ) : (
+          <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
+            {scoped.map((item) => (
+              <li key={item.name} className={cx(pillBaseClass, pillTone.neutral, "py-0.5 pr-1")}>
+                {item.name}
+                <button type="button" className={cx("grid size-5 place-items-center rounded-full border-0 bg-transparent p-0 hover:bg-slate-200 dark:hover:bg-slate-700")} aria-label={`Remove ${item.name}`} onClick={() => setRemoving(item.name)}>
+                  <X size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {removing && (
+        <ConfirmDialog
+          eyebrow="Config"
+          title={`Remove "${removing}"?`}
+          body="This removes the section from the dropdown. Requirements that already use it keep their current value."
+          confirmLabel="Remove section"
+          cancelLabel="Keep section"
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => { onRemove(removing); setRemoving(null); }}
+        />
+      )}
+    </section>
+  );
+}
+
+/** Sub-sections are declared under a section — the dropdown picks which one (drawing from both
+ *  Config-declared sections and any section already in use by a master requirement, same union
+ *  AdminRequirementDetailScreen's ComboboxField offers), and the list/add form below only ever
+ *  shows/creates sub-sections for that section. */
+function SubsectionsConfigCard({ sectionOptions, values, onAdd, onRemove }: { sectionOptions: string[]; values: { section: string; name: string }[]; onAdd: (section: string, name: string) => void; onRemove: (section: string, name: string) => void }) {
+  const [section, setSection] = useState(sectionOptions[0] ?? "");
+  const [draft, setDraft] = useState("");
+  const [removing, setRemoving] = useState<string | null>(null);
+  const scoped = values.filter((item) => item.section === section);
+  const duplicate = scoped.some((item) => item.name.toLowerCase() === draft.trim().toLowerCase());
+
+  function handleAdd(event: FormEvent) {
+    event.preventDefault();
+    const trimmed = draft.trim();
+    if (!trimmed || duplicate || !section) return;
+    onAdd(section, trimmed);
+    setDraft("");
+  }
+
+  return (
+    <section className={cx(tableCardClass)}>
+      <div className={cx(tableCardHeaderStartClass)}>
+        <div>
+          <p className={cx(eyebrowClasses)}>Dropdown values</p>
+          <h2 className={cx(tableCardHeaderTitleClass)}>Sub-Sections</h2>
+          <p className={cx("mt-1 text-sm text-slate-600 dark:text-slate-400")}>Offered in the Sub-Section field when creating or editing a master requirement.</p>
+        </div>
+        <span className={cx(tableCardHeaderCountClass)}>{scoped.length} value{scoped.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className={cx("grid gap-3.5 p-4")}>
+        {sectionOptions.length ? (
+          <>
+            <Select label="Section" value={section} onChange={setSection} options={sectionOptions.map((value) => ({ value, label: value }))} />
+            <form className={cx("flex flex-col gap-2 sm:flex-row")} onSubmit={handleAdd}>
+              <input className={cx(fieldInputClass, "flex-1")} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="For example, 1.2 Leadership commitment" aria-label="New sub-section name" />
+              <Button type="submit" variant="secondary" icon={<Plus size={17} />} disabled={!draft.trim() || duplicate}>Add</Button>
+            </form>
+            {duplicate && <small className={cx(fieldErrorClass)}>That value already exists under this section.</small>}
+            {scoped.length === 0 ? (
+              <EmptyState bare icon={<ListChecks size={24} />} title="No sub-sections yet" description={`Add the first sub-section under ${section} above.`} />
+            ) : (
+              <ul className={cx("m-0 flex flex-wrap gap-2 p-0 list-none")}>
+                {scoped.map((item) => (
+                  <li key={item.name} className={cx(pillBaseClass, pillTone.neutral, "py-0.5 pr-1")}>
+                    {item.name}
+                    <button type="button" className={cx("grid size-5 place-items-center rounded-full border-0 bg-transparent p-0 hover:bg-slate-200 dark:hover:bg-slate-700")} aria-label={`Remove ${item.name}`} onClick={() => setRemoving(item.name)}>
+                      <X size={13} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : (
+          <EmptyState bare icon={<ListChecks size={24} />} title="No sections yet" description="Add a section first, then come back to add its sub-sections." />
+        )}
+      </div>
+      {removing && (
+        <ConfirmDialog
+          eyebrow="Config"
+          title={`Remove "${removing}"?`}
+          body="This removes the sub-section from the dropdown. Requirements that already use it keep their current value."
+          confirmLabel="Remove sub-section"
+          cancelLabel="Keep sub-section"
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => { onRemove(section, removing); setRemoving(null); }}
+        />
+      )}
+    </section>
+  );
+}
+
 type ConfigListKey = "regions" | "segments" | "sections" | "subsections";
 
 export function AdminConfigScreen() {
   const {
-    regions, segments, sectionNames, subsectionNames,
+    regions, segments, sectionNames, subsectionNames, masterRequirements,
     addRegion, removeRegion, addSegment, removeSegment,
     addSectionName, removeSectionName, addSubsectionName, removeSubsectionName,
   } = useAdministration();
   const [activeKey, setActiveKey] = useState<ConfigListKey>("regions");
+  // Same union AdminRequirementDetailScreen's ComboboxField offers — a section already in use by
+  // a master requirement counts as "known" here too, not just ones declared through this screen.
+  const sectionOptions = [...new Set([...sectionNames.map((item) => item.name), ...masterRequirements.map((item) => item.section)])].sort();
 
   const lists: Record<ConfigListKey, { label: string; icon: typeof MapPin; count: number; card: React.ReactNode }> = {
     regions: {
@@ -583,11 +743,11 @@ export function AdminConfigScreen() {
     },
     sections: {
       label: "Sections", icon: FileText, count: sectionNames.length,
-      card: <ConfigListCard title="Sections" description="Offered in the Section field when creating or editing a master requirement." placeholder="For example, Leadership & Engagement" values={sectionNames} onAdd={addSectionName} onRemove={removeSectionName} removalNote="Requirements that already use it keep their current value." />,
+      card: <SectionsConfigCard values={sectionNames} onAdd={addSectionName} onRemove={removeSectionName} />,
     },
     subsections: {
       label: "Sub-Sections", icon: ListChecks, count: subsectionNames.length,
-      card: <ConfigListCard title="Sub-Sections" description="Offered in the Sub-Section field when creating or editing a master requirement." placeholder="For example, 1.2 Leadership commitment" values={subsectionNames} onAdd={addSubsectionName} onRemove={removeSubsectionName} removalNote="Requirements that already use it keep their current value." />,
+      card: <SubsectionsConfigCard sectionOptions={sectionOptions} values={subsectionNames} onAdd={addSubsectionName} onRemove={removeSubsectionName} />,
     },
   };
 
@@ -1337,8 +1497,8 @@ export function AdminRequirementDetailScreen() {
 
   // Merges in Config's admin-curated Section/Sub-Section lists (see AdminConfigScreen) so a name
   // pre-declared there is selectable here before any requirement actually uses it.
-  const existingSections = [...new Set([...sectionNames, ...masterRequirements.map((item) => item.section)].filter(Boolean))].sort();
-  const existingSubsections = [...new Set([...subsectionNames, ...masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection)].filter(Boolean))].sort();
+  const existingSections = [...new Set([...sectionNames.map((item) => item.name), ...masterRequirements.map((item) => item.section)].filter(Boolean))].sort();
+  const existingSubsections = [...new Set([...subsectionNames.filter((item) => item.section === draft.section).map((item) => item.name), ...masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection)].filter(Boolean))].sort();
   const existingRequirementIds = [...new Set(masterRequirements.map((item) => item.requirementId).filter(Boolean))].sort();
   // Every sibling question under the same Requirement ID shares section/subsection (title is
   // derived from subsection at save time, see `save()` below) — picking an existing Requirement

@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { actionComplete, currentAssessmentPeriod, isActionMissingDescription, isActionMissingOwner, isGap, rollupPerformance } from "../../shared/domain/assessment";
+import { actionComplete, currentAssessmentPeriod, isActionMissingDescription, isActionMissingOwner, isGap, rollupPerformance, type SectionKind } from "../../shared/domain/assessment";
 import { createdRequirementAuditChanges, deletedRequirementAuditChanges, updatedRequirementAuditChanges } from "../../shared/domain/requirement-audit";
 import { syncLiveRequirement, syncLiveRequirements, syncSections } from "../../shared/domain/requirement-sync";
 import { useDataSource } from "./DataSourceProvider";
@@ -92,10 +92,10 @@ interface ApplicationDataValue extends PersistedState {
   removeRegion: (region: string) => void;
   addSegment: (segment: string) => void;
   removeSegment: (segment: string) => void;
-  addSectionName: (name: string) => void;
+  addSectionName: (name: string, kind: SectionKind) => void;
   removeSectionName: (name: string) => void;
-  addSubsectionName: (name: string) => void;
-  removeSubsectionName: (name: string) => void;
+  addSubsectionName: (section: string, name: string) => void;
+  removeSubsectionName: (section: string, name: string) => void;
   notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
   markNotificationRead: (id: string, role: SiteUserRole) => void;
   markAllNotificationsRead: (role: SiteUserRole) => void;
@@ -461,20 +461,20 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     touch((current) => ({ ...current, segments: current.segments.filter((item) => item !== segment) }));
   }
 
-  function addSectionName(name: string) {
-    touch((current) => current.sectionNames.includes(name) ? current : { ...current, sectionNames: [...current.sectionNames, name].sort() });
+  function addSectionName(name: string, kind: SectionKind) {
+    touch((current) => current.sectionNames.some((item) => item.name === name) ? current : { ...current, sectionNames: [...current.sectionNames, { name, kind }].sort((a, b) => a.name.localeCompare(b.name)) });
   }
 
   function removeSectionName(name: string) {
-    touch((current) => ({ ...current, sectionNames: current.sectionNames.filter((item) => item !== name) }));
+    touch((current) => ({ ...current, sectionNames: current.sectionNames.filter((item) => item.name !== name) }));
   }
 
-  function addSubsectionName(name: string) {
-    touch((current) => current.subsectionNames.includes(name) ? current : { ...current, subsectionNames: [...current.subsectionNames, name].sort() });
+  function addSubsectionName(section: string, name: string) {
+    touch((current) => current.subsectionNames.some((item) => item.section === section && item.name === name) ? current : { ...current, subsectionNames: [...current.subsectionNames, { section, name }].sort((a, b) => a.name.localeCompare(b.name)) });
   }
 
-  function removeSubsectionName(name: string) {
-    touch((current) => ({ ...current, subsectionNames: current.subsectionNames.filter((item) => item !== name) }));
+  function removeSubsectionName(section: string, name: string) {
+    touch((current) => ({ ...current, subsectionNames: current.subsectionNames.filter((item) => !(item.section === section && item.name === name)) }));
   }
 
   function addSiteUser(user: SiteUser) {

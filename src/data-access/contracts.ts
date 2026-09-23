@@ -65,9 +65,11 @@ export interface AppSnapshot {
   /** Admin-curated Section/Sub-Section names offered on the master requirement form — see the
    *  Config screen. Requirements already in use contribute their own section/subsection too
    *  (see AdminRequirementDetailScreen's ComboboxField options), this just lets an admin
-   *  pre-declare a name before any requirement uses it. */
-  sectionNames: string[];
-  subsectionNames: string[];
+   *  pre-declare a name before any requirement uses it. A section is created under a framework;
+   *  a sub-section is created under one of those sections (by name) — mirroring how a section
+   *  and its sub-sections are actually used on a master requirement. */
+  sectionNames: { name: string; kind: SectionSummary["kind"] }[];
+  subsectionNames: { section: string; name: string }[];
 }
 
 export type DataSourceKind = "demo" | "api";

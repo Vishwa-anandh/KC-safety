@@ -753,8 +753,28 @@ export const segments: string[] = ["Family Care", "Personal Care", "Professional
  * by `requirements`/`masterRequirements` below so the dropdowns look unchanged on first load —
  * an admin can add to either list here to offer a name before any requirement uses it.
  */
-export const sectionNames: string[] = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation", "Improvement", "Machine Safety Performance Standard", "Occupational Health Performance Standard"];
-export const subsectionNames: string[] = ["1.2 Leadership commitment", "2.1 Risks and opportunities", "3.2 Competence", "4.3 Change management", "5.1 Performance monitoring", "6.1 Improvement actions", "7.2 Safeguarding", "7.4 Lockout/Tagout", "3.1 Exposure assessment", "3.3 Medical surveillance"];
+export const sectionNames: { name: string; kind: "operating-system" | "performance-standard" }[] = [
+  { name: "Leadership & Engagement", kind: "operating-system" },
+  { name: "Planning", kind: "operating-system" },
+  { name: "Support", kind: "operating-system" },
+  { name: "Operation", kind: "operating-system" },
+  { name: "Performance Evaluation", kind: "operating-system" },
+  { name: "Improvement", kind: "operating-system" },
+  { name: "Machine Safety Performance Standard", kind: "performance-standard" },
+  { name: "Occupational Health Performance Standard", kind: "performance-standard" },
+];
+export const subsectionNames: { section: string; name: string }[] = [
+  { section: "Leadership & Engagement", name: "1.2 Leadership commitment" },
+  { section: "Planning", name: "2.1 Risks and opportunities" },
+  { section: "Support", name: "3.2 Competence" },
+  { section: "Operation", name: "4.3 Change management" },
+  { section: "Performance Evaluation", name: "5.1 Performance monitoring" },
+  { section: "Improvement", name: "6.1 Improvement actions" },
+  { section: "Machine Safety Performance Standard", name: "7.2 Safeguarding" },
+  { section: "Machine Safety Performance Standard", name: "7.4 Lockout/Tagout" },
+  { section: "Occupational Health Performance Standard", name: "3.1 Exposure assessment" },
+  { section: "Occupational Health Performance Standard", name: "3.3 Medical surveillance" },
+];
 
 // Guidance repeats across sibling rows sharing one Requirement ID, same as `requirements` above —
 // kept here as named constants (rather than inline, as `requirements` does) purely to avoid
