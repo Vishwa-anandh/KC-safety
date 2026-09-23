@@ -7,14 +7,16 @@ import {
   ChevronDown,
   Circle,
   CircleDotDashed,
+  ClipboardCheck,
   Clock3,
   Info,
   Minus,
   Search,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
-import { performanceLabel } from "../domain/assessment";
+import { frameworkLabel, performanceLabel, type SectionKind } from "../domain/assessment";
 import type { Performance } from "../types";
 import { cx } from "../utils";
 
@@ -326,7 +328,30 @@ const pillTone = {
   danger: "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300",
   neutral: "border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300",
   brand: "border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
+  accent: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-300",
 };
+
+const frameworkTone: Record<SectionKind, string> = {
+  "operating-system": pillTone.brand,
+  "performance-standard": pillTone.accent,
+};
+
+const frameworkIcon: Record<SectionKind, ReactNode> = {
+  "operating-system": <ClipboardCheck size={14} />,
+  "performance-standard": <ShieldCheck size={14} />,
+};
+
+/** The one framework badge every section/requirement/action list in the app should render with —
+ *  same icon, tone, and wording everywhere a governance framework (Operating System vs
+ *  Performance Standard) needs to be shown. */
+export function FrameworkBadge({ kind, compact = false }: { kind: SectionKind; compact?: boolean }) {
+  return (
+    <span className={cx("framework-badge", pillBase, frameworkTone[kind], compact && "px-2 py-0.5")}>
+      {frameworkIcon[kind]}
+      {frameworkLabel(kind)}
+    </span>
+  );
+}
 
 const performanceTone = {
   initial: pillTone.danger,

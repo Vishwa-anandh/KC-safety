@@ -24,11 +24,11 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { useSites } from "../model/useSites";
 import { useAuth } from "../../auth";
-import { actionComplete, actionStatus, assessmentPeriods, currentAssessmentPeriod, isActionOpen, isActionMissingOwner, isActionMissingDescription, isGap, responseLabel, rollupPerformance } from "../../../shared/domain/assessment";
+import { actionComplete, actionStatus, assessmentPeriods, currentAssessmentPeriod, isActionOpen, isActionMissingOwner, isActionMissingDescription, isGap, responseLabel, rollupPerformance, type SectionKind } from "../../../shared/domain/assessment";
 import { requirementRoute } from "../../../app/router/links";
 import { appPaths } from "../../../app/router/route-manifest";
 import type { ActionItem, AssessmentPeriod, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
-import { Button, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
+import { Button, EmptyState, eyebrowClasses, FrameworkBadge, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 import { AssessmentGlanceCard, EvidenceCoverageStrip, GapsBySectionChart, HeroStatCard, InlineBreakdown, InlineProgress, NeedsAttentionPanel, OpenActionsByOwnerChart, RecentChangesFeed } from "../components/OverviewCharts";
 import type { NeedsAttentionItem, OwnerActionRow, SectionGapRow } from "../components/OverviewCharts";
@@ -114,8 +114,7 @@ function SectionCard({ section, requirement }: { section: SectionSummary; requir
         <PerformanceBadge performance={section.performance} compact />
       </div>
       <div className={cx("section-card__body my-4 flex-1")}>
-        <p className={cx(eyebrowClasses)}>{section.kind === "operating-system" ? "Operating System" : "Performance Standard"}</p>
-        <h3 className={cx("mt-1 mb-1.5 text-lg font-bold text-slate-900 dark:text-slate-100")}>{section.name}</h3>
+        <h3 className={cx("mb-1.5 text-lg font-bold text-slate-900 dark:text-slate-100")}>{section.name}</h3>
         <p className={cx("text-sm leading-snug text-slate-600 dark:text-slate-400")}>{section.description}</p>
       </div>
       <ProgressBar value={section.completion} label="Completion" />
@@ -126,7 +125,8 @@ function SectionCard({ section, requirement }: { section: SectionSummary; requir
 }
 
 export function OverviewScreen() {
-  const { requirements, assignedSite, lastUpdated } = useSites();
+  const { requirements, sectionSummaries, assignedSite, lastUpdated } = useSites();
+  const sectionKindById = useMemo(() => new Map(sectionSummaries.map((section) => [section.id, section.kind])), [sectionSummaries]);
   const nextRequirement = requirements.find((requirement) => !actionComplete(requirement.response, requirement.action)) ?? requirements[0];
   const nextRoute = nextRequirement ? requirementRoute(nextRequirement) : "/assessment";
 
@@ -151,6 +151,7 @@ export function OverviewScreen() {
     return {
       id,
       name,
+      kind: sectionKindById.get(id) ?? "operating-system",
       total: items.length,
       no: items.filter((requirement) => requirement.response === "no").length,
       partial: items.filter((requirement) => requirement.response === "partial").length,
@@ -158,7 +159,7 @@ export function OverviewScreen() {
       to: target ? requirementRoute(target) : appPaths.assessment,
       cells: items.map((requirement) => ({ id: requirement.id, number: requirement.number, response: requirement.response, to: requirementRoute(requirement) })),
     };
-  }), [sectionGroups]);
+  }), [sectionGroups, sectionKindById]);
 
   const completionStats = useMemo(() => ({
     answered: requirements.filter((requirement) => requirement.response !== null).length,
@@ -570,7 +571,7 @@ function QuestionHistoryTimeline({ question }: { question: Requirement }) {
   );
 }
 
-function QuestionHistoryCard({ row }: { row: QuestionHistoryRow }) {
+function QuestionHistoryCard({ row, kind }: { row: QuestionHistoryRow; kind: SectionKind }) {
   const [open, setOpen] = useState(false);
   const entries = [...(row.question.history ?? [])].sort((left, right) => right.recordedAt.localeCompare(left.recordedAt));
   const detailsId = `site-question-history-${row.question.id}`;
@@ -579,10 +580,11 @@ function QuestionHistoryCard({ row }: { row: QuestionHistoryRow }) {
       <header className={cx("actions-response-history__header flex flex-col gap-3 p-3.5 md:flex-row md:items-center md:gap-4")}>
         <div className={cx("actions-response-history__identity flex min-w-0 flex-1 items-start gap-3")}>
           <span className={cx("actions-response-history__number grid size-10 flex-none place-items-center rounded-lg bg-kc-blue-50 text-xs font-extrabold text-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>Q{row.question.number}</span>
-          <div className={cx("grid min-w-0 gap-0.5")}>
+          <div className={cx("grid min-w-0 gap-1")}>
             <Link className={cx("inline-flex w-fit items-center gap-1 text-xs font-extrabold text-kc-blue-800 hover:text-kc-blue-600 hover:underline dark:text-kc-blue-200 dark:hover:text-kc-blue-400")} to={requirementRoute(row.requirement)}>{row.requirement.number} · Question {row.question.number}<ArrowRight size={14} /></Link>
             <h3 className={cx("truncate text-sm text-slate-900 sm:truncate md:overflow-hidden md:text-ellipsis md:whitespace-nowrap dark:text-slate-100")}>{row.question.text}</h3>
             <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{row.requirement.sectionName} · {row.question.period}</span>
+            <FrameworkBadge kind={kind} compact />
           </div>
         </div>
         <div className={cx("actions-response-history__current flex-none grid justify-items-start gap-1")}><span className={cx("text-xs font-semibold text-slate-500 dark:text-slate-400")}>Current response</span><span className={cx(responseChipClass(row.question.response))}>{responseLabel(row.question.response)}</span></div>
@@ -605,7 +607,8 @@ function QuestionHistoryCard({ row }: { row: QuestionHistoryRow }) {
 }
 
 export function ActionsScreen() {
-  const { requirements, updateQuestion } = useSites();
+  const { requirements, sectionSummaries, updateQuestion } = useSites();
+  const sectionKindById = useMemo(() => new Map(sectionSummaries.map((section) => [section.id, section.kind])), [sectionSummaries]);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"actions" | "history">("actions");
   const [searchParams] = useSearchParams();
@@ -613,6 +616,7 @@ export function ActionsScreen() {
   const [status, setStatus] = useState<"all" | "Open" | "In progress" | "Complete">("all");
   const [response, setResponse] = useState<"all" | "no" | "partial">("all");
   const [period, setPeriod] = useState<"all" | AssessmentPeriod>("all");
+  const [framework, setFramework] = useState<"all" | "operating-system" | "performance-standard">("all");
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyResponse, setHistoryResponse] = useState<"all" | "unanswered" | "no" | "partial" | "yes">("all");
   const [historyPeriod, setHistoryPeriod] = useState<"all" | AssessmentPeriod>("all");
@@ -623,7 +627,8 @@ export function ActionsScreen() {
   const complete = actions.filter(({ question }) => !isActionOpen(question.action)).length;
   const filtered = actions.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${question.text} ${question.action?.description ?? ""} ${question.action?.owner ?? ""} ${question.action?.followUp ?? ""}`.toLowerCase().includes(query.toLowerCase());
-    return matchesQuery && (status === "all" || (question.action?.status ?? "Open") === status) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
+    const matchesFramework = framework === "all" || (sectionKindById.get(requirement.sectionId) ?? "operating-system") === framework;
+    return matchesQuery && matchesFramework && (status === "all" || (question.action?.status ?? "Open") === status) && (response === "all" || question.response === response) && (period === "all" || question.period === period);
   });
   const filteredHistoryRows = historyRows.filter(({ requirement, question }) => {
     const matchesQuery = `${requirement.number} ${requirement.title} ${requirement.sectionName} ${question.number} ${question.text} ${(question.history ?? []).map((entry) => `${entry.event} ${entry.recordedBy}`).join(" ")}`.toLowerCase().includes(historyQuery.toLowerCase());
@@ -651,6 +656,7 @@ export function ActionsScreen() {
             <label className={cx(searchControlClass)}><Search size={17} /><input className={cx(searchInputClass)} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search actions, owners, or requirements" /></label>
             <Select label="Filter action status" icon={<Filter size={17} />} value={status} onChange={(value) => setStatus(value as typeof status)} options={[{ value: "all", label: "All action states" }, { value: "Open", label: "Open" }, { value: "In progress", label: "In progress" }, { value: "Complete", label: "Complete" }]} />
             <Select label="Filter response" value={response} onChange={(value) => setResponse(value as typeof response)} options={[{ value: "all", label: "No and Partial" }, { value: "no", label: "No only" }, { value: "partial", label: "Partial only" }]} />
+            <Select label="Filter framework" value={framework} onChange={(value) => setFramework(value as typeof framework)} options={[{ value: "all", label: "All frameworks" }, { value: "operating-system", label: "Operating System" }, { value: "performance-standard", label: "Performance Standard" }]} />
             <Select label="Filter assessment period" icon={<CalendarClock size={17} />} value={period} onChange={(value) => setPeriod(value as typeof period)} options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]} />
           </div>
           {filtered.length ? <div className={cx("data-table-wrap w-full max-w-full")} data-tour="actions-table"><table className={cx("data-table block w-full min-w-0 table-fixed border-collapse text-sm text-slate-900 shell:table dark:text-slate-100")}>
@@ -661,7 +667,7 @@ export function ActionsScreen() {
               const cellLabelClass = "w-29 flex-none text-xs font-bold tracking-wide text-slate-500 dark:text-slate-400 shell:hidden";
               const lastCellClass = "data-table__cell flex min-h-11 w-full min-w-0 items-center justify-end bg-slate-50 px-3.5 py-3 text-left align-middle wrap-anywhere dark:bg-slate-900 shell:table-cell shell:min-h-0 shell:justify-normal shell:bg-transparent shell:px-4";
               return <tr className={cx("block w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-900 shell:table-row shell:rounded-none shell:border-0 shell:bg-transparent shell:shadow-none")} key={question.id}>
-                <td className={cellClass} data-label="Requirement"><span className={cx(cellLabelClass)}>Requirement</span><span className={cx("min-w-0")}><strong className={cx("block")}>{requirement.number} · Question {question.number}</strong><span className={cx("mt-1 block text-xs text-slate-500 dark:text-slate-400")}>{requirement.title}</span></span></td>
+                <td className={cellClass} data-label="Requirement"><span className={cx(cellLabelClass)}>Requirement</span><span className={cx("min-w-0")}><strong className={cx("block")}>{requirement.number} · Question {question.number}</strong><span className={cx("mt-1 block text-xs text-slate-500 dark:text-slate-400")}>{requirement.title}</span><span className="mt-1.5 block"><FrameworkBadge kind={sectionKindById.get(requirement.sectionId) ?? "operating-system"} compact /></span></span></td>
                 <td className={cellClass} data-label="Response"><span className={cx(cellLabelClass)}>Response</span><span className={cx(responseChipClass(question.response))}>{question.response === "no" ? "No" : "Partial"}</span></td>
                 <td className={cellClass} data-label="Action"><span className={cx(cellLabelClass)}>Action</span>{question.action?.description || <span className={cx(missingValueClass)}>Description not added</span>}</td>
                 <td className={cellClass} data-label="Owner"><span className={cx(cellLabelClass)}>Owner</span>{question.action?.owner ? <span className={cx("person-inline inline-flex items-center gap-2 whitespace-nowrap text-slate-700 dark:text-slate-300")}><span className={cx(avatarTinyClass)}>{question.action.owner.split(" ").map((part) => part[0]).join("")}</span>{question.action.owner}</span> : <span className={cx(missingValueClass)}>Owner not assigned</span>}</td>
@@ -679,7 +685,7 @@ export function ActionsScreen() {
           <Select label="Filter current response" value={historyResponse} onChange={(value) => setHistoryResponse(value as typeof historyResponse)} options={[{ value: "all", label: "All responses" }, { value: "unanswered", label: "Not answered" }, { value: "no", label: "No" }, { value: "partial", label: "Partial" }, { value: "yes", label: "Yes" }]} />
           <Select label="Filter assessment period" icon={<CalendarClock size={17} />} value={historyPeriod} onChange={(value) => setHistoryPeriod(value as typeof historyPeriod)} options={[{ value: "all", label: "All periods" }, ...assessmentPeriods.map((value) => ({ value, label: value }))]} />
         </div>
-        {filteredHistoryRows.length ? <div className={cx("actions-response-history-list grid gap-3 p-4")}>{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} />)}</div> : <EmptyState icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
+        {filteredHistoryRows.length ? <div className={cx("actions-response-history-list grid gap-3 p-4")}>{filteredHistoryRows.map((row) => <QuestionHistoryCard key={row.question.id} row={row} kind={sectionKindById.get(row.requirement.sectionId) ?? "operating-system"} />)}</div> : <EmptyState icon={<Search size={25} />} title="No questions match" description="Clear a filter or search for another requirement or question." />}
       </section>}
       {editing && <ActionDialog row={editing} onClose={() => setEditing(null)} onSave={(action) => {
         updateQuestion(editing.requirement.id, { action }, user?.name);

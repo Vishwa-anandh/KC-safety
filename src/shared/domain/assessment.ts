@@ -1,8 +1,16 @@
-import type { ActionItem, Performance, ResponseValue } from "../types";
+import type { ActionItem, Performance, ResponseValue, SectionSummary } from "../types";
 
 export function actionComplete(response: ResponseValue, action?: ActionItem) {
   void action;
   return Boolean(response);
+}
+
+export type SectionKind = SectionSummary["kind"];
+
+/** The two governance frameworks every section belongs to (SectionSummary.kind) — shown as a
+ *  badge anywhere a section, requirement, or action needs to say which one it's under. */
+export function frameworkLabel(kind: SectionKind) {
+  return kind === "operating-system" ? "Operating System" : "Performance Standard";
 }
 
 /** A requirement is a "gap" once it has a No or Partial response — the one predicate every

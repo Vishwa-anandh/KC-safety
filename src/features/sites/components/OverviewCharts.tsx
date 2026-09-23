@@ -2,9 +2,9 @@ import { AlertTriangle, ArrowRight, Paperclip } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { requirementRoute } from "../../../app/router/links";
-import { responseLabel } from "../../../shared/domain/assessment";
+import { responseLabel, type SectionKind } from "../../../shared/domain/assessment";
 import type { AssessmentHistoryEntry, Requirement, ResponseValue } from "../../../shared/types";
-import { eyebrowClasses, InlineMessage, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
+import { eyebrowClasses, FrameworkBadge, InlineMessage, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 // Card-shell recipe duplicated verbatim from SiteScreens.tsx (cardClass/cardHeaderClass/...) —
@@ -286,6 +286,7 @@ export interface GapCell {
 export interface SectionGapRow {
   id: string;
   name: string;
+  kind: SectionKind;
   total: number;
   no: number;
   partial: number;
@@ -351,7 +352,10 @@ export function GapsBySectionChart({ sections }: { sections: SectionGapRow[] }) 
             return (
               <div key={section.id} className="grid min-w-0 gap-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <Link to={section.to} className="truncate text-sm font-semibold text-slate-800 hover:text-kc-blue-700 dark:text-slate-200 dark:hover:text-kc-blue-300">{section.name}</Link>
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link to={section.to} className="truncate text-sm font-semibold text-slate-800 hover:text-kc-blue-700 dark:text-slate-200 dark:hover:text-kc-blue-300">{section.name}</Link>
+                    <FrameworkBadge kind={section.kind} compact />
+                  </span>
                   <span className="flex-none text-xs text-slate-500 dark:text-slate-400">{caption}</span>
                 </div>
                 <div className="flex flex-wrap gap-1">

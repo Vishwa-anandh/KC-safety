@@ -4,10 +4,11 @@ import { useApplicationData } from "../../../app/providers/ApplicationDataProvid
 export function useAssessment() {
   const {
     requirements,
+    sectionSummaries,
     updateQuestion,
     addEvidence,
     updateEvidence,
     removeEvidence,
   } = useApplicationData();
-  return { requirements, updateQuestion, addEvidence, updateEvidence, removeEvidence };
+  return { requirements, sectionSummaries, updateQuestion, addEvidence, updateEvidence, removeEvidence };
 }

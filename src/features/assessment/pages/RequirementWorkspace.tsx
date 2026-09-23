@@ -26,8 +26,8 @@ import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../model/useAssessment";
 import { useAuth } from "../../auth";
 import { actionComplete, performanceForResponse } from "../../../shared/domain/assessment";
-import type { ActionItem, EvidenceItem, Requirement, ResponseValue } from "../../../shared/types";
-import { Button, ConfirmDialog, eyebrowClasses, IconButton, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
+import type { ActionItem, EvidenceItem, Requirement, ResponseValue, SectionSummary } from "../../../shared/types";
+import { Button, ConfirmDialog, eyebrowClasses, FrameworkBadge, IconButton, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 // ---------------------------------------------------------------------------------------------
@@ -104,17 +104,20 @@ function NavigatorState({ state }: { state: string }) {
 
 function AssessmentNavigator({
   requirements,
+  sectionSummaries,
   currentSectionId,
   currentSubsection,
   onNavigate,
   onClose,
 }: {
   requirements: Requirement[];
+  sectionSummaries: SectionSummary[];
   currentSectionId: string;
   currentSubsection?: string;
   onNavigate: (requirement: Requirement) => void;
   onClose?: () => void;
 }) {
+  const sectionKindById = useMemo(() => new Map(sectionSummaries.map((section) => [section.id, section.kind])), [sectionSummaries]);
   // Sections nest sub-sections, which nest their requirement-questions. The navigator only ever
   // surfaces the section/sub-section names and a rollup progress — the individual questions
   // themselves are read from the main panel now, which lists every one of them in place.
@@ -130,10 +133,11 @@ function AssessmentNavigator({
     return [...bySection.entries()].map(([sectionName, section]) => ({
       sectionName,
       sectionId: section.sectionId,
+      kind: sectionKindById.get(section.sectionId) ?? "operating-system",
       items: [...section.subsections.values()].flat(),
       subsections: [...section.subsections.entries()].map(([subsection, items]) => ({ subsection, items })),
     }));
-  }, [requirements]);
+  }, [requirements, sectionKindById]);
   const [query, setQuery] = useState("");
   const filteredSectionGroups = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -149,6 +153,12 @@ function AssessmentNavigator({
       })
       .filter((section) => section.subsections.length > 0);
   }, [sectionGroups, query]);
+  const frameworkGroups = useMemo(() => {
+    const kinds: SectionSummary["kind"][] = ["operating-system", "performance-standard"];
+    return kinds
+      .map((kind) => ({ kind, sections: filteredSectionGroups.filter((section) => section.kind === kind) }))
+      .filter((group) => group.sections.length > 0);
+  }, [filteredSectionGroups]);
   const completed = requirements.filter((requirement) => actionComplete(requirement.response, requirement.action)).length;
   const isIncomplete = (requirement: Requirement) => !actionComplete(requirement.response, requirement.action);
   const currentSectionIndex = requirements.findIndex((requirement) => requirement.sectionId === currentSectionId);
@@ -162,9 +172,10 @@ function AssessmentNavigator({
   return (
     <aside className={cx("assessment-navigator flex h-full flex-col overflow-x-hidden overflow-y-auto bg-white p-4 dark:bg-slate-900", !inSheet && "border-r border-slate-200 dark:border-slate-700")} aria-label="Assessment navigator">
       <div className="assessment-navigator__header mb-4 flex items-start justify-between gap-3">
-        <div>
+        <div className="grid min-w-0 gap-1.5">
           <p className={eyebrowClasses}>Current section</p>
-          <h2 className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">{currentSection?.sectionName ?? "Assessment"}</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{currentSection?.sectionName ?? "Assessment"}</h2>
+          {currentSection && <FrameworkBadge kind={currentSection.kind} compact />}
         </div>
         {onClose && <IconButton label="Close assessment navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
@@ -183,47 +194,52 @@ function AssessmentNavigator({
         </label>
       </div>
       <div className="navigator-group flex-1">
-        <div className="navigator-items grid gap-1">
-          {filteredSectionGroups.map((section) => {
-            const sectionCompleted = section.items.filter((item) => actionComplete(item.response, item.action)).length;
-            const sectionActive = section.sectionId === currentSectionId;
-            return (
-              <div key={section.sectionId} className="navigator-section grid gap-0.5">
-                <button
-                  type="button"
-                  className="navigator-section__trigger flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
-                  onClick={() => onNavigate(section.items[0])}
-                >
-                  <NavigatorState state={groupState(section.items)} />
-                  <span className={cx("min-w-0 flex-1 truncate text-[11px] font-normal tracking-wide", sectionActive ? "text-kc-blue-700 dark:text-kc-blue-300" : "text-slate-500 dark:text-slate-400")}>{section.sectionName}</span>
-                  <NavProgress completed={sectionCompleted} total={section.items.length} />
-                </button>
-                <div className="navigator-subgroup grid gap-0.5 pl-6.5">
-                  {section.subsections.map((sub) => {
-                    const subCompleted = sub.items.filter((item) => actionComplete(item.response, item.action)).length;
-                    const subActive = sectionActive && sub.subsection === currentSubsection;
-                    return (
-                      <button
-                        key={`${section.sectionId}::${sub.subsection}`}
-                        type="button"
-                        className={cx(
-                          "navigator-subgroup__trigger flex min-h-9.5 w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800",
-                          subActive && "navigator-subgroup__trigger--active border-kc-blue-300 bg-linear-to-r from-kc-blue-50 to-kc-blue-100 shadow-sm dark:border-kc-blue-600 dark:from-kc-blue-950 dark:to-kc-blue-900",
-                        )}
-                        onClick={() => onNavigate(sub.items[0])}
-                      >
-                        <NavigatorState state={groupState(sub.items)} />
-                        <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
-                        <NavProgress completed={subCompleted} total={sub.items.length} />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          {!filteredSectionGroups.length && <p className="navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400">No sections or requirements match "{query}".</p>}
-        </div>
+        {frameworkGroups.map((group) => (
+          <div key={group.kind} className="navigator-framework-group mt-4 grid gap-1.5 first:mt-0">
+            <FrameworkBadge kind={group.kind} compact />
+            <div className="navigator-items grid gap-1">
+              {group.sections.map((section) => {
+                const sectionCompleted = section.items.filter((item) => actionComplete(item.response, item.action)).length;
+                const sectionActive = section.sectionId === currentSectionId;
+                return (
+                  <div key={section.sectionId} className="navigator-section grid gap-0.5">
+                    <button
+                      type="button"
+                      className="navigator-section__trigger flex w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+                      onClick={() => onNavigate(section.items[0])}
+                    >
+                      <NavigatorState state={groupState(section.items)} />
+                      <span className={cx("min-w-0 flex-1 truncate text-[11px] font-normal tracking-wide", sectionActive ? "text-kc-blue-700 dark:text-kc-blue-300" : "text-slate-500 dark:text-slate-400")}>{section.sectionName}</span>
+                      <NavProgress completed={sectionCompleted} total={section.items.length} />
+                    </button>
+                    <div className="navigator-subgroup grid gap-0.5 pl-6.5">
+                      {section.subsections.map((sub) => {
+                        const subCompleted = sub.items.filter((item) => actionComplete(item.response, item.action)).length;
+                        const subActive = sectionActive && sub.subsection === currentSubsection;
+                        return (
+                          <button
+                            key={`${section.sectionId}::${sub.subsection}`}
+                            type="button"
+                            className={cx(
+                              "navigator-subgroup__trigger flex min-h-9.5 w-full min-w-0 items-center gap-2 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-left hover:bg-slate-50 dark:hover:bg-slate-800",
+                              subActive && "navigator-subgroup__trigger--active border-kc-blue-300 bg-linear-to-r from-kc-blue-50 to-kc-blue-100 shadow-sm dark:border-kc-blue-600 dark:from-kc-blue-950 dark:to-kc-blue-900",
+                            )}
+                            onClick={() => onNavigate(sub.items[0])}
+                          >
+                            <NavigatorState state={groupState(sub.items)} />
+                            <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
+                            <NavProgress completed={subCompleted} total={sub.items.length} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {!filteredSectionGroups.length && <p className="navigator-empty m-0 p-4 text-center text-sm text-slate-500 dark:text-slate-400">No sections or requirements match "{query}".</p>}
       </div>
       <Button className="next-incomplete mt-4 w-full" variant="secondary" icon={<ListChecks size={18} />} disabled={!nextIncomplete} onClick={() => nextIncomplete && onNavigate(nextIncomplete)}>
         Next incomplete
@@ -628,7 +644,7 @@ function RequirementCard({
 export default function RequirementWorkspace() {
   const { sectionId, requirementId } = useParams();
   const navigate = useNavigate();
-  const { requirements, updateQuestion, addEvidence, updateEvidence, removeEvidence } = useAssessment();
+  const { requirements, sectionSummaries, updateQuestion, addEvidence, updateEvidence, removeEvidence } = useAssessment();
   const { user } = useAuth();
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [evidenceEditor, setEvidenceEditor] = useState<{ mode: "new"; requirementId: string } | { mode: "edit"; requirementId: string; item: EvidenceItem } | null>(null);
@@ -637,6 +653,7 @@ export default function RequirementWorkspace() {
 
   const sectionRequirements = useMemo(() => requirements.filter((item) => item.sectionId === sectionId), [requirements, sectionId]);
   const highlighted = sectionRequirements.find((item) => item.id === requirementId) ?? sectionRequirements[0];
+  const currentSectionSummary = sectionSummaries.find((section) => section.id === sectionId);
   const subsectionGroups = useMemo(() => {
     const bySubsection = new Map<string, Requirement[]>();
     sectionRequirements.forEach((item) => {
@@ -676,7 +693,7 @@ export default function RequirementWorkspace() {
       </div>
       <div className="requirement-layout min-w-0 w-full shell:flex shell:items-stretch" style={{ minHeight: "calc(100vh - var(--content-offset))" }}>
         <div className={requirementNavigatorWrapClass} style={{ top: "var(--content-offset)", height: "calc(100vh - var(--content-offset))" }}>
-          <AssessmentNavigator requirements={requirements} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} />
+          <AssessmentNavigator requirements={requirements} sectionSummaries={sectionSummaries} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} />
         </div>
         <div className="requirement-main min-w-0 pt-4 pb-12 shell:flex-1 md:pt-6 md:pb-16" style={{ paddingInline: "var(--page-gutter)" }}>
           <nav className={breadcrumbsClass} aria-label="Breadcrumb">
@@ -684,6 +701,7 @@ export default function RequirementWorkspace() {
             <ChevronRight size={15} />
             <span aria-current="page">{sectionRequirements[0].sectionName}</span>
           </nav>
+          {currentSectionSummary && <div className="-mt-2 mb-4"><FrameworkBadge kind={currentSectionSummary.kind} compact /></div>}
           {subsectionGroups.map((group, groupIndex) => (
             <section className={cx("questions-section", groupIndex === 0 ? "mt-2" : "mt-6")} aria-labelledby={`subsection-${group.subsection}`} key={group.subsection}>
               <div className={sectionTitleRowClass}>
@@ -732,7 +750,7 @@ export default function RequirementWorkspace() {
         <div className={sheetLayerClass}>
           <button className={sheetBackdropClass} aria-label="Close navigator" onClick={() => setNavigatorOpen(false)} />
           <div className={cx(sheetClass, "sheet--left left-0 right-8")}>
-            <AssessmentNavigator requirements={requirements} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} />
+            <AssessmentNavigator requirements={requirements} sectionSummaries={sectionSummaries} currentSectionId={sectionId ?? ""} currentSubsection={highlighted?.subsection} onNavigate={moveTo} onClose={() => setNavigatorOpen(false)} />
           </div>
         </div>
       )}
