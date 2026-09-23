@@ -38,7 +38,7 @@ import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
 import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -1242,6 +1242,60 @@ export function AdminRequirementAuditScreen() {
   );
 }
 
+// Sentinels for ComboboxField's Select — never persisted, only used to distinguish "nothing
+// chosen yet" from "chose to type a brand-new value" when the field's actual value is "".
+const COMBOBOX_EMPTY = "__combobox-empty__";
+const COMBOBOX_NEW = "__combobox-new__";
+
+/**
+ * Pick an existing value or type a new one — used for Section/Sub-Section/Requirement ID on the
+ * Master data create/edit form so admins reuse the exact existing spelling by default (avoiding
+ * silent near-duplicates like "Leadership & Engagement" vs "leadership and engagement") while
+ * still being able to create genuinely new content. `key`d by the caller to the record being
+ * edited so its "typing new" state resets when navigating to a different requirement.
+ */
+function ComboboxField({ label, value, options, onChange, placeholder, newLabel = "Add new" }: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+  placeholder: string;
+  newLabel?: string;
+}) {
+  const [manualNew, setManualNew] = useState(value !== "" && !options.includes(value));
+  const creatingNew = manualNew || (value !== "" && !options.includes(value));
+  const selectOptions: SelectOption[] = [
+    { value: COMBOBOX_EMPTY, label: placeholder },
+    ...options.map((option) => ({ value: option, label: option })),
+    { value: COMBOBOX_NEW, label: `+ ${newLabel}` },
+  ];
+  const selectValue = creatingNew ? COMBOBOX_NEW : (value === "" ? COMBOBOX_EMPTY : value);
+  return (
+    <div className={cx(fieldClass)}>
+      <span className={cx(fieldLabelRowClass)}>{label}</span>
+      <Select
+        label={label}
+        value={selectValue}
+        onChange={(next) => {
+          if (next === COMBOBOX_NEW) { setManualNew(true); onChange(""); }
+          else if (next === COMBOBOX_EMPTY) { setManualNew(false); onChange(""); }
+          else { setManualNew(false); onChange(next); }
+        }}
+        options={selectOptions}
+      />
+      {creatingNew && (
+        <input
+          className={cx(fieldInputClass)}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={`Type a new ${label.toLowerCase()}`}
+          aria-label={`New ${label.toLowerCase()}`}
+        />
+      )}
+    </div>
+  );
+}
+
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
@@ -1254,6 +1308,21 @@ export function AdminRequirementDetailScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const existingSections = [...new Set(masterRequirements.map((item) => item.section).filter(Boolean))].sort();
+  const existingSubsections = [...new Set(masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection).filter(Boolean))].sort();
+  const existingRequirementIds = [...new Set(masterRequirements.map((item) => item.requirementId).filter(Boolean))].sort();
+  // Every sibling question under the same Requirement ID shares section/subsection/title (see
+  // shared/types.ts's note on MasterRequirement) — picking an existing Requirement ID here keeps
+  // this question in lockstep with the rest of its group instead of letting them drift apart.
+  function updateRequirementId(value: string) {
+    const sibling = masterRequirements.find((item) => item.requirementId === value && item.id !== draft.id);
+    setDraft((current) => ({
+      ...current,
+      requirementId: value,
+      ...(sibling ? { section: sibling.section, subsection: sibling.subsection, title: sibling.title } : {}),
+    }));
+  }
 
   // React reuses this route component when only :requirementId changes. Resetting the editor
   // from the route record keeps the header and fields in lockstep after a
@@ -1337,18 +1406,11 @@ export function AdminRequirementDetailScreen() {
                 placeholder="For example, LET-01-Q1"
                 aria-label="ID"
               />
-              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
-                Requirement ID
-                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.requirementId} onChange={(event) => update("requirementId", event.target.value)} placeholder="For example, LET-01" aria-label="Requirement ID" />
-              </label>
-              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
-                Section
-                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.section} onChange={(event) => update("section", event.target.value)} placeholder="For example, Leadership & Engagement" aria-label="Section" />
-              </label>
-              <label className={cx("flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400")}>
-                Sub-Section
-                <input className={cx("min-w-24 border-0 bg-transparent p-0 text-xs font-bold text-slate-900 outline-none dark:text-slate-100")} value={draft.subsection} onChange={(event) => update("subsection", event.target.value)} placeholder="For example, 1.2 Leadership commitment" aria-label="Sub-Section" />
-              </label>
+            </div>
+            <div className={cx("requirement-header__grouping mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3")} key={requirementId ?? "new"}>
+              <ComboboxField label="Requirement ID" value={draft.requirementId} options={existingRequirementIds} onChange={updateRequirementId} placeholder="Select a requirement" newLabel="Add new requirement" />
+              <ComboboxField label="Section" value={draft.section} options={existingSections} onChange={(value) => update("section", value)} placeholder="Select a section" newLabel="Add new section" />
+              <ComboboxField label="Sub-Section" value={draft.subsection} options={existingSubsections} onChange={(value) => update("subsection", value)} placeholder="Select a sub-section" newLabel="Add new sub-section" />
             </div>
             <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
               <div className={cx("min-w-0 md:flex-1")}>
