@@ -84,7 +84,7 @@ const dropzoneIconClass = "dropzone__icon grid size-12 place-items-center rounde
 /** Completed/total count for the navigator's section/sub-section rows — just the figure, no bar;
  * the check/warning/circle state icon next to it already carries the at-a-glance signal. */
 function NavProgress({ completed, total }: { completed: number; total: number }) {
-  return <small className="nav-progress flex-none text-xs font-semibold whitespace-nowrap text-slate-500 tabular-nums dark:text-slate-400">{completed}/{total}</small>;
+  return <small className="nav-progress flex-none text-xs font-normal whitespace-nowrap text-slate-500 tabular-nums dark:text-slate-400">{completed}/{total}</small>;
 }
 
 /** Rollup state for a group of requirements (a section or sub-section), reusing the same
@@ -560,7 +560,7 @@ function RequirementCard({
         <PerformanceBadge performance={performanceForResponse(draft.response)} compact />
       </div>
       {Boolean(draft.guidance?.length) && (
-        <details className="how-to-meet mt-3.5 rounded-md border border-kc-blue-200 bg-kc-blue-50 px-3 py-2.5 dark:border-kc-blue-800 dark:bg-kc-blue-950">
+        <details className="how-to-meet mt-3.5 rounded-md border border-kc-blue-200 bg-white px-3 py-2.5 dark:border-kc-blue-800 dark:bg-slate-800">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-bold tracking-wide text-kc-blue-700 dark:text-kc-blue-300">
             <BookOpen size={14} /> How to meet this requirement
           </summary>
