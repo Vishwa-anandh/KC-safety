@@ -15,7 +15,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../model/AuthProvider";
 import { roleProfiles } from "../../onboarding";
 import type { UserRole } from "../../../shared/types";
-import { Button, KcLogo } from "../../../shared/ui/UI";
+import { Button } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 const roleIcons = {
@@ -162,11 +162,12 @@ export default function LoginScreen() {
         />
 
         <div className={cx("login-story__brand relative z-10 flex items-center gap-3")}>
-          <KcLogo />
-          <div className={cx("grid")}>
-            <strong className={cx("text-lg")}>EHS360</strong>
-            <span className={cx("text-xs text-white/70")}>Self-Assessment</span>
-          </div>
+          {/* Wrapped in a white pill rather than sitting directly on the hero gradient — the
+              wordmark's navy lettering would lose contrast against the gradient's darker tones. */}
+          <span className={cx("inline-flex items-center rounded-xl bg-white px-3 py-2 shadow-sm")}>
+            <img className={cx("h-7 w-auto sm:h-8")} src="/brand/logo-ehs360.png" alt="EHS360" />
+          </span>
+          <span className={cx("text-xs text-white/70")}>Self-Assessment</span>
         </div>
 
         <div className={cx("login-story__content relative z-10 mt-9 mb-4 grid max-w-2xl gap-4 sm:mt-11 sm:mb-8 lg:my-auto")}>

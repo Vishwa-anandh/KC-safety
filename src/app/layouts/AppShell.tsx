@@ -10,7 +10,6 @@ import {
   ClipboardCheck,
   FileText,
   History,
-  KeyRound,
   LogOut,
   LayoutDashboard,
   MoreHorizontal,
@@ -25,7 +24,7 @@ import {
 } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useApplicationData } from "../providers/ApplicationDataProvider";
-import { ChangePasswordDialog, useAuth } from "../../features/auth";
+import { useAuth } from "../../features/auth";
 import { useGuidedSetup, type UserRole } from "../../features/onboarding";
 import { useNotifications } from "../../features/notifications";
 import type { AppNotification, NotificationCategory } from "../../shared/types";
@@ -109,9 +108,16 @@ function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: 
       )}
       style={topbarHeightStyle}
     >
-      <span className={cx("brand-lockup__mark inline-grid transition-all duration-150 ease-out", collapsed && "group-hover/sidebar:scale-75 group-hover/sidebar:opacity-0 pointer-coarse:scale-75 pointer-coarse:opacity-0")}>
-        <KcLogo />
-      </span>
+      {collapsed ? (
+        <span className={cx("brand-lockup__mark inline-grid transition-all duration-150 ease-out group-hover/sidebar:scale-75 group-hover/sidebar:opacity-0 pointer-coarse:scale-75 pointer-coarse:opacity-0")}>
+          <KcLogo />
+        </span>
+      ) : (
+        <div className={cx("brand-lockup__logo grid min-w-0 gap-1.5 overflow-hidden")}>
+          <img className={cx("h-7 w-auto flex-none")} src="/brand/logo-ehs360.png" alt="EHS360" />
+          <span className={cx("text-sm whitespace-nowrap text-slate-500 dark:text-white/65")}>Self-Assessment</span>
+        </div>
+      )}
       {collapsed && onToggle && (
         <button
           type="button"
@@ -122,16 +128,6 @@ function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: 
           <PanelLeftOpen size={21} aria-hidden="true" />
         </button>
       )}
-      <div
-        className={cx(
-          "grid min-w-0 origin-left overflow-hidden transition-all duration-300 ease-out",
-          collapsed ? "max-w-0 -translate-x-2 scale-95 opacity-0" : "max-w-42 translate-x-0 opacity-100",
-        )}
-        aria-hidden={collapsed}
-      >
-        <strong className={cx("text-lg leading-tight tracking-normal")}>EHS360</strong>
-        <span className={cx("text-sm whitespace-nowrap text-slate-500 dark:text-white/65")}>Self-Assessment</span>
-      </div>
     </div>
   );
 }
@@ -420,7 +416,6 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
   const { preference, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const menuId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -520,13 +515,6 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
             >
               <Settings size={17} /><span>Open settings</span>
             </Link>
-            <button
-              className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:text-slate-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
-              type="button"
-              onClick={() => { setOpen(false); setChangePasswordOpen(true); }}
-            >
-              <KeyRound size={17} /><span>Change password</span>
-            </button>
             <Link
               className={cx("flex min-h-10 w-full items-center gap-2 rounded-lg bg-transparent px-2.5 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-kc-blue-50 hover:text-kc-blue-800 dark:text-slate-300 dark:hover:bg-kc-blue-950 dark:hover:text-kc-blue-200")}
               to={appPaths.settingsSupport}
@@ -545,7 +533,6 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
           </div>
         </div>
       )}
-      {changePasswordOpen && <ChangePasswordDialog onClose={() => setChangePasswordOpen(false)} />}
     </div>
   );
 }

@@ -582,14 +582,7 @@ export function CheckboxList({
 }
 
 export function KcLogo() {
-  return (
-    <div className={cx("kc-mark grid size-11 flex-none place-items-center rounded-xl border border-kc-blue-200 bg-kc-blue-100 text-kc-blue-700 dark:border-kc-blue-800 dark:bg-kc-blue-900 dark:text-kc-blue-300")} aria-label="Kimberly-Clark">
-      <svg className={cx("size-8 fill-current")} viewBox="0 0 40 40" aria-hidden="true">
-        <path d="M7 20c0-7.2 5.8-13 13-13 5 0 9.4 2.8 11.6 7l-6.2 3.2A6.2 6.2 0 0 0 20 14a6 6 0 1 0 5.5 8.5l6.4 2.8A13 13 0 0 1 7 20Z" />
-        <path d="m21 8 7 12-7 12-4.8-2.8 5.4-9.2-5.4-9.2L21 8Z" opacity=".52" />
-      </svg>
-    </div>
-  );
+  return <img className={cx("kc-mark size-11 flex-none object-contain")} src="/brand/logo-mark.png" alt="EHS360" />;
 }
 
 /**
