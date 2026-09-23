@@ -213,7 +213,6 @@ function AssessmentNavigator({
                     </button>
                     <div className="navigator-subgroup grid gap-0.5 pl-6.5">
                       {section.subsections.map((sub) => {
-                        const subCompleted = sub.items.filter((item) => actionComplete(item.response, item.action)).length;
                         const subActive = sectionActive && sub.subsection === currentSubsection;
                         return (
                           <button
@@ -227,7 +226,6 @@ function AssessmentNavigator({
                           >
                             <NavigatorState state={groupState(sub.items)} />
                             <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
-                            <NavProgress completed={subCompleted} total={sub.items.length} />
                           </button>
                         );
                       })}

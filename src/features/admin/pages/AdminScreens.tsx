@@ -41,7 +41,7 @@ import type { ImportHistoryRecord } from "../../../data-access/contracts";
 import type { SectionKind } from "../../../shared/domain/assessment";
 
 import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, FrameworkBadge, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, type SelectOption, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -1567,7 +1567,7 @@ export function AdminRequirementsScreen() {
                 <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={item.id} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
                   <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("block whitespace-nowrap text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
                   <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("block text-slate-900 dark:text-slate-100")}>{item.text}</span></td>
-                  <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-1")}><span className={cx("block")}>{item.section}</span><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{item.subsection}</span><FrameworkBadge kind={sectionKindByName.get(item.section) ?? "operating-system"} compact /></span></td>
+                  <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-0.5")}><span className={cx("block")}>{item.section}</span><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{item.subsection}</span></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
                   <td className={cx(dataTableCellClass)} data-label="Priority"><span className={cx(dataTableCellLabelClass)}>Priority</span>{item.sectionPriority !== undefined ? <span className={cx(pillBaseClass, pillTone.neutral)}>Priority {item.sectionPriority}{item.overallPriority !== undefined ? ` · ${item.overallPriority} overall` : ""}</span> : <span className={cx("text-xs text-amber-700 italic dark:text-amber-300")}>Not set</span>}</td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
