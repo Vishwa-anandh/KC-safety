@@ -62,6 +62,12 @@ export interface AppSnapshot {
   /** Admin-curated dropdown values shown on the site form — see the Config screen. */
   regions: string[];
   segments: string[];
+  /** Admin-curated Section/Sub-Section names offered on the master requirement form — see the
+   *  Config screen. Requirements already in use contribute their own section/subsection too
+   *  (see AdminRequirementDetailScreen's ComboboxField options), this just lets an admin
+   *  pre-declare a name before any requirement uses it. */
+  sectionNames: string[];
+  subsectionNames: string[];
 }
 
 export type DataSourceKind = "demo" | "api";

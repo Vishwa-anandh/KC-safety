@@ -519,6 +519,81 @@ export const requirements: Requirement[] = [
     period: currentAssessmentPeriod,
     evidence: [],
   },
+  {
+    id: "machine-q-3",
+    requirementId: "PS 7.4.1",
+    number: "1",
+    title: "Lockout/tagout verification",
+    sectionId: "ps-machine-safety",
+    sectionName: "Machine Safety Performance Standard",
+    subsection: "7.4 Lockout/Tagout",
+    sectionPriority: 1,
+    overallPriority: 11,
+    requirementText: "Hazardous energy sources on machines are isolated and controlled before service or maintenance work begins.",
+    text: "Are lockout/tagout procedures documented for machines requiring energy isolation?",
+    guidance: ["Identify machines requiring energy-isolation procedures.","Document and label isolation points for each machine.","Periodically audit lockout/tagout practice against the written procedure."],
+    expectedEvidence: ["Lockout/tagout procedure library.", "Energy-isolation point diagrams."],
+    response: "partial",
+    period: currentAssessmentPeriod,
+    action: { description: "Finish documenting isolation points for the remaining Line 4 machines.", owner: "Elena Garcia" },
+    evidence: [],
+  },
+  {
+    id: "machine-q-4",
+    requirementId: "PS 7.4.1",
+    number: "2",
+    title: "Lockout/tagout verification",
+    sectionId: "ps-machine-safety",
+    sectionName: "Machine Safety Performance Standard",
+    subsection: "7.4 Lockout/Tagout",
+    sectionPriority: 2,
+    overallPriority: 25,
+    requirementText: "Hazardous energy sources on machines are isolated and controlled before service or maintenance work begins.",
+    text: "Are lockout/tagout procedures periodically verified through audits?",
+    guidance: ["Identify machines requiring energy-isolation procedures.","Document and label isolation points for each machine.","Periodically audit lockout/tagout practice against the written procedure."],
+    expectedEvidence: ["Lockout/tagout audit log.", "Corrective action records from audits."],
+    response: "no",
+    period: currentAssessmentPeriod,
+    action: { description: "Schedule the first lockout/tagout practice audit for this quarter.", owner: "Elena Garcia" },
+    evidence: [],
+  },
+  {
+    id: "occupational-q-3",
+    requirementId: "OH 3.3.1",
+    number: "1",
+    title: "Medical surveillance",
+    sectionId: "ps-occupational-health",
+    sectionName: "Occupational Health Performance Standard",
+    subsection: "3.3 Medical surveillance",
+    sectionPriority: 1,
+    overallPriority: 13,
+    requirementText: "Employees with qualifying occupational exposures receive medical surveillance appropriate to the hazard, with results reviewed by a qualified provider.",
+    text: "Is a medical surveillance program in place for employees with qualifying exposures?",
+    guidance: ["Identify roles and exposures that require medical surveillance.","Schedule surveillance exams at the required frequency.","Route results to a qualified provider for review and follow-up."],
+    expectedEvidence: ["Medical surveillance program roster.", "Exam scheduling records."],
+    response: "partial",
+    period: currentAssessmentPeriod,
+    action: { description: "Enroll the two recently transferred operators into the surveillance schedule.", owner: "Aisha Rahman" },
+    evidence: [],
+  },
+  {
+    id: "occupational-q-4",
+    requirementId: "OH 3.3.1",
+    number: "2",
+    title: "Medical surveillance",
+    sectionId: "ps-occupational-health",
+    sectionName: "Occupational Health Performance Standard",
+    subsection: "3.3 Medical surveillance",
+    sectionPriority: 2,
+    overallPriority: 26,
+    requirementText: "Employees with qualifying occupational exposures receive medical surveillance appropriate to the hazard, with results reviewed by a qualified provider.",
+    text: "Are medical surveillance results reviewed and acted on by a qualified provider?",
+    guidance: ["Identify roles and exposures that require medical surveillance.","Schedule surveillance exams at the required frequency.","Route results to a qualified provider for review and follow-up."],
+    expectedEvidence: ["Provider review records.", "Follow-up action log."],
+    response: "yes",
+    period: currentAssessmentPeriod,
+    evidence: [],
+  },
 ];
 
 export const ownerRecords: OwnerRecord[] = [
@@ -672,6 +747,15 @@ export const dashboardSites: DashboardSite[] = [
 export const regions: string[] = ["Asia Pacific", "EMEA", "Latin America", "North America"];
 export const segments: string[] = ["Family Care", "Personal Care", "Professional"];
 
+/**
+ * Admin-curated Section/Sub-Section dropdown values for the master requirement form (Config
+ * screen and AdminRequirementDetailScreen's ComboboxField). Seeded with the values already used
+ * by `requirements`/`masterRequirements` below so the dropdowns look unchanged on first load —
+ * an admin can add to either list here to offer a name before any requirement uses it.
+ */
+export const sectionNames: string[] = ["Leadership & Engagement", "Planning", "Support", "Operation", "Performance Evaluation", "Improvement", "Machine Safety Performance Standard", "Occupational Health Performance Standard"];
+export const subsectionNames: string[] = ["1.2 Leadership commitment", "2.1 Risks and opportunities", "3.2 Competence", "4.3 Change management", "5.1 Performance monitoring", "6.1 Improvement actions", "7.2 Safeguarding", "7.4 Lockout/Tagout", "3.1 Exposure assessment", "3.3 Medical surveillance"];
+
 // Guidance repeats across sibling rows sharing one Requirement ID, same as `requirements` above —
 // kept here as named constants (rather than inline, as `requirements` does) purely to avoid
 // retyping each list once per sibling master record below.
@@ -689,6 +773,8 @@ const planningGuidance = [
 const operationGuidance = ["Define when a change review is required.", "Include affected workers and technical specialists.", "Verify controls before the change is released."];
 const machineGuidance = ["Maintain a machine inventory.", "Document safeguarding assessments.", "Verify safeguards after maintenance or modification."];
 const occupationalGuidance = ["Maintain a current exposure inventory.", "Use qualified assessors and validated methods.", "Communicate results and required controls to affected workers."];
+const lockoutTagoutGuidance = ["Identify machines requiring energy-isolation procedures.", "Document and label isolation points for each machine.", "Periodically audit lockout/tagout practice against the written procedure."];
+const medicalSurveillanceGuidance = ["Identify roles and exposures that require medical surveillance.", "Schedule surveillance exams at the required frequency.", "Route results to a qualified provider for review and follow-up."];
 
 // A master requirement IS a single question (see shared/types.ts) — mirrors the same
 // requirementId groupings as `requirements` above, by design (both sides key their `id`s
@@ -705,6 +791,10 @@ export const masterRequirements: MasterRequirement[] = [
   { id: "machine-q-2", requirementId: "PS 7.2.1", number: "2", title: "Machine safeguarding verification", text: "Are safeguard inspections recorded at the required frequency?", guidance: machineGuidance, section: "Machine Safety Performance Standard", subsection: "7.2 Safeguarding", status: "Draft", siteIds: [], expectedEvidence: ["Guard inspection log.", "Inspection frequency schedule."], evidenceRequired: true, sectionPriority: 2, overallPriority: 21 },
   { id: "occupational-q-1", requirementId: "OH 3.1.4", number: "1", title: "Occupational exposure assessment", text: "Is the occupational exposure inventory current?", guidance: occupationalGuidance, section: "Occupational Health Performance Standard", subsection: "3.1 Exposure assessment", status: "Published", siteIds: [], expectedEvidence: ["Current exposure inventory.", "Similar exposure group list."], evidenceRequired: true, sectionPriority: 1, overallPriority: 23 },
   { id: "occupational-q-2", requirementId: "OH 3.1.4", number: "2", title: "Occupational exposure assessment", text: "Are exposure assessments current for all priority similar exposure groups?", guidance: occupationalGuidance, section: "Occupational Health Performance Standard", subsection: "3.1 Exposure assessment", status: "Published", siteIds: [], expectedEvidence: ["Sampling reports.", "Exposure assessment schedule."], evidenceRequired: true, sectionPriority: 2, overallPriority: 10 },
+  { id: "machine-q-3", requirementId: "PS 7.4.1", number: "1", title: "Lockout/tagout verification", text: "Are lockout/tagout procedures documented for machines requiring energy isolation?", guidance: lockoutTagoutGuidance, section: "Machine Safety Performance Standard", subsection: "7.4 Lockout/Tagout", status: "Published", siteIds: [], expectedEvidence: ["Lockout/tagout procedure library.", "Energy-isolation point diagrams."], evidenceRequired: true, sectionPriority: 1, overallPriority: 11 },
+  { id: "machine-q-4", requirementId: "PS 7.4.1", number: "2", title: "Lockout/tagout verification", text: "Are lockout/tagout procedures periodically verified through audits?", guidance: lockoutTagoutGuidance, section: "Machine Safety Performance Standard", subsection: "7.4 Lockout/Tagout", status: "Published", siteIds: [], expectedEvidence: ["Lockout/tagout audit log.", "Corrective action records from audits."], evidenceRequired: true, sectionPriority: 2, overallPriority: 25 },
+  { id: "occupational-q-3", requirementId: "OH 3.3.1", number: "1", title: "Medical surveillance", text: "Is a medical surveillance program in place for employees with qualifying exposures?", guidance: medicalSurveillanceGuidance, section: "Occupational Health Performance Standard", subsection: "3.3 Medical surveillance", status: "Published", siteIds: [], expectedEvidence: ["Medical surveillance program roster.", "Exam scheduling records."], evidenceRequired: true, sectionPriority: 1, overallPriority: 13 },
+  { id: "occupational-q-4", requirementId: "OH 3.3.1", number: "2", title: "Medical surveillance", text: "Are medical surveillance results reviewed and acted on by a qualified provider?", guidance: medicalSurveillanceGuidance, section: "Occupational Health Performance Standard", subsection: "3.3 Medical surveillance", status: "Published", siteIds: [], expectedEvidence: ["Provider review records.", "Follow-up action log."], evidenceRequired: true, sectionPriority: 2, overallPriority: 26 },
 ];
 
 export function performanceForResponse(response: ResponseValue): Performance {

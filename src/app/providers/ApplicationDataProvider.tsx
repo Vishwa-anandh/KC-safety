@@ -92,6 +92,10 @@ interface ApplicationDataValue extends PersistedState {
   removeRegion: (region: string) => void;
   addSegment: (segment: string) => void;
   removeSegment: (segment: string) => void;
+  addSectionName: (name: string) => void;
+  removeSectionName: (name: string) => void;
+  addSubsectionName: (name: string) => void;
+  removeSubsectionName: (name: string) => void;
   notify: (input: Omit<AppNotification, "id" | "createdAt" | "readBy">) => void;
   markNotificationRead: (id: string, role: SiteUserRole) => void;
   markAllNotificationsRead: (role: SiteUserRole) => void;
@@ -457,6 +461,22 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     touch((current) => ({ ...current, segments: current.segments.filter((item) => item !== segment) }));
   }
 
+  function addSectionName(name: string) {
+    touch((current) => current.sectionNames.includes(name) ? current : { ...current, sectionNames: [...current.sectionNames, name].sort() });
+  }
+
+  function removeSectionName(name: string) {
+    touch((current) => ({ ...current, sectionNames: current.sectionNames.filter((item) => item !== name) }));
+  }
+
+  function addSubsectionName(name: string) {
+    touch((current) => current.subsectionNames.includes(name) ? current : { ...current, subsectionNames: [...current.subsectionNames, name].sort() });
+  }
+
+  function removeSubsectionName(name: string) {
+    touch((current) => ({ ...current, subsectionNames: current.subsectionNames.filter((item) => item !== name) }));
+  }
+
   function addSiteUser(user: SiteUser) {
     touch((current) => ({ ...current, siteUsers: [user, ...current.siteUsers] }));
   }
@@ -521,6 +541,10 @@ export function ApplicationDataProvider({ children }: { children: ReactNode }) {
     removeRegion,
     addSegment,
     removeSegment,
+    addSectionName,
+    removeSectionName,
+    addSubsectionName,
+    removeSubsectionName,
     notify,
     markNotificationRead,
     markAllNotificationsRead,

@@ -562,10 +562,14 @@ function ConfigListCard({
   );
 }
 
-type ConfigListKey = "regions" | "segments";
+type ConfigListKey = "regions" | "segments" | "sections" | "subsections";
 
 export function AdminConfigScreen() {
-  const { regions, segments, addRegion, removeRegion, addSegment, removeSegment } = useAdministration();
+  const {
+    regions, segments, sectionNames, subsectionNames,
+    addRegion, removeRegion, addSegment, removeSegment,
+    addSectionName, removeSectionName, addSubsectionName, removeSubsectionName,
+  } = useAdministration();
   const [activeKey, setActiveKey] = useState<ConfigListKey>("regions");
 
   const lists: Record<ConfigListKey, { label: string; icon: typeof MapPin; count: number; card: React.ReactNode }> = {
@@ -576,6 +580,14 @@ export function AdminConfigScreen() {
     segments: {
       label: "Segments", icon: Layers, count: segments.length,
       card: <ConfigListCard title="Segments" description="Shown in the Segment field when creating or editing a site." placeholder="For example, Family Care" values={segments} onAdd={addSegment} onRemove={removeSegment} removalNote="Sites that already use it keep their current value." />,
+    },
+    sections: {
+      label: "Sections", icon: FileText, count: sectionNames.length,
+      card: <ConfigListCard title="Sections" description="Offered in the Section field when creating or editing a master requirement." placeholder="For example, Leadership & Engagement" values={sectionNames} onAdd={addSectionName} onRemove={removeSectionName} removalNote="Requirements that already use it keep their current value." />,
+    },
+    subsections: {
+      label: "Sub-Sections", icon: ListChecks, count: subsectionNames.length,
+      card: <ConfigListCard title="Sub-Sections" description="Offered in the Sub-Section field when creating or editing a master requirement." placeholder="For example, 1.2 Leadership commitment" values={subsectionNames} onAdd={addSubsectionName} onRemove={removeSubsectionName} removalNote="Requirements that already use it keep their current value." />,
     },
   };
 
@@ -594,7 +606,7 @@ export function AdminConfigScreen() {
                 type="button"
                 onClick={() => setActiveKey(key)}
                 className={cx(
-                  "config-index__item flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border border-transparent p-2 text-left text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-99 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+                  "config-index__item flex min-h-13.5 min-w-0 items-center gap-2.5 rounded-xl border border-transparent bg-white p-2 text-left text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 active:scale-99 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100",
                   active && "config-index__item--active border-kc-blue-200 bg-kc-blue-50 text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200",
                 )}
                 aria-current={active ? "true" : undefined}
@@ -1306,7 +1318,7 @@ function ComboboxField({ label, value, options, onChange, placeholder, newLabel 
 export function AdminRequirementDetailScreen() {
   const { requirementId } = useParams();
   const navigate = useNavigate();
-  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites } = useAdministration();
+  const { masterRequirements, addMasterRequirement, updateMasterRequirement, removeMasterRequirement, sites, sectionNames, subsectionNames } = useAdministration();
   const isNew = !requirementId;
   const existing = requirementId ? masterRequirements.find((item) => item.id === requirementId) : undefined;
   const siteOptions = buildSiteOptions(sites);
@@ -1316,8 +1328,10 @@ export function AdminRequirementDetailScreen() {
   const [pendingNavigation, setPendingNavigation] = useState<MasterRequirement | "list" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  const existingSections = [...new Set(masterRequirements.map((item) => item.section).filter(Boolean))].sort();
-  const existingSubsections = [...new Set(masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection).filter(Boolean))].sort();
+  // Merges in Config's admin-curated Section/Sub-Section lists (see AdminConfigScreen) so a name
+  // pre-declared there is selectable here before any requirement actually uses it.
+  const existingSections = [...new Set([...sectionNames, ...masterRequirements.map((item) => item.section)].filter(Boolean))].sort();
+  const existingSubsections = [...new Set([...subsectionNames, ...masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection)].filter(Boolean))].sort();
   const existingRequirementIds = [...new Set(masterRequirements.map((item) => item.requirementId).filter(Boolean))].sort();
   // Every sibling question under the same Requirement ID shares section/subsection (title is
   // derived from subsection at save time, see `save()` below) — picking an existing Requirement

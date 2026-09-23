@@ -8,9 +8,11 @@ import {
   ownerRecords,
   regions,
   requirements,
+  sectionNames,
   sections,
   segments,
   siteUsers,
+  subsectionNames,
 } from "../fixtures/assessment";
 import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts";
 import { createdRequirementAuditChanges } from "../../shared/domain/requirement-audit";
@@ -269,6 +271,8 @@ function freshSnapshot(): AppSnapshot {
     lastUpdated: new Date().toISOString(),
     regions: structuredClone(regions),
     segments: structuredClone(segments),
+    sectionNames: structuredClone(sectionNames),
+    subsectionNames: structuredClone(subsectionNames),
   };
 }
 
