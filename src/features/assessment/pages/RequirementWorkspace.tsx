@@ -175,7 +175,6 @@ function AssessmentNavigator({
         <div className="grid min-w-0 gap-1.5">
           <p className={eyebrowClasses}>Current section</p>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">{currentSection?.sectionName ?? "Assessment"}</h2>
-          {currentSection && <FrameworkBadge kind={currentSection.kind} compact />}
         </div>
         {onClose && <IconButton label="Close assessment navigator" onClick={onClose}><X size={19} /></IconButton>}
       </div>
@@ -653,7 +652,6 @@ export default function RequirementWorkspace() {
 
   const sectionRequirements = useMemo(() => requirements.filter((item) => item.sectionId === sectionId), [requirements, sectionId]);
   const highlighted = sectionRequirements.find((item) => item.id === requirementId) ?? sectionRequirements[0];
-  const currentSectionSummary = sectionSummaries.find((section) => section.id === sectionId);
   const subsectionGroups = useMemo(() => {
     const bySubsection = new Map<string, Requirement[]>();
     sectionRequirements.forEach((item) => {
@@ -701,7 +699,6 @@ export default function RequirementWorkspace() {
             <ChevronRight size={15} />
             <span aria-current="page">{sectionRequirements[0].sectionName}</span>
           </nav>
-          {currentSectionSummary && <div className="-mt-2 mb-4"><FrameworkBadge kind={currentSectionSummary.kind} compact /></div>}
           {subsectionGroups.map((group, groupIndex) => (
             <section className={cx("questions-section", groupIndex === 0 ? "mt-2" : "mt-6")} aria-labelledby={`subsection-${group.subsection}`} key={group.subsection}>
               <div className={sectionTitleRowClass}>
