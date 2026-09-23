@@ -1,10 +1,10 @@
 import { AlertTriangle, ArrowRight, Paperclip } from "lucide-react";
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { requirementRoute } from "../../../app/router/links";
 import { responseLabel } from "../../../shared/domain/assessment";
 import type { AssessmentHistoryEntry, Requirement, ResponseValue } from "../../../shared/types";
-import { eyebrowClasses, InlineMessage } from "../../../shared/ui/UI";
+import { eyebrowClasses, InlineMessage, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
 // Card-shell recipe duplicated verbatim from SiteScreens.tsx (cardClass/cardHeaderClass/...) —
@@ -21,7 +21,7 @@ const cardHeaderDetailClass = "text-sm text-slate-500 dark:text-slate-400";
 // "response" vocabulary as the rest of the app.
 export type ChartTone = "success" | "warning" | "danger" | "neutral" | "brand";
 
-const pillBase = "inline-flex w-fit items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold";
+const pillBase = "inline-flex w-fit items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-bold sm:gap-1.5 sm:px-2 sm:py-1 sm:text-xs";
 const toneChipClass: Record<ChartTone, string> = {
   success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300",
@@ -51,7 +51,7 @@ const toneTextClass: Record<ChartTone, string> = {
 };
 
 function LegendSwatch({ tone, label }: { tone: ChartTone; label: string }) {
-  return <span className="inline-flex min-w-0 items-center gap-1.5"><span className={cx("size-2.5 flex-none rounded-full", swatchDotClass[tone])} /><span className="truncate">{label}</span></span>;
+  return <span className="inline-flex min-w-0 items-center gap-1 sm:gap-1.5"><span className={cx("size-2 flex-none rounded-full sm:size-2.5", swatchDotClass[tone])} /><span className="truncate">{label}</span></span>;
 }
 
 const iconChipClass: Record<ChartTone, string> = {
@@ -67,12 +67,12 @@ const iconChipClass: Record<ChartTone, string> = {
  *  same widget before a reader even reaches the charts below. */
 export function HeroStatCard({ icon, tone, label, value, footer }: { icon: ReactNode; tone: ChartTone; label: string; value: ReactNode; footer?: ReactNode }) {
   return (
-    <article className={cx(cardClass, "flex min-w-0 flex-col gap-3 p-4")}>
-      <div className="flex items-center gap-3">
-        <span className={cx("grid size-10 flex-none place-items-center rounded-lg", iconChipClass[tone])}>{icon}</span>
+    <article className={cx(cardClass, "flex min-w-0 flex-col gap-2 p-2 sm:gap-3 sm:p-4")}>
+      <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
+        <span className={cx("grid size-6 flex-none place-items-center rounded-md sm:size-10 sm:rounded-lg", iconChipClass[tone])}>{icon}</span>
         <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
-          <strong className="block text-2xl leading-tight font-bold tracking-tight tabular-nums text-slate-900 dark:text-slate-100">{value}</strong>
+          <p className="break-words text-[9px] leading-[1.15] font-semibold text-slate-500 sm:text-xs sm:leading-tight dark:text-slate-400">{label}</p>
+          <strong className="block text-base leading-tight font-bold tracking-tight tabular-nums text-slate-900 sm:text-2xl dark:text-slate-100">{value}</strong>
         </div>
       </div>
       {footer}
@@ -82,7 +82,7 @@ export function HeroStatCard({ icon, tone, label, value, footer }: { icon: React
 
 export function InlineBreakdown({ items }: { items: Array<{ label: string; value: number; tone: ChartTone }> }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-500 sm:gap-x-3 sm:text-xs dark:text-slate-400">
       {items.map((item) => <LegendSwatch key={item.label} tone={item.tone} label={`${item.label} ${item.value}`} />)}
     </div>
   );
@@ -91,11 +91,11 @@ export function InlineBreakdown({ items }: { items: Array<{ label: string; value
 export function InlineProgress({ value, total, tone, caption }: { value: number; total: number; tone: ChartTone; caption: string }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="grid gap-1.5">
+    <div className="grid gap-1 sm:gap-1.5">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
         <span className={cx("block h-full rounded-full", segmentFillClass[tone])} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-slate-500 dark:text-slate-400">{caption}</span>
+      <span className="text-[10px] text-slate-500 sm:text-xs dark:text-slate-400">{caption}</span>
     </div>
   );
 }
@@ -305,16 +305,19 @@ function cellToneClass(response: ResponseValue): string {
  *  heatmap) reads at both the section level (colour pattern across a row) and the individual
  *  question level (each cell links straight to that requirement) at the same time, which no bar
  *  chart on this page can do. Colour still isn't the only signal: each cell carries its own
- *  aria-label/title with the exact question number and response, and the caption line below every
- *  row repeats the same counts as plain text. */
+ *  aria-label plus the app's shared hover tooltip with the exact question number and response,
+ *  and the caption line below every row repeats the same counts as plain text. */
 function GapCell({ cell }: { cell: GapCell }) {
+  const tooltipId = useId();
   return (
     <Link
       to={cell.to}
-      className={cx("grid size-5.5 flex-none place-items-center rounded-[5px] transition-transform hover:z-10 hover:scale-125 hover:shadow-md focus-visible:z-10 focus-visible:scale-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-kc-blue-500", cellToneClass(cell.response))}
+      className={cx("relative grid size-5.5 flex-none place-items-center rounded-[5px] transition-transform hover:z-10 hover:scale-125 hover:shadow-md focus-visible:z-10 focus-visible:scale-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-kc-blue-500", tooltipTriggerClass, cellToneClass(cell.response))}
       aria-label={`Question ${cell.number}: ${responseLabel(cell.response)}`}
-      title={`Q${cell.number} · ${responseLabel(cell.response)}`}
-    />
+      aria-describedby={tooltipId}
+    >
+      <TooltipLabel id={tooltipId} label={`Q${cell.number} · ${responseLabel(cell.response)}`} placement="top" />
+    </Link>
   );
 }
 

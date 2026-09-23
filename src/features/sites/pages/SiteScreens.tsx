@@ -44,7 +44,7 @@ const pageContainerClass = "page-container w-full pt-5 pb-14 text-slate-900 md:p
 const pageSectionClass = "page-section mt-9";
 const sectionTitleRowClass = "section-title-row mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end";
 const sectionCardGridClass = "section-card-grid grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3";
-const metricsGridClass = "metrics-grid mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 wide:grid-cols-4";
+const metricsGridClass = "metrics-grid mt-5 grid grid-cols-4 gap-1.5 sm:gap-3 md:gap-4";
 
 /** Canonical primary button recipe, inlined onto `<Link>` elements (the shared Button component
  * only renders a `<button>`). Kept verbatim from the Button base + primary variant + default size. */
@@ -291,7 +291,7 @@ export function OverviewScreen() {
           value={unansweredQuestions.length}
           tone="neutral"
           icon={<HelpCircle size={19} />}
-          footer={<p className="m-0 text-xs text-slate-500 dark:text-slate-400">Spread across {unansweredSectionCount} of {sectionGroups.length} sections</p>}
+          footer={<p className="m-0 text-[10px] text-slate-500 sm:text-xs dark:text-slate-400">Spread across {unansweredSectionCount} of {sectionGroups.length} sections</p>}
         />
         <HeroStatCard
           label="Completed actions"
@@ -304,15 +304,13 @@ export function OverviewScreen() {
       <div className="mt-4">
         <AssessmentGlanceCard completion={completionStats} responses={responseBreakdown} sectionPerformance={sectionPerformance} />
       </div>
-      <div className="overview-charts-row mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[2fr_1fr]">
+      <div className="overview-charts-row mt-4 grid grid-cols-1 items-start gap-4 xl:grid-cols-[2fr_1fr_1fr]">
         <GapsBySectionChart sections={sectionRows} />
         <NeedsAttentionPanel items={needsAttentionItems} viewAllTo={appPaths.actions} />
-      </div>
-      <div className="overview-charts-row mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <OpenActionsByOwnerChart owners={ownerRows} />
-        <div className="min-w-0">
-          <EvidenceCoverageStrip {...evidenceCoverage} to={appPaths.assessment} />
-        </div>
+      </div>
+      <div className="mt-4">
+        <EvidenceCoverageStrip {...evidenceCoverage} to={appPaths.assessment} />
       </div>
       <div className="mt-4">
         <RecentChangesFeed rows={recentChanges} />

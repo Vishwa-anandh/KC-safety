@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -38,7 +38,7 @@ import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 
 import type { DashboardSite, MasterRequirement, RequirementAuditAction, RequirementAuditChange, RequirementAuditTarget, SiteUser, SiteUserRole } from "../../../shared/types";
-import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select } from "../../../shared/ui/UI";
+import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconButton, InlineMessage, MetricCard, PageHeader, Select, TooltipLabel, tooltipTriggerClass } from "../../../shared/ui/UI";
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
@@ -141,6 +141,18 @@ function siteCodesSummary(sites: DashboardSite[], siteIds: string[]) {
   if (!siteIds.length) return { text: "All sites", title: undefined };
   const codes = siteIds.map((id) => sites.find((site) => site.id === id)?.code ?? id);
   return codes.length <= 2 ? { text: codes.join(", "), title: undefined } : { text: `${codes.length} sites`, title: codes.join(", ") };
+}
+
+function SiteCodesCell({ sites, siteIds }: { sites: DashboardSite[]; siteIds: string[] }) {
+  const { text, title } = siteCodesSummary(sites, siteIds);
+  const tooltipId = useId();
+  if (!title) return <>{text}</>;
+  return (
+    <span className={cx(tooltipTriggerClass, "inline-block")} tabIndex={0} aria-describedby={tooltipId}>
+      {text}
+      <TooltipLabel id={tooltipId} label={title} placement="top" />
+    </span>
+  );
 }
 
 /**
@@ -1482,7 +1494,7 @@ export function AdminRequirementsScreen() {
                   <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
                   <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.title}</strong><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>Guidance and evidence requirements configured</span></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span>{item.section}</td>
-                  <td className={cx(dataTableCellClass)} data-label="Sites" title={siteCodesSummary(sites, item.siteIds).title}><span className={cx(dataTableCellLabelClass)}>Sites</span>{siteCodesSummary(sites, item.siteIds).text}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
                   <td className={cx(dataTableLastCellClass)} data-label="Actions">
                     <span className={cx(rowActionsClass, "row-actions--menu relative")}>

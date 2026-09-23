@@ -62,17 +62,30 @@ export function Button({
   );
 }
 
-/** Tooltip chrome shared by all four placements. The tooltip is always a direct child of the
- * icon button, so its reveal is driven by the button's own named group rather than a
- * descendant selector — a nested `group` in a consumer cannot hijack it. */
-const tooltipBase = "app-tooltip pointer-events-none invisible absolute z-320 w-max max-w-56 rounded-lg border border-kc-blue-700 bg-kc-blue-900 px-3 py-2 text-xs leading-tight font-semibold whitespace-normal text-white opacity-0 shadow-lg transition-all delay-100 duration-150 group-hover/icon-button:visible group-hover/icon-button:opacity-100 group-hover/icon-button:delay-200 group-focus-visible/icon-button:visible group-focus-visible/icon-button:opacity-100 group-focus-visible/icon-button:delay-200 after:absolute after:size-2 after:rotate-45 after:border-kc-blue-700 after:bg-kc-blue-950 pointer-coarse:hidden";
+/** Tooltip chrome shared by every tooltip in the app, not just icon buttons. The tooltip is
+ * always a direct child of its trigger, so its reveal is driven by the trigger's own
+ * `group/tooltip` named group rather than a descendant selector — a nested `group` in a
+ * consumer cannot hijack it. Any hoverable/focusable trigger can opt in: add
+ * `tooltipTriggerClass` to the trigger's own className (it only adds `group/tooltip relative`,
+ * nothing visual) and render `<TooltipLabel>` as a direct child. */
+export const tooltipTriggerClass = "group/tooltip relative";
+
+const tooltipBase = "app-tooltip pointer-events-none invisible absolute z-320 w-max max-w-56 rounded-lg border border-kc-blue-700 bg-kc-blue-900 px-3 py-2 text-xs leading-tight font-semibold whitespace-normal text-white opacity-0 shadow-lg transition-all delay-100 duration-150 group-hover/tooltip:visible group-hover/tooltip:opacity-100 group-hover/tooltip:delay-200 group-focus-visible/tooltip:visible group-focus-visible/tooltip:opacity-100 group-focus-visible/tooltip:delay-200 after:absolute after:size-2 after:rotate-45 after:border-kc-blue-700 after:bg-kc-blue-950 pointer-coarse:hidden";
 
 const tooltipPlacementClasses = {
-  bottom: "top-full left-1/2 mt-2.5 -translate-x-1/2 -translate-y-1 group-hover/icon-button:translate-y-0 group-focus-visible/icon-button:translate-y-0 after:-top-1 after:left-1/2 after:-ml-1 after:border-t after:border-l",
-  top: "bottom-full left-1/2 mb-2.5 -translate-x-1/2 translate-y-1 group-hover/icon-button:translate-y-0 group-focus-visible/icon-button:translate-y-0 after:-bottom-1 after:left-1/2 after:-ml-1 after:border-r after:border-b",
-  right: "top-1/2 left-full ml-3 translate-x-1 -translate-y-1/2 group-hover/icon-button:translate-x-0 group-focus-visible/icon-button:translate-x-0 after:top-1/2 after:-left-1 after:-mt-1 after:border-b after:border-l",
-  left: "top-1/2 right-full mr-3 -translate-x-1 -translate-y-1/2 group-hover/icon-button:translate-x-0 group-focus-visible/icon-button:translate-x-0 after:top-1/2 after:-right-1 after:-mt-1 after:border-t after:border-r",
+  bottom: "top-full left-1/2 mt-2.5 -translate-x-1/2 -translate-y-1 group-hover/tooltip:translate-y-0 group-focus-visible/tooltip:translate-y-0 after:-top-1 after:left-1/2 after:-ml-1 after:border-t after:border-l",
+  top: "bottom-full left-1/2 mb-2.5 -translate-x-1/2 translate-y-1 group-hover/tooltip:translate-y-0 group-focus-visible/tooltip:translate-y-0 after:-bottom-1 after:left-1/2 after:-ml-1 after:border-r after:border-b",
+  right: "top-1/2 left-full ml-3 translate-x-1 -translate-y-1/2 group-hover/tooltip:translate-x-0 group-focus-visible/tooltip:translate-x-0 after:top-1/2 after:-left-1 after:-mt-1 after:border-b after:border-l",
+  left: "top-1/2 right-full mr-3 -translate-x-1 -translate-y-1/2 group-hover/tooltip:translate-x-0 group-focus-visible/tooltip:translate-x-0 after:top-1/2 after:-right-1 after:-mt-1 after:border-t after:border-r",
 };
+
+export function TooltipLabel({ id, label, placement = "bottom" }: { id?: string; label: ReactNode; placement?: "top" | "right" | "bottom" | "left" }) {
+  return (
+    <span id={id} className={cx(tooltipBase, tooltipPlacementClasses[placement])} role="tooltip">
+      {label}
+    </span>
+  );
+}
 
 export function IconButton({
   label,
@@ -86,11 +99,9 @@ export function IconButton({
 }) {
   const tooltipId = useId();
   return (
-    <button {...props} className={cx("icon-button group/icon-button relative inline-flex size-10 flex-none items-center justify-center rounded-lg bg-transparent text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100", className)} aria-label={label} aria-describedby={tooltipId}>
+    <button {...props} className={cx("icon-button", tooltipTriggerClass, "inline-flex size-10 flex-none items-center justify-center rounded-lg bg-transparent text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100", className)} aria-label={label} aria-describedby={tooltipId}>
       {children}
-      <span id={tooltipId} className={cx(tooltipBase, tooltipPlacementClasses[tooltipPlacement])} role="tooltip">
-        {label}
-      </span>
+      <TooltipLabel id={tooltipId} label={label} placement={tooltipPlacement} />
     </button>
   );
 }
