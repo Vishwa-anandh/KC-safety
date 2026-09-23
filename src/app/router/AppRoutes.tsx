@@ -9,6 +9,7 @@ import { RequirementWorkspace } from "../../features/assessment";
 import {
   AccountSettings,
   AppearanceSettings,
+  ChangePasswordSettings,
   GuidanceSettings,
   NotificationsSettings,
   SecuritySettings,
@@ -96,6 +97,7 @@ export default function App() {
               <Route path={settingsSegments.appearance} element={<AppearanceSettings />} />
               <Route path={settingsSegments.notifications} element={<NotificationsSettings />} />
               <Route path={settingsSegments.security} element={<SecuritySettings />} />
+              <Route path={settingsSegments.changePassword} element={<ChangePasswordSettings />} />
               <Route path={settingsSegments.guidance} element={<GuidanceSettings />} />
               <Route path={settingsSegments.support} element={<SupportSettings />} />
             </Route>

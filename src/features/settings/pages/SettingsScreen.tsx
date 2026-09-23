@@ -32,7 +32,7 @@ import { cx } from "../../../shared/utils";
 import { appPaths } from "../../../app/router/route-manifest";
 import { settingsRoute } from "../../../app/router/links";
 
-type SettingsSectionId = "account" | "appearance" | "notifications" | "security" | "guidance" | "support";
+type SettingsSectionId = "account" | "appearance" | "notifications" | "security" | "changePassword" | "guidance" | "support";
 
 interface NotificationPreferences {
   assessmentReminders: boolean;
@@ -58,7 +58,8 @@ const sections: Array<{ id: SettingsSectionId; label: string; description: strin
   { id: "account", label: "Account and access", description: "Profile, role, and scope", icon: UserRound, keywords: "profile email identity role permission site authorized scope" },
   { id: "appearance", label: "Appearance", description: "Theme and display", icon: Accessibility, keywords: "theme system light dark appearance display accessibility contrast" },
   { id: "notifications", label: "Notifications", description: "Alerts and summaries", icon: Bell, keywords: "email alert reminder corrective action assignment summary digest" },
-  { id: "security", label: "Security", description: "Passkeys and session", icon: ShieldCheck, keywords: "passkey password device browser session sign out security" },
+  { id: "security", label: "Security", description: "Passkeys and session", icon: ShieldCheck, keywords: "passkey device browser session sign out security" },
+  { id: "changePassword", label: "Change password", description: "Update your sign-in password", icon: KeyRound, keywords: "password change credential update security" },
   { id: "guidance", label: "Guided setup", description: "Progress and learning", icon: PlayCircle, keywords: "tour onboarding progress replay reset walkthrough" },
   { id: "support", label: "Help and support", description: "Resources and assistance", icon: CircleHelp, keywords: "help support contact documentation privacy demo" },
 ];
@@ -408,7 +409,6 @@ export function SecuritySettings() {
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [platformAuthenticator, setPlatformAuthenticator] = useState<boolean | null>(null);
   const passkeyNameRef = useRef<HTMLInputElement>(null);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const userPasskeys = passkeys.filter((item) => item.userId === user?.id);
   const passkeySupported = window.isSecureContext && "PublicKeyCredential" in window;
@@ -426,15 +426,6 @@ export function SecuritySettings() {
     const timer = window.setTimeout(() => passkeyNameRef.current?.focus(), 280);
     return () => window.clearTimeout(timer);
   }, [passkeySetupRequested]);
-
-  useEffect(() => {
-    if (searchParams.get("setup") === "password") {
-      setChangePasswordOpen(true);
-      setSearchParams({}, { replace: true });
-    }
-    // Only reacts to the deep link that opens this dialog, not to setSearchParams changing identity.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
 
   async function addPasskey(event: FormEvent) {
     event.preventDefault();
@@ -576,13 +567,6 @@ export function SecuritySettings() {
           </div>
           {message && <InlineMessage tone={message.tone} title={message.title}>{message.detail}</InlineMessage>}
         </div>
-        <div className="security-subsection flex flex-col items-start justify-between gap-3 not-first:border-t not-first:border-slate-200 not-first:pt-4 sm:flex-row sm:items-center dark:not-first:border-slate-700">
-          <div className="grid gap-0.5">
-            <strong className={settingSubheadingLabelClass}>Password</strong>
-            <span className={settingSubheadingHintClass}>Change the password used to sign in with your work email.</span>
-          </div>
-          <Button variant="secondary" icon={<KeyRound size={17} />} onClick={() => setChangePasswordOpen(true)}>Change password</Button>
-        </div>
         <div className="security-subsection session-panel grid grid-cols-[auto_1fr] items-center gap-3 border-t border-slate-200 pt-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] dark:border-slate-700">
           <div className="session-panel__icon grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             <Laptop size={21} />
@@ -628,6 +612,37 @@ export function SecuritySettings() {
           </section>
         </div>
       )}
+    </>
+  );
+}
+
+/** Its own tab (rather than nested in Security) so it's directly reachable from the settings nav —
+ *  mirrors Security's own `?setup=passkey` deep-link pattern for `?setup=password`. */
+export function ChangePasswordSettings() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("setup") === "password") {
+      setChangePasswordOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+    // Only reacts to the deep link that opens this dialog, not to setSearchParams changing identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  return (
+    <>
+      <PageHeader eyebrow="Personal workspace" title="Change password" description="Update the password used to sign in with your work email." />
+      <section className={cx(settingsCardClass)}>
+        <div className="security-subsection flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="grid gap-0.5">
+            <strong className={settingSubheadingLabelClass}>Password</strong>
+            <span className={settingSubheadingHintClass}>Choose a new password for your work email sign-in.</span>
+          </div>
+          <Button variant="secondary" icon={<KeyRound size={17} />} onClick={() => setChangePasswordOpen(true)}>Change password</Button>
+        </div>
+      </section>
       {changePasswordOpen && <ChangePasswordDialog onClose={() => setChangePasswordOpen(false)} />}
     </>
   );

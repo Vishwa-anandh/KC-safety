@@ -39,6 +39,7 @@ export const appPaths = {
   settingsAppearance: "/settings/appearance",
   settingsNotifications: "/settings/notifications",
   settingsSecurity: "/settings/security",
+  settingsChangePassword: "/settings/change-password",
   settingsGuidance: "/settings/guidance",
   settingsSupport: "/settings/support",
   noAssignment: "/no-assignment",
@@ -51,6 +52,7 @@ export const settingsSegments = {
   appearance: "appearance",
   notifications: "notifications",
   security: "security",
+  changePassword: "change-password",
   guidance: "guidance",
   support: "support",
 } as const;
@@ -86,6 +88,7 @@ export const routeManifest: readonly AppRouteDefinition[] = [
   { id: "settings-appearance", path: appPaths.settingsAppearance, access: { kind: "authenticated" }, navigation: false },
   { id: "settings-notifications", path: appPaths.settingsNotifications, access: { kind: "authenticated" }, navigation: false },
   { id: "settings-security", path: appPaths.settingsSecurity, access: { kind: "authenticated" }, navigation: false },
+  { id: "settings-change-password", path: appPaths.settingsChangePassword, access: { kind: "authenticated" }, navigation: false },
   { id: "settings-guidance", path: appPaths.settingsGuidance, access: { kind: "authenticated" }, navigation: false },
   { id: "settings-support", path: appPaths.settingsSupport, access: { kind: "authenticated" }, navigation: false },
   { id: "no-assignment", path: appPaths.noAssignment, access: { kind: "public" }, navigation: false },
