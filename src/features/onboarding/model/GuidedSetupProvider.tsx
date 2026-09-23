@@ -84,7 +84,7 @@ export const roleProfiles: Record<UserRole, RoleProfile> = {
     id: "administrator",
     name: "Rachel Morgan",
     initials: "RM",
-    label: "Enterprise administrator",
+    label: "Administrator",
     shortLabel: "Administrator",
     scope: "Global EHS&S administration",
     description: "Validates governed workbooks, reviews detailed audit history, and creates, edits, and publishes master requirements.",
