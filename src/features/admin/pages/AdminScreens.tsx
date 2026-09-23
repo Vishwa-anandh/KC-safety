@@ -1419,13 +1419,14 @@ export function AdminRequirementDetailScreen() {
                 aria-label="ID"
               />
             </div>
-            <div className={cx("requirement-header__grouping mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3")} key={requirementId ?? "new"}>
+            <div className={cx("requirement-header__grouping mt-3 grid grid-cols-1 gap-3 sm:grid-cols-4")} key={requirementId ?? "new"}>
               <ComboboxField label="Requirement ID" value={draft.requirementId} options={existingRequirementIds} onChange={updateRequirementId} placeholder="Select a requirement" newLabel="Add new requirement" />
               <ComboboxField label="Section" value={draft.section} options={existingSections} onChange={(value) => update("section", value)} placeholder="Select a section" newLabel="Add new section" />
               <ComboboxField label="Sub-Section" value={draft.subsection} options={existingSubsections} onChange={(value) => update("subsection", value)} placeholder="Select a sub-section" newLabel="Add new sub-section" />
-            </div>
-            <div className={cx("requirement-header__title mt-3 flex items-center justify-end")}>
-              <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
+              <div className={cx(fieldClass)}>
+                <span className={cx(fieldLabelRowClass)}>Status</span>
+                <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
+              </div>
             </div>
             <div className={cx("requirement-header__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400")}>
               <span>{draft.siteIds.length ? `${draft.siteIds.length} of ${sites.length} sites scoped` : "Applies to all sites"}</span>
@@ -1538,7 +1539,7 @@ export function AdminRequirementsScreen() {
         }
       />
       {feedback && <InlineMessage tone={feedback.includes("already exists") ? "warning" : "success"} title={feedback.includes("already exists") ? "Requirement not added" : "Master content saved"}>{feedback}</InlineMessage>}
-      <div className={cx("master-data-tabs mt-5 inline-flex w-full gap-0 border-b border-slate-200 sm:w-auto sm:gap-5 dark:border-slate-700")} role="tablist" aria-label="Master data framework">
+      <div className={cx("master-data-tabs inline-flex w-full gap-0 border-b border-slate-200 sm:w-auto sm:gap-5 dark:border-slate-700")} role="tablist" aria-label="Master data framework">
         <button id="framework-tab-all" type="button" role="tab" aria-selected={activeFramework === "all"} aria-controls="master-data-panel" onClick={() => switchFramework("all")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "all" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><span>All requirements</span><small className={cx("inline text-xs", activeFramework === "all" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{masterRequirements.length}</small></button>
         <button id="framework-tab-os" type="button" role="tab" aria-selected={activeFramework === "operating-system"} aria-controls="master-data-panel" onClick={() => switchFramework("operating-system")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "operating-system" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><ClipboardCheck size={17} /><span>Operating System</span><small className={cx("inline text-xs", activeFramework === "operating-system" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{operatingSystemCount}</small></button>
         <button id="framework-tab-ps" type="button" role="tab" aria-selected={activeFramework === "performance-standard"} aria-controls="master-data-panel" onClick={() => switchFramework("performance-standard")} className={cx("inline-flex flex-1 min-h-10 cursor-pointer items-center justify-center gap-2 border-0 border-b-2 bg-transparent px-1.5 py-2 text-sm font-bold text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-kc-blue-500 sm:flex-none sm:justify-start sm:px-0", activeFramework === "performance-standard" ? "border-kc-blue-700 text-kc-blue-800 dark:border-kc-blue-400 dark:text-kc-blue-200" : "border-transparent dark:text-slate-400 dark:hover:text-slate-100")}><ShieldCheck size={17} /><span>Performance Standard</span><small className={cx("inline text-xs", activeFramework === "performance-standard" ? "text-kc-blue-800 dark:text-kc-blue-200" : "text-slate-600 dark:text-slate-400")}>{performanceStandardCount}</small></button>
@@ -1556,18 +1557,22 @@ export function AdminRequirementsScreen() {
             <table className={cx(dataTableClass, "data-table--requirements")}>
               <thead className={cx(dataTableHeadClass)}><tr>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>ID</th>
-                <th className={cx(dataTableHeaderCellClass, "shell:w-1/4")}>Requirement</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/5")}>Requirement</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Section</th>
-                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Sites</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Sub-Section</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Sites</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Priority</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Status</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Actions</th>
               </tr></thead>
               <tbody className={cx(dataTableBodyClass)}>{rows.map((item) => (
                 <tr className={cx(dataTableRowClass, dataTableRowLinkClass)} key={item.id} onClick={() => navigate(`/admin/requirements/${item.id}`)}>
-                  <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
-                  <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("grid min-w-0 gap-0.5")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>{item.subsection}</strong><span className={cx("block truncate text-xs text-slate-500 dark:text-slate-400")}>{item.text}</span></span></td>
+                  <td className={cx(dataTableCellClass)} data-label="ID"><span className={cx(dataTableCellLabelClass)}>ID</span><strong className={cx("block whitespace-nowrap text-slate-900 dark:text-slate-100")}>{item.id}</strong></td>
+                  <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("block text-slate-900 dark:text-slate-100")}>{item.text}</span></td>
                   <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-1")}><span className={cx("block")}>{item.section}</span><FrameworkBadge kind={sectionKindByName.get(item.section) ?? "operating-system"} compact /></span></td>
+                  <td className={cx(dataTableCellClass)} data-label="Sub-Section"><span className={cx(dataTableCellLabelClass)}>Sub-Section</span><span className={cx("block")}>{item.subsection}</span></td>
                   <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
+                  <td className={cx(dataTableCellClass)} data-label="Priority"><span className={cx(dataTableCellLabelClass)}>Priority</span>{item.sectionPriority !== undefined ? <span className={cx(pillBaseClass, pillTone.neutral)}>Priority {item.sectionPriority}{item.overallPriority !== undefined ? ` · ${item.overallPriority} overall` : ""}</span> : <span className={cx("text-xs text-amber-700 italic dark:text-amber-300")}>Not set</span>}</td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
                   <td className={cx(dataTableLastCellClass)} data-label="Actions">
                     <span className={cx(rowActionsClass, "row-actions--menu relative")}>
