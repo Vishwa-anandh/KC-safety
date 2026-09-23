@@ -1316,15 +1316,15 @@ export function AdminRequirementDetailScreen() {
   const existingSections = [...new Set(masterRequirements.map((item) => item.section).filter(Boolean))].sort();
   const existingSubsections = [...new Set(masterRequirements.filter((item) => item.section === draft.section).map((item) => item.subsection).filter(Boolean))].sort();
   const existingRequirementIds = [...new Set(masterRequirements.map((item) => item.requirementId).filter(Boolean))].sort();
-  // Every sibling question under the same Requirement ID shares section/subsection/title (see
-  // shared/types.ts's note on MasterRequirement) — picking an existing Requirement ID here keeps
-  // this question in lockstep with the rest of its group instead of letting them drift apart.
+  // Every sibling question under the same Requirement ID shares section/subsection (title is
+  // derived from subsection at save time, see `save()` below) — picking an existing Requirement
+  // ID here keeps this question in lockstep with the rest of its group instead of drifting apart.
   function updateRequirementId(value: string) {
     const sibling = masterRequirements.find((item) => item.requirementId === value && item.id !== draft.id);
     setDraft((current) => ({
       ...current,
       requirementId: value,
-      ...(sibling ? { section: sibling.section, subsection: sibling.subsection, title: sibling.title } : {}),
+      ...(sibling ? { section: sibling.section, subsection: sibling.subsection } : {}),
     }));
   }
 
@@ -1347,7 +1347,7 @@ export function AdminRequirementDetailScreen() {
   }
 
   const update = (key: keyof MasterRequirement, value: string) => setDraft((current) => ({ ...current, [key]: value }));
-  const valid = Boolean(draft.id.trim() && draft.title.trim() && draft.section.trim() && draft.subsection.trim() && draft.text.trim());
+  const valid = Boolean(draft.id.trim() && draft.section.trim() && draft.subsection.trim() && draft.text.trim());
   const hasUnsavedChanges = isNew || JSON.stringify(draft) !== JSON.stringify(existing);
 
   function requestNavigation(target: MasterRequirement | "list") {
@@ -1373,14 +1373,19 @@ export function AdminRequirementDetailScreen() {
       navigate("/admin/requirements", { state: { feedback: `Requirement ${trimmedId} already exists. Open it to edit the existing record.` } });
       return;
     }
+    const cleanedSubsection = draft.subsection.trim();
     const cleaned: MasterRequirement = {
       ...draft,
       id: trimmedId,
       requirementId: draft.requirementId.trim() || trimmedId,
-      title: draft.title.trim(),
+      // No separate title field — the sub-section name doubles as the requirement's display
+      // title everywhere one is shown (recent changes, audit log, search), since sibling
+      // questions under a Requirement ID are already expected to share it (see ComboboxField's
+      // autofill above).
+      title: cleanedSubsection,
       text: draft.text.trim(),
       section: draft.section.trim(),
-      subsection: draft.subsection.trim(),
+      subsection: cleanedSubsection,
       guidance: (draft.guidance ?? []).map((line) => line.trim()).filter(Boolean),
       expectedEvidence: draft.expectedEvidence.map((line) => line.trim()).filter(Boolean),
     };
@@ -1416,24 +1421,8 @@ export function AdminRequirementDetailScreen() {
               <ComboboxField label="Section" value={draft.section} options={existingSections} onChange={(value) => update("section", value)} placeholder="Select a section" newLabel="Add new section" />
               <ComboboxField label="Sub-Section" value={draft.subsection} options={existingSubsections} onChange={(value) => update("subsection", value)} placeholder="Select a sub-section" newLabel="Add new sub-section" />
             </div>
-            <div className={cx("requirement-header__title mt-3 grid items-start justify-between gap-4 md:flex")}>
-              <div className={cx("min-w-0 md:flex-1")}>
-                <p className={cx(eyebrowClasses)}>Requirement</p>
-                <textarea
-                  className={cx(
-                    "requirement-title-input mt-0.5 w-full max-w-180 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-lg leading-snug font-bold text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900",
-                    submitted && !draft.title.trim() && "field-invalid-input border-red-600! ring-3 ring-red-100 dark:border-red-400!",
-                  )}
-                  rows={2}
-                  value={draft.title}
-                  onChange={(event) => update("title", event.target.value)}
-                  placeholder="Requirement title"
-                  aria-label="Requirement title"
-                />
-              </div>
-              <div className={cx("requirement-header__controls flex flex-none flex-wrap items-center justify-end gap-2.5")}>
-                <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
-              </div>
+            <div className={cx("requirement-header__title mt-3 flex items-center justify-end")}>
+              <Select label="Status" value={draft.status} onChange={(value) => update("status", value)} options={[{ value: "Draft", label: "Draft" }, { value: "Published", label: "Published" }]} />
             </div>
             <div className={cx("requirement-header__footer mt-4 flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400")}>
               <span>{draft.siteIds.length ? `${draft.siteIds.length} of ${sites.length} sites scoped` : "Applies to all sites"}</span>
@@ -1448,7 +1437,7 @@ export function AdminRequirementDetailScreen() {
                 ) : <span>All sites</span>}
               </div>
             </div>
-            {submitted && !valid && <InlineMessage className={cx("mt-4")} tone="danger" title="Complete required fields">Requirement ID, title, section, and text for every question are required before saving.</InlineMessage>}
+            {submitted && !valid && <InlineMessage className={cx("mt-4")} tone="danger" title="Complete required fields">An ID, section, sub-section, and text for every question are required before saving.</InlineMessage>}
           </header>
           <section className={cx("questions-section mt-6")} aria-labelledby="admin-questions-title">
             <div className={cx("section-title-row mb-4 flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between")}>
