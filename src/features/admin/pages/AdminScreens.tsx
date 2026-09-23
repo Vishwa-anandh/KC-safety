@@ -637,16 +637,20 @@ export function AdminImportBatchPreviewScreen() {
       {published && <InlineMessage tone="success" title="Already published">This batch's requirements are live in the master requirements catalog.</InlineMessage>}
       {!rows.length && <EmptyState icon={<FileSpreadsheet size={28} />} title="No requirements in this batch" description="This import batch has no linked master requirement rows." />}
       {sectionOrder.map((section) => {
-        const byRequirement = new Map<string, MasterRequirement[]>();
+        // A master requirement IS a single question (see the type-level note in shared/types.ts)
+        // — `requirementId` only clusters sibling question-records that share one Requirement ID
+        // for display, it never nests them. "Group"/"question" below names that distinction
+        // instead of implying a requirement contains questions.
+        const byRequirementId = new Map<string, MasterRequirement[]>();
         grouped[section].forEach((item) => {
-          const list = byRequirement.get(item.requirementId) ?? [];
+          const list = byRequirementId.get(item.requirementId) ?? [];
           list.push(item);
-          byRequirement.set(item.requirementId, list);
+          byRequirementId.set(item.requirementId, list);
         });
-        const requirementGroups = [...byRequirement.entries()];
+        const requirementGroups = [...byRequirementId.entries()];
         return (
           <section className={cx(tableCardClass)} key={section}>
-            <div className={cx(tableCardHeaderStartClass)}><div><p className={cx(eyebrowClasses)}>Category</p><h2 className={cx(tableCardHeaderTitleClass)}>{section}</h2></div><span className={cx(tableCardHeaderCountClass)}>{requirementGroups.length} requirement{requirementGroups.length === 1 ? "" : "s"}</span></div>
+            <div className={cx(tableCardHeaderStartClass)}><div><p className={cx(eyebrowClasses)}>Category</p><h2 className={cx(tableCardHeaderTitleClass)}>{section}</h2></div><span className={cx(tableCardHeaderCountClass)}>{requirementGroups.length} requirement group{requirementGroups.length === 1 ? "" : "s"}</span></div>
             <div className={cx(historyListClass)}>{requirementGroups.map(([requirementId, items]) => (
               <article className={cx("import-preview-requirement overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900")} key={requirementId}>
                 <div className={cx("import-preview-requirement__summary flex flex-wrap items-center gap-3 p-3")}>
@@ -656,7 +660,7 @@ export function AdminImportBatchPreviewScreen() {
                 </div>
                 <div className={cx("import-preview-questions min-w-0 border-t border-slate-200 bg-white p-4 md:pl-19 dark:border-slate-700 dark:bg-slate-900")}>
                   <div className={cx("import-preview-questions__header flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4")}>
-                    <div><p className={cx(eyebrowClasses)}>Review questions</p><h3 className={cx("mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>Questions included with this requirement</h3></div>
+                    <div><p className={cx(eyebrowClasses)}>Requirement questions</p><h3 className={cx("mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100")}>Every question grouped under Requirement ID {requirementId}</h3></div>
                     <span className={cx(questionCountClass)}>{items.length} question{items.length === 1 ? "" : "s"}</span>
                   </div>
                   <ol className={cx("import-preview-question-list m-0 mt-3 grid list-none gap-2.5 p-0")}>
