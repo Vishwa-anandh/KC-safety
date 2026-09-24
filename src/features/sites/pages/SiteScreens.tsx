@@ -28,7 +28,7 @@ import { actionComplete, actionStatus, assessmentPeriods, currentAssessmentPerio
 import { requirementRoute } from "../../../app/router/links";
 import { appPaths } from "../../../app/router/route-manifest";
 import type { ActionItem, AssessmentPeriod, OwnerRecord, Requirement, SectionSummary, SiteContacts } from "../../../shared/types";
-import { Button, EmptyState, eyebrowClasses, FrameworkBadge, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
+import { Button, EmptyState, eyebrowClasses, FrameworkBadge, IconButton, InlineMessage, MetricCard, PageHeader, PerformanceBadge, ProgressBar, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 import { AssessmentGlanceCard, EvidenceCoverageStrip, GapsBySectionChart, HeroStatCard, InlineBreakdown, InlineProgress, NeedsAttentionPanel, OpenActionsByOwnerChart, RecentChangesFeed } from "../components/OverviewCharts";
 import type { NeedsAttentionItem, OwnerActionRow, SectionGapRow } from "../components/OverviewCharts";
@@ -384,6 +384,21 @@ const siteFields: Array<{ key: keyof SiteContacts; label: string; group: "local"
   { key: "regionalOccupationalHealthEmail", label: "Regional Occupational Health email", group: "regional", email: true },
 ];
 
+/** Read-only rendering of one contacts group — same grid slots as the editable version below so
+ *  toggling edit mode doesn't shift the layout, just what's shown in each slot. */
+function ContactsGroupReadOnly({ group, contacts }: { group: "local" | "regional"; contacts: SiteContacts }) {
+  return <div className={cx(formGridClass)}>{siteFields.filter((field) => field.group === group).map((field) => (
+    <div className={cx(fieldWrapClass)} key={field.key}>
+      <span className={cx(fieldLabelRowClass)}>{field.label}</span>
+      {field.email ? (
+        <a className={cx("inline-flex w-fit items-center gap-1.5 text-sm text-kc-blue-700 hover:underline dark:text-kc-blue-300")} href={`mailto:${contacts[field.key]}`}><Mail size={15} className={cx("flex-none")} />{contacts[field.key]}</a>
+      ) : (
+        <span className={cx("text-sm text-slate-900 dark:text-slate-100")}>{contacts[field.key] || "—"}</span>
+      )}
+    </div>
+  ))}</div>;
+}
+
 function ContactsGroup({ group, draft, errors, onChange }: { group: "local" | "regional"; draft: SiteContacts; errors: Set<keyof SiteContacts>; onChange: (key: keyof SiteContacts, value: string) => void }) {
   return <div className={cx(formGridClass)}>{siteFields.filter((field) => field.group === group).map((field) => {
     const invalid = errors.has(field.key);
@@ -407,20 +422,33 @@ function ContactsGroup({ group, draft, errors, onChange }: { group: "local" | "r
 export function SiteInformationScreen() {
   const { siteContacts, saveSiteContacts } = useSites();
   const [draft, setDraft] = useState<SiteContacts>(siteContacts);
-  const [saved, setSaved] = useState(true);
+  const [editing, setEditing] = useState(false);
   const [errors, setErrors] = useState<Set<keyof SiteContacts>>(new Set());
   const [confirmation, setConfirmation] = useState(false);
+  // Only the active edit session is unsaved work worth warning about — browsing the read-only
+  // view never risks losing anything.
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (!saved) event.preventDefault(); };
+    const warn = (event: BeforeUnloadEvent) => { if (editing) event.preventDefault(); };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [saved]);
+  }, [editing]);
 
   function change(key: keyof SiteContacts, value: string) {
     setDraft((current) => ({ ...current, [key]: value }));
-    setSaved(false);
-    setConfirmation(false);
     setErrors((current) => { const next = new Set(current); next.delete(key); return next; });
+  }
+
+  function startEdit() {
+    setDraft(siteContacts);
+    setErrors(new Set());
+    setConfirmation(false);
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setDraft(siteContacts);
+    setErrors(new Set());
+    setEditing(false);
   }
 
   function save() {
@@ -429,22 +457,34 @@ export function SiteInformationScreen() {
     setErrors(invalid);
     if (invalid.size) return;
     saveSiteContacts(draft);
-    setSaved(true);
+    setEditing(false);
     setConfirmation(true);
   }
 
   return (
     <div className={cx(pageContainerClass)} style={pageContainerStyle}>
-      <PageHeader eyebrow="Site workspace" title="Site information" description="Maintain leadership and contact details for your assigned site. Core site identity is governed centrally." actions={<Button variant="primary" icon={<Save size={18} />} onClick={save} disabled={saved} data-tour="site-save">Save changes</Button>} />
+      <PageHeader
+        eyebrow="Site workspace"
+        title="Site information"
+        description="Leadership and contact details for your assigned site. Core site identity is governed centrally."
+        actions={editing ? (
+          <>
+            <Button variant="secondary" onClick={cancelEdit}>Cancel</Button>
+            <Button variant="primary" icon={<Save size={18} />} onClick={save} data-tour="site-save">Save changes</Button>
+          </>
+        ) : (
+          <Button variant="primary" icon={<Pencil size={18} />} onClick={startEdit} data-tour="site-save">Edit</Button>
+        )}
+      />
       {confirmation && <InlineMessage tone="success" title="Site contacts saved">The updated contact information is now available across this site workspace.</InlineMessage>}
       {errors.size > 0 && <InlineMessage tone="danger" title="Review the highlighted fields">Complete every contact and use a valid email address before saving.</InlineMessage>}
       <section className={cx("form-card", cardClass)} data-tour="site-contacts-form">
-        <div className={cx("form-card__header", cardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Local leadership</p><h2 className={cx(cardHeaderTitleClass)}>Site contacts</h2><span className={cx(cardHeaderDetailClass)}>People responsible for site-level EHS&S coordination.</span></div>{saved ? <SaveStatus /> : <span className={cx("unsaved-state rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300")}>Unsaved changes</span>}</div>
-        <ContactsGroup group="local" draft={draft} errors={errors} onChange={change} />
+        <div className={cx("form-card__header", cardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Local leadership</p><h2 className={cx(cardHeaderTitleClass)}>Site contacts</h2><span className={cx(cardHeaderDetailClass)}>People responsible for site-level EHS&S coordination.</span></div></div>
+        {editing ? <ContactsGroup group="local" draft={draft} errors={errors} onChange={change} /> : <ContactsGroupReadOnly group="local" contacts={siteContacts} />}
       </section>
       <section className={cx("form-card", cardClass)}>
         <div className={cx("form-card__header", cardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Reference contacts</p><h2 className={cx(cardHeaderTitleClass)}>Regional leadership</h2><span className={cx(cardHeaderDetailClass)}>Used for escalation and enterprise communication.</span></div></div>
-        <ContactsGroup group="regional" draft={draft} errors={errors} onChange={change} />
+        {editing ? <ContactsGroup group="regional" draft={draft} errors={errors} onChange={change} /> : <ContactsGroupReadOnly group="regional" contacts={siteContacts} />}
       </section>
     </div>
   );
