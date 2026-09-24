@@ -2,6 +2,7 @@ import {
   Accessibility,
   Bell,
   BookOpen,
+  Camera,
   Check,
   CircleHelp,
   KeyRound,
@@ -22,12 +23,12 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type PointerEvent as ReactPointerEvent, type SyntheticEvent } from "react";
 import { NavLink, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 import { ChangePasswordDialog, useAuth } from "../../auth";
 import { useGuidedSetup, type UserRole } from "../../onboarding";
 import { AccentSelector, ThemeSelector, useTheme } from "../model/ThemeProvider";
-import { Button, ConfirmDialog, IconButton, InlineMessage, PageHeader, ProgressBar } from "../../../shared/ui/UI";
+import { Avatar, Button, ConfirmDialog, IconButton, InlineMessage, PageHeader, ProgressBar } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 import { appPaths } from "../../../app/router/route-manifest";
 import { settingsRoute } from "../../../app/router/links";
@@ -211,9 +212,7 @@ export function SettingsLayout() {
             </div>
           )}
           <div className="settings-index__account hidden min-w-0 items-center gap-2 border-t border-slate-200 px-1.5 pt-2.5 lg:flex dark:border-slate-700">
-            <span className="avatar inline-grid size-9.5 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">
-              {user?.initials ?? profile.initials}
-            </span>
+            <Avatar src={user?.avatarUrl} initials={user?.initials ?? profile.initials} className="size-9.5" />
             <div className="grid min-w-0">
               <strong className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-slate-900 dark:text-slate-100">{user?.name ?? profile.name}</strong>
               <span className="overflow-hidden text-xs text-ellipsis whitespace-nowrap text-slate-500 dark:text-slate-400">{user?.roleLabel ?? profile.label}</span>
@@ -228,9 +227,143 @@ export function SettingsLayout() {
   );
 }
 
+// Square crop viewport shown in the dialog and the exported photo's resolution — independent
+// numbers, since the on-screen crop area doesn't need to match the file's actual pixel size.
+const AVATAR_VIEWPORT = 240;
+const AVATAR_OUTPUT = 320;
+const AVATAR_MIN_ZOOM = 1;
+const AVATAR_MAX_ZOOM = 3;
+
+/** Pick-position-and-zoom cropper for a freshly selected photo. The image is always scaled to
+ *  cover the (square) viewport at zoom 1, so there's never an empty gap around it — dragging and
+ *  zooming just move/scale the image within that constraint, not the crop frame itself. */
+function AvatarCropDialog({ file, onCancel, onSave }: { file: File; onCancel: () => void; onSave: (dataUrl: string) => void }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const baseScale = naturalSize ? AVATAR_VIEWPORT / Math.min(naturalSize.width, naturalSize.height) : 1;
+  const displayWidth = naturalSize ? naturalSize.width * baseScale * zoom : AVATAR_VIEWPORT;
+  const displayHeight = naturalSize ? naturalSize.height * baseScale * zoom : AVATAR_VIEWPORT;
+
+  function clampOffset(next: { x: number; y: number }, width: number, height: number) {
+    return { x: Math.min(0, Math.max(AVATAR_VIEWPORT - width, next.x)), y: Math.min(0, Math.max(AVATAR_VIEWPORT - height, next.y)) };
+  }
+
+  function handleImageLoad(event: SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+    const scale = AVATAR_VIEWPORT / Math.min(width, height);
+    setNaturalSize({ width, height });
+    setOffset({ x: (AVATAR_VIEWPORT - width * scale) / 2, y: (AVATAR_VIEWPORT - height * scale) / 2 });
+  }
+
+  function handleZoomChange(nextZoom: number) {
+    if (!naturalSize) { setZoom(nextZoom); return; }
+    // Re-anchors on the viewport's center point so the slider zooms toward the middle of the
+    // crop, not the image's top-left corner.
+    const nextWidth = naturalSize.width * baseScale * nextZoom;
+    const nextHeight = naturalSize.height * baseScale * nextZoom;
+    const relX = (AVATAR_VIEWPORT / 2 - offset.x) / displayWidth;
+    const relY = (AVATAR_VIEWPORT / 2 - offset.y) / displayHeight;
+    setZoom(nextZoom);
+    setOffset(clampOffset({ x: AVATAR_VIEWPORT / 2 - relX * nextWidth, y: AVATAR_VIEWPORT / 2 - relY * nextHeight }, nextWidth, nextHeight));
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!naturalSize) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { startX: event.clientX, startY: event.clientY, originX: offset.x, originY: offset.y };
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragRef.current) return;
+    const drag = dragRef.current;
+    setOffset(clampOffset({ x: drag.originX + (event.clientX - drag.startX), y: drag.originY + (event.clientY - drag.startY) }, displayWidth, displayHeight));
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function handleSave() {
+    if (!naturalSize || !imgRef.current) return;
+    const scale = baseScale * zoom;
+    const canvas = document.createElement("canvas");
+    canvas.width = AVATAR_OUTPUT;
+    canvas.height = AVATAR_OUTPUT;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(imgRef.current, -offset.x / scale, -offset.y / scale, AVATAR_VIEWPORT / scale, AVATAR_VIEWPORT / scale, 0, 0, AVATAR_OUTPUT, AVATAR_OUTPUT);
+    onSave(canvas.toDataURL("image/png"));
+  }
+
+  return (
+    <div className={dialogLayerClass}>
+      <button className={dialogBackdropClass} aria-label="Cancel photo upload" onClick={onCancel} />
+      <section className={cx(dialogClass, "max-w-sm")} role="dialog" aria-modal="true" aria-labelledby="avatar-crop-title">
+        <div className={dialogHeaderClass}>
+          <div><p className={dialogTitleEyebrowClass}>Account and access</p><h2 id="avatar-crop-title" className={dialogTitleClass}>Crop your photo</h2></div>
+          <IconButton label="Cancel" onClick={onCancel}><X size={20} /></IconButton>
+        </div>
+        <div className="grid gap-4 p-4">
+          <div
+            className="relative mx-auto touch-none overflow-hidden rounded-full border border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-800"
+            style={{ width: AVATAR_VIEWPORT, height: AVATAR_VIEWPORT, cursor: dragRef.current ? "grabbing" : "grab" }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            {imageUrl && (
+              <img
+                ref={imgRef}
+                src={imageUrl}
+                alt=""
+                draggable={false}
+                onLoad={handleImageLoad}
+                className="pointer-events-none absolute max-w-none select-none"
+                style={{ width: displayWidth, height: displayHeight, left: offset.x, top: offset.y }}
+              />
+            )}
+          </div>
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Zoom</span>
+            <input type="range" min={AVATAR_MIN_ZOOM} max={AVATAR_MAX_ZOOM} step={0.01} value={zoom} disabled={!naturalSize} onChange={(event) => handleZoomChange(Number(event.target.value))} className="w-full accent-kc-blue-600" aria-label="Zoom" />
+          </label>
+          <p className="m-0 text-xs text-slate-500 dark:text-slate-400">Drag the photo to reposition it, and use the slider to zoom.</p>
+        </div>
+        <div className={dialogFooterClass}>
+          <Button variant="tertiary" onClick={onCancel}>Cancel</Button>
+          <Button variant="primary" icon={<Check size={17} />} onClick={handleSave} disabled={!naturalSize}>Save photo</Button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function AccountSettings() {
-  const { user } = useAuth();
+  const { user, updateAvatar } = useAuth();
   const { profile } = useGuidedSetup();
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) setPendingFile(file);
+    event.target.value = "";
+  }
+
   return (
     <>
       <PageHeader
@@ -245,12 +378,26 @@ export function AccountSettings() {
       />
       <section className={settingsCardClass}>
         <div className="settings-identity grid grid-cols-[auto_1fr] items-center gap-3.5 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[auto_minmax(120px,0.65fr)_minmax(200px,1.35fr)] dark:border-slate-700 dark:bg-slate-900">
-          <span className="avatar avatar--large inline-grid size-13 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-sm font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200">
-            {user?.initials ?? profile.initials}
-          </span>
-          <div className="grid min-w-0">
+          <div className="relative w-fit flex-none">
+            <Avatar src={user?.avatarUrl} initials={user?.initials ?? profile.initials} className="avatar--large size-13" />
+            <button
+              type="button"
+              className="absolute -right-1 -bottom-1 grid size-6 flex-none place-items-center rounded-full border-2 border-slate-50 bg-kc-blue-600 text-white hover:bg-kc-blue-700 dark:border-slate-900"
+              aria-label="Upload profile photo"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera size={13} />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} aria-label="Choose a profile photo" />
+          </div>
+          <div className="grid min-w-0 gap-1">
             <strong className="text-sm text-slate-900 dark:text-slate-100">{user?.name ?? profile.name}</strong>
             <a href={`mailto:${user?.email}`} className="overflow-hidden text-xs text-ellipsis text-slate-500 dark:text-slate-400">{user?.email}</a>
+            {user?.avatarUrl && (
+              <button type="button" className="mt-0.5 inline-flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-xs font-semibold text-red-700 hover:underline dark:text-red-300" onClick={() => setRemoving(true)}>
+                <Trash2 size={13} /> Remove photo
+              </button>
+            )}
           </div>
           <dl className="col-span-full m-0 grid grid-cols-1 gap-2.5 sm:col-span-1">
             <div className="grid gap-0.5 border-t border-slate-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3.5 dark:border-slate-700">
@@ -278,6 +425,18 @@ export function AccountSettings() {
           </ul>
         </div>
       </section>
+      {pendingFile && <AvatarCropDialog file={pendingFile} onCancel={() => setPendingFile(null)} onSave={(dataUrl) => { updateAvatar(dataUrl); setPendingFile(null); }} />}
+      {removing && (
+        <ConfirmDialog
+          eyebrow="Account and access"
+          title="Remove your profile photo?"
+          body="Your avatar will show your initials again. You can upload a new photo any time."
+          confirmLabel="Remove photo"
+          cancelLabel="Keep photo"
+          onCancel={() => setRemoving(false)}
+          onConfirm={() => { updateAvatar(null); setRemoving(false); }}
+        />
+      )}
     </>
   );
 }

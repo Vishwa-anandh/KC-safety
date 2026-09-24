@@ -630,6 +630,18 @@ export function KcLogo() {
   );
 }
 
+/** The one avatar every profile chip renders — a cropped photo when the account has one (see
+ *  Account and access), the initials badge otherwise. `className` carries sizing only (size-*,
+ *  text-*, md:size-*); the circular shape, border, and colors are fixed here so a photo and the
+ *  initials fallback always look like the same element, never a resize/recolor per call site. */
+export function Avatar({ src, initials, className }: { src?: string; initials: string; className?: string }) {
+  return (
+    <span className={cx("avatar inline-grid flex-none place-items-center overflow-hidden rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200", className)}>
+      {src ? <img className={cx("size-full object-cover")} src={src} alt="" /> : initials}
+    </span>
+  );
+}
+
 /**
  * Confirmation for destructive actions. Uses role="alertdialog" (not "dialog") because it
  * interrupts the user to confirm a consequence, and focuses the cancel button so the safe

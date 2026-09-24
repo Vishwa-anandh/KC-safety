@@ -12,6 +12,9 @@ export interface AuthUser {
   role: UserRole;
   roleLabel: string;
   scope: string;
+  /** Cropped square photo as a data URL, set from Account and access — falls back to the
+   *  initials badge everywhere an avatar is shown when this is unset. */
+  avatarUrl?: string;
 }
 
 export interface PasskeyRecord {

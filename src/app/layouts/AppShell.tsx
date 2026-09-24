@@ -29,7 +29,7 @@ import { useGuidedSetup, type UserRole } from "../../features/onboarding";
 import { useNotifications } from "../../features/notifications";
 import type { AppNotification, NotificationCategory } from "../../shared/types";
 import { ThemeSelector, useTheme } from "../../features/settings";
-import { IconButton, KcLogo } from "../../shared/ui/UI";
+import { Avatar, IconButton, KcLogo } from "../../shared/ui/UI";
 import { cx } from "../../shared/utils";
 import { appPaths } from "../router/route-manifest";
 
@@ -455,7 +455,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className={cx("avatar inline-grid size-9 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 md:size-10 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{profile.initials}</span>
+        <Avatar src={user?.avatarUrl} initials={profile.initials} className="size-9 md:size-10" />
         <span className={cx("profile-button__copy grid", (compact || collapsed) && "hidden")}>
           <strong className={cx("text-sm", inSidebar ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-slate-200")}>{profile.name}</strong>
           <small className={cx("text-xs", inSidebar ? "text-slate-500 dark:text-white/65" : "text-slate-500 dark:text-slate-400")}>{profile.label}</small>
@@ -487,7 +487,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
           aria-label="Profile and appearance"
         >
           <div className={cx("profile-menu__identity flex items-center gap-3 border-b border-slate-200 bg-linear-135 from-kc-blue-50 to-transparent p-4 dark:border-slate-700 dark:from-kc-blue-950 dark:to-transparent")}>
-            <span className={cx("avatar inline-grid size-9 flex-none place-items-center rounded-full border border-kc-blue-200 bg-kc-blue-50 text-xs font-bold text-kc-blue-800 md:size-10 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-kc-blue-200")}>{profile.initials}</span>
+            <Avatar src={user?.avatarUrl} initials={profile.initials} className="size-9 md:size-10" />
             <div className={cx("grid min-w-0")}>
               <strong className={cx("text-base text-slate-900 dark:text-slate-100")}>{profile.name}</strong>
               <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{profile.label}</span>

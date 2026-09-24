@@ -22,6 +22,7 @@ interface AuthContextValue {
   requestPasswordChangeCode: (currentPassword: string) => Promise<{ maskedEmail: string; devCode?: string }>;
   confirmPasswordChange: (code: string, newPassword: string) => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
+  updateAvatar: (avatarUrl: string | null) => void;
   registerPasskey: (name: string) => Promise<PasskeyRecord>;
   renamePasskey: (id: string, name: string) => void;
   removePasskey: (id: string) => void;
@@ -160,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (account) updateSession(account);
   }
 
+  function updateAvatar(avatarUrl: string | null) {
+    if (!user) return;
+    updateSession({ ...user, avatarUrl: avatarUrl ?? undefined });
+  }
+
   async function registerPasskey(name: string) {
     if (!user) throw new Error("Sign in before adding a passkey.");
     assertPasskeySupport();
@@ -270,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithPasskey,
     signOut,
     switchDemoRole,
+    updateAvatar,
     registerPasskey,
     renamePasskey,
     removePasskey,
