@@ -113,7 +113,7 @@ const navPerformanceTextTone: Record<Performance, string> = {
  * the row already carries a check/warning/circle icon via NavigatorState, so a second badge
  * chrome here would be redundant. */
 function NavPerformance({ performance }: { performance: Performance }) {
-  return <small className={cx("nav-performance flex-none text-xs font-bold whitespace-nowrap", navPerformanceTextTone[performance])}>{performanceLabel(performance)}</small>;
+  return <small className={cx("nav-performance flex-none text-xs font-normal whitespace-nowrap", navPerformanceTextTone[performance])}>{performanceLabel(performance)}</small>;
 }
 
 function AssessmentNavigator({
