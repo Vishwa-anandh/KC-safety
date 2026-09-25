@@ -25,7 +25,7 @@ import {
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../model/useAssessment";
 import { useAuth } from "../../auth";
-import { actionComplete, performanceForResponse } from "../../../shared/domain/assessment";
+import { actionComplete, performanceForResponse, rollupPerformance } from "../../../shared/domain/assessment";
 import type { ActionItem, EvidenceItem, Requirement, ResponseValue, SectionSummary } from "../../../shared/types";
 import { Button, ConfirmDialog, eyebrowClasses, FrameworkBadge, IconButton, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
@@ -226,6 +226,7 @@ function AssessmentNavigator({
                           >
                             <NavigatorState state={groupState(sub.items)} />
                             <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
+                            <PerformanceBadge performance={rollupPerformance(sub.items.map((item) => item.response))} compact />
                           </button>
                         );
                       })}
