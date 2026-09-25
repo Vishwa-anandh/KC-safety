@@ -25,8 +25,8 @@ import {
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAssessment } from "../model/useAssessment";
 import { useAuth } from "../../auth";
-import { actionComplete, performanceForResponse, rollupPerformance } from "../../../shared/domain/assessment";
-import type { ActionItem, EvidenceItem, Requirement, ResponseValue, SectionSummary } from "../../../shared/types";
+import { actionComplete, performanceForResponse, performanceLabel, rollupPerformance } from "../../../shared/domain/assessment";
+import type { ActionItem, EvidenceItem, Performance, Requirement, ResponseValue, SectionSummary } from "../../../shared/types";
 import { Button, ConfirmDialog, eyebrowClasses, FrameworkBadge, IconButton, PerformanceBadge, ProgressBar, SaveStatus, Select } from "../../../shared/ui/UI";
 import { cx } from "../../../shared/utils";
 
@@ -100,6 +100,20 @@ function NavigatorState({ state }: { state: string }) {
   if (state === "complete") return <CheckCircle2 size={16} className="nav-state nav-state--complete flex-none text-emerald-700 dark:text-emerald-300" />;
   if (state === "gap") return <AlertTriangle size={16} className="nav-state nav-state--gap flex-none text-amber-700 dark:text-amber-300" />;
   return <Circle size={15} className="nav-state nav-state--incomplete flex-none text-slate-400 dark:text-slate-500" />;
+}
+
+const navPerformanceTextTone: Record<Performance, string> = {
+  performing: "text-emerald-700 dark:text-emerald-400",
+  emerging: "text-amber-700 dark:text-amber-400",
+  initial: "text-red-700 dark:text-red-400",
+  "not-assessed": "text-slate-500 dark:text-slate-400",
+};
+
+/** Sub-section performance signal, kept to plain colored text (no pill background/border) —
+ * the row already carries a check/warning/circle icon via NavigatorState, so a second badge
+ * chrome here would be redundant. */
+function NavPerformance({ performance }: { performance: Performance }) {
+  return <small className={cx("nav-performance flex-none text-xs font-bold whitespace-nowrap", navPerformanceTextTone[performance])}>{performanceLabel(performance)}</small>;
 }
 
 function AssessmentNavigator({
@@ -226,7 +240,7 @@ function AssessmentNavigator({
                           >
                             <NavigatorState state={groupState(sub.items)} />
                             <span className={cx("min-w-0 flex-1 truncate text-sm font-semibold", subActive ? "text-kc-blue-900 dark:text-kc-blue-100" : "text-slate-600 dark:text-slate-400")}>{sub.subsection || "General"}</span>
-                            <PerformanceBadge performance={rollupPerformance(sub.items.map((item) => item.response))} compact />
+                            <NavPerformance performance={rollupPerformance(sub.items.map((item) => item.response))} />
                           </button>
                         );
                       })}
