@@ -74,7 +74,7 @@ export const roleProfiles: Record<UserRole, RoleProfile> = {
     name: "Maya Patel",
     initials: "MP",
     label: "Site contributor",
-    shortLabel: "Site user",
+    shortLabel: "Site admin",
     scope: "Northstar Manufacturing",
     description: "Maintains site contacts and owners, completes the assessment, attaches evidence, and closes information gaps.",
     home: "/overview",

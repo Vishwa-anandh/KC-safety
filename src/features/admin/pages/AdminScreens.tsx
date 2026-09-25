@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Download,
   FileInput,
+  FileSearch,
   FileSpreadsheet,
   FileText,
   Filter,
@@ -35,7 +36,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useAdministration } from "../model/useAdministration";
-import { importTemplateColumns, planRequirementImport, planRequirementRows, type ImportTemplateRow, type RequirementImportMode, type RequirementImportPlan } from "../model/importWorkbook";
+import { planRequirementImport, planRequirementRows, type RequirementImportMode, type RequirementImportPlan } from "../model/importWorkbook";
 import { assetBaseUrl } from "../../../app/config/environment";
 import type { ImportHistoryRecord } from "../../../data-access/contracts";
 import { frameworkLabel, type SectionKind } from "../../../shared/domain/assessment";
@@ -45,7 +46,7 @@ import { Button, CheckboxList, ConfirmDialog, EmptyState, eyebrowClasses, IconBu
 import { ContactsPanel, OwnersPanel } from "../../sites/components/SitePanels";
 import { cx } from "../../../shared/utils";
 
-const importSteps = ["Choose flow", "Upload", "Review changes", "Site selection", "Publish"];
+const importSteps = ["Upload", "Site selection", "Review"];
 
 // ---------------------------------------------------------------------------------------------
 // Canonical class recipes shared across this file's screens. Each mirrors a pattern duplicated
@@ -192,7 +193,7 @@ const stepItemLabelTone = {
 };
 
 function StepIndicator({ current }: { current: number }) {
-  return <div className={cx("border-b border-slate-200 dark:border-slate-700")}><ol className={cx("step-indicator mx-auto my-0 grid w-full max-w-4xl grid-cols-5 list-none px-2 py-3.5 md:p-4")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
+  return <div className={cx("border-b border-slate-200 dark:border-slate-700")}><ol className={cx("step-indicator mx-auto my-0 grid w-full max-w-4xl grid-cols-3 list-none px-2 py-3.5 md:p-4")} aria-label="Import progress" data-tour="import-steps">{importSteps.map((step, index) => {
     const state = index < current ? "complete" : index === current ? "current" : "upcoming";
     return (
       <li
@@ -282,8 +283,6 @@ const importStageHeadingClass = "import-stage__heading mb-5 flex max-w-3xl gap-3
 const stageIconClass = "stage-icon grid size-12 flex-none place-items-center rounded-xl bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300";
 const dropzoneClass = "dropzone grid min-h-65 w-full place-content-center place-items-center gap-2 rounded-lg border-2 border-dashed border-kc-blue-300 bg-kc-blue-50 p-4 text-center text-slate-700 hover:border-kc-blue-600 hover:bg-kc-blue-100 dark:border-kc-blue-800 dark:bg-kc-blue-950 dark:text-slate-300 dark:hover:bg-kc-blue-900";
 const selectedFileClass = "selected-file flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950";
-const inspectionGridClass = "inspection-grid mb-4 grid grid-cols-1 gap-3 md:grid-cols-4";
-const inspectionTileClass = "grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 dark:border-slate-700 dark:bg-slate-900";
 const resultStateClass = "result-state mx-auto grid max-w-160 justify-items-center py-12 text-center";
 const importCardFooterClass = "import-card__footer flex flex-col items-stretch justify-between gap-3 border-t border-slate-200 p-3.5 md:flex-row md:items-center dark:border-slate-700";
 
@@ -884,190 +883,51 @@ export function AdminImportBatchPreviewScreen() {
   );
 }
 
-// "Requirement ID" and "Question ID" hold short codes (e.g. LE-01, LE-01-Q1) so they need far
-// less room than the free-text columns; Section/Sub-Section values are short phrases that were
-// already wrapping onto two lines at the wider size. Trimming both keeps the "Workbook rows"
-// table from needing a horizontal scrollbar at a normal admin viewport width.
-const compactWorkbookColumns = new Set<string>(["Requirement ID", "Question ID", "Section Priority", "Overall Priority"]);
-const mediumWorkbookColumns = new Set<string>(["Section", "Sub-Section"]);
-function workbookColumnWidthClass(column: string) {
-  if (compactWorkbookColumns.has(column)) return "min-w-16";
-  if (mediumWorkbookColumns.has(column)) return "min-w-28";
-  return "min-w-32";
-}
-
 export function AdminImportsScreen() {
   const navigate = useNavigate();
-  const { importHistory, publishImportBatch, submitImportBatch, masterRequirements, sites, notify } = useAdministration();
+  const { submitImportBatch, masterRequirements, sites } = useAdministration();
+  // Every import safely matches existing Requirement ID + Question ID and updates in place,
+  // creating only genuinely new questions — there's no separate "new vs update" choice to make.
+  const mode: RequirementImportMode = "update";
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<RequirementImportMode | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [plan, setPlan] = useState<RequirementImportPlan | null>(null);
-  const [editableRows, setEditableRows] = useState<ImportTemplateRow[]>([]);
-  const [selectedRowNumbers, setSelectedRowNumbers] = useState<number[]>([]);
-  const lastSelectedRowNumber = useRef<number | null>(null);
-  const [publishNow, setPublishNow] = useState(false);
   const [siteScope, setSiteScope] = useState<"all" | "specific">("all");
   const [scopedSiteIds, setScopedSiteIds] = useState<string[]>([]);
-  const [result, setResult] = useState<ImportHistoryRecord | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const siteOptions = buildSiteOptions(sites);
-  // Spreadsheet-style range selection over the "Workbook rows" cells, for copy/paste across
-  // multiple cells at once. Coordinates are indexes into editableRows / importTemplateColumns,
-  // not row numbers/column names, so a pasted block can be applied purely by offset.
-  const [cellSelection, setCellSelection] = useState<{ anchorRow: number; anchorCol: number; focusRow: number; focusCol: number } | null>(null);
-  const isSelectingCellsRef = useRef(false);
   // The whole batch shares one site scope, chosen in the wizard's Site selection step — not a
   // per-row workbook value.
   const resolvedSiteIds = siteScope === "specific" ? scopedSiteIds : [];
 
-  useEffect(() => {
-    if (!result || !publishNow || result.publishStatus === "Published") return;
-    publishImportBatch(result.id);
-    setResult((current) => current ? { ...current, publishStatus: "Published" } : current);
-  }, [publishImportBatch, publishNow, result]);
-
-  // Ends a drag-selection wherever the mouse button is released, even outside the table.
-  useEffect(() => {
-    function endCellDrag() { isSelectingCellsRef.current = false; }
-    window.addEventListener("mouseup", endCellDrag);
-    return () => window.removeEventListener("mouseup", endCellDrag);
-  }, []);
-
   async function selectFile(selected?: File) {
     if (!selected) return;
-    if (!mode) { setFileError("Choose New requirements or Update requirements before uploading a workbook."); return; }
     if (!selected.name.toLowerCase().endsWith(".xlsx")) { setFile(null); setPlan(null); setFileError("Choose the EHS360 Excel .xlsx import template."); return; }
     if (selected.size > 25 * 1024 * 1024) { setFile(null); setFileError("The import file must be 25 MB or smaller."); return; }
-    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds); setFile(selected); setPlan(nextPlan); setEditableRows(nextPlan.rows); setSelectedRowNumbers(mode === "new" ? nextPlan.rows.map((row) => row.rowNumber) : []); setFileError(""); }
+    try { const nextPlan = await planRequirementImport(mode, selected, masterRequirements, resolvedSiteIds); setFile(selected); setPlan(nextPlan); setFileError(""); }
     catch (error) { setFile(null); setPlan(null); setFileError(error instanceof Error ? error.message : "The workbook could not be read."); }
   }
-  function updatePreviewRows(nextRows: ImportTemplateRow[]) {
-    setEditableRows(nextRows);
-    if (!mode || !file) return;
-    const nextPlan = planRequirementRows(mode, file.name, nextRows, masterRequirements, resolvedSiteIds);
-    setPlan(nextPlan);
-    setSelectedRowNumbers((current) => mode === "new"
-      ? nextPlan.rows.map((row) => row.rowNumber)
-      : current.filter((rowNumber) => nextPlan.rows.some((row) => row.rowNumber === rowNumber)));
-  }
-  function togglePreviewRow(rowNumber: number, checked: boolean, shiftKey: boolean) {
-    const rowNumbers = editableRows.map((row) => row.rowNumber);
-    const lastIndex = lastSelectedRowNumber.current === null ? -1 : rowNumbers.indexOf(lastSelectedRowNumber.current);
-    const currentIndex = rowNumbers.indexOf(rowNumber);
-    const range = shiftKey && lastIndex >= 0 && currentIndex >= 0
-      ? rowNumbers.slice(Math.min(lastIndex, currentIndex), Math.max(lastIndex, currentIndex) + 1)
-      : [rowNumber];
-    setSelectedRowNumbers((current) => checked
-      ? [...new Set([...current, ...range])]
-      : current.filter((number) => !range.includes(number)));
-    lastSelectedRowNumber.current = rowNumber;
-  }
-  function cellSelectionBounds(selection: { anchorRow: number; anchorCol: number; focusRow: number; focusCol: number }) {
-    return {
-      minRow: Math.min(selection.anchorRow, selection.focusRow),
-      maxRow: Math.max(selection.anchorRow, selection.focusRow),
-      minCol: Math.min(selection.anchorCol, selection.focusCol),
-      maxCol: Math.max(selection.anchorCol, selection.focusCol),
-    };
-  }
-  function isCellSelected(rowIndex: number, colIndex: number) {
-    if (!cellSelection) return false;
-    const bounds = cellSelectionBounds(cellSelection);
-    return rowIndex >= bounds.minRow && rowIndex <= bounds.maxRow && colIndex >= bounds.minCol && colIndex <= bounds.maxCol;
-  }
-  function startCellSelection(rowIndex: number, colIndex: number, extend: boolean) {
-    isSelectingCellsRef.current = true;
-    setCellSelection((current) => extend && current
-      ? { ...current, focusRow: rowIndex, focusCol: colIndex }
-      : { anchorRow: rowIndex, anchorCol: colIndex, focusRow: rowIndex, focusCol: colIndex });
-  }
-  function extendCellSelection(rowIndex: number, colIndex: number) {
-    if (!isSelectingCellsRef.current) return;
-    setCellSelection((current) => current ? { ...current, focusRow: rowIndex, focusCol: colIndex } : current);
-  }
-  // Only intercepted when the selection spans more than one cell — a single-cell selection lets
-  // the browser's normal in-textarea copy/paste behave exactly as expected.
-  function handleWorkbookCopy(event: React.ClipboardEvent<HTMLDivElement>) {
-    if (!cellSelection) return;
-    const bounds = cellSelectionBounds(cellSelection);
-    if (bounds.minRow === bounds.maxRow && bounds.minCol === bounds.maxCol) return;
-    event.preventDefault();
-    const tsv = [];
-    for (let rowIndex = bounds.minRow; rowIndex <= bounds.maxRow; rowIndex++) {
-      const cols = [];
-      for (let colIndex = bounds.minCol; colIndex <= bounds.maxCol; colIndex++) cols.push(editableRows[rowIndex]?.[importTemplateColumns[colIndex]] ?? "");
-      tsv.push(cols.join("\t"));
-    }
-    event.clipboardData.setData("text/plain", tsv.join("\n"));
-  }
-  function handleWorkbookPaste(event: React.ClipboardEvent<HTMLDivElement>) {
-    if (!cellSelection) return;
-    const text = event.clipboardData.getData("text/plain");
-    if (!text) return;
-    const lines = text.replace(/\r/g, "").split("\n");
-    if (lines.at(-1) === "") lines.pop();
-    const grid = lines.map((line) => line.split("\t"));
-    // A single value (no tabs, one line) isn't a "paste a block" gesture — let it land in
-    // whichever cell natively has focus instead.
-    if (grid.length <= 1 && (grid[0]?.length ?? 0) <= 1) return;
-    event.preventDefault();
-    const bounds = cellSelectionBounds(cellSelection);
-    const next = editableRows.map((row) => ({ ...row }));
-    grid.forEach((line, rowOffset) => {
-      const targetRow = bounds.minRow + rowOffset;
-      if (targetRow >= next.length) return;
-      line.forEach((value, colOffset) => {
-        const targetCol = bounds.minCol + colOffset;
-        if (targetCol >= importTemplateColumns.length) return;
-        next[targetRow][importTemplateColumns[targetCol]] = value;
-      });
-    });
-    updatePreviewRows(next);
-    setCellSelection({
-      anchorRow: bounds.minRow,
-      anchorCol: bounds.minCol,
-      focusRow: Math.min(next.length - 1, bounds.minRow + grid.length - 1),
-      focusCol: Math.min(importTemplateColumns.length - 1, bounds.minCol + (grid[0]?.length ?? 1) - 1),
-    });
-  }
   function advance() {
-    if (step === 3) {
+    if (step === 1) {
       // Site selection applies as one shared scope for the whole batch — every requirement in
-      // this import gets the same siteIds, not a per-row workbook value.
-      if (mode && file) setPlan(planRequirementRows(mode, file.name, editableRows, masterRequirements, resolvedSiteIds));
-      setStep(4);
+      // this import gets the same siteIds.
+      if (file && plan) setPlan(planRequirementRows(mode, file.name, plan.rows, masterRequirements, resolvedSiteIds));
+      setStep(2);
       return;
     }
-    if (step === 4 && selectedPlan && !selectedPlan.issues.some((issue) => issue.severity === "error")) {
-      const selected = new Set(selectedRowNumbers);
-      const stagedPlan = planRequirementRows(mode!, file!.name, editableRows.filter((row) => selected.has(row.rowNumber)), masterRequirements, resolvedSiteIds);
-      const record = submitImportBatch(stagedPlan);
-      notify({
-        title: `${record.fileName} imported`,
-        body: publishNow ? `${record.created + record.updated} requirements were published from this import.` : `${record.created + record.updated} requirements are staged as drafts and stay invisible to sites until published.`,
-        category: "master-data",
-        audience: ["administrator"],
-        link: `/admin/imports/${record.id}/preview`,
-      });
-      setResult(record); setStep(5); return;
-    }
-    setStep((value) => Math.min(5, value + 1));
+    setStep((value) => Math.min(2, value + 1));
+  }
+  // Fires from the Review step — every batch lands as a reviewable Draft; publishing is a
+  // separate, explicit decision already wired up on the batch preview screen this hands off to.
+  function launchImport() {
+    if (!plan) return;
+    const record = submitImportBatch(plan);
+    navigate(`/admin/imports/${record.id}/preview`);
   }
   function resetImport() {
-    setStep(0); setMode(null); setFile(null); setPlan(null); setEditableRows([]); setSelectedRowNumbers([]); setPublishNow(false); setFileError(""); setSiteScope("all"); setScopedSiteIds([]); setResult(null);
+    setStep(0); setFile(null); setPlan(null); setFileError(""); setSiteScope("all"); setScopedSiteIds([]);
   }
-  const selectedPlan = mode && file
-    ? planRequirementRows(mode, file.name, editableRows.filter((row) => selectedRowNumbers.includes(row.rowNumber)), masterRequirements, resolvedSiteIds)
-    : plan;
-  // Continue is blocked while any *selected* row has an error — but with nothing shown near the
-  // table, that block was silent (the user could select every row and still not know why the
-  // button stayed disabled). These surface exactly which rows and why.
-  const selectedErrorIssues = (selectedPlan?.issues ?? []).filter((issue) => issue.severity === "error");
-  const selectedErrorRows = new Set(selectedErrorIssues.map((issue) => issue.row));
-  const needsReview = selectedErrorIssues.length > 0;
-  const selectedWarningIssues = (selectedPlan?.issues ?? []).filter((issue) => issue.severity === "warning");
 
   return (
     <div style={{ paddingInline: "var(--page-gutter)" }} className={cx("page-container w-full pt-5 pb-14 text-slate-900 md:pt-8 md:pb-16 dark:text-slate-100")}>
@@ -1079,19 +939,7 @@ export function AdminImportsScreen() {
           {step === 0 && <>
             <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><FileInput size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 1 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose an import flow</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>New imports add master requirements. Updates safely change existing requirement and question IDs.</p></div>
-            </div>
-            <div className={cx("grid gap-4 md:grid-cols-2")}>
-              {(["new", "update"] as const).map((choice) => <button key={choice} type="button" onClick={() => { if (mode !== choice) { setFile(null); setPlan(null); setSelectedRowNumbers([]); } setMode(choice); }} className={cx("rounded-xl border p-5 text-left transition-colors", mode === choice ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 bg-white hover:border-kc-blue-300 dark:border-slate-700 dark:bg-slate-900") }>
-                <strong className={cx("block text-base text-slate-900 dark:text-slate-100")}>{choice === "new" ? "New requirements" : "Update requirements"}</strong>
-                <span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>{choice === "new" ? "Create new requirements and questions from unused IDs." : "Match Requirement ID + Question ID, preview changes, and add new questions safely."}</span>
-              </button>)}
-            </div>
-          </>}
-          {step === 1 && <>
-            <div className={cx(importStageHeadingClass)}>
-              <span className={cx(stageIconClass)}><FileInput size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 2 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Upload source workbook</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Use the EHS360 Master Requirement Import Template or an approved workbook with the same columns.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 1 of 3</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Upload source workbook</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Use the EHS360 Master Requirement Import Template or an approved workbook with the same columns.</p></div>
             </div>
             <input ref={inputRef} className={cx("sr-only")} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void selectFile(event.target.files?.[0])} />
             {!file ? (
@@ -1116,70 +964,10 @@ export function AdminImportsScreen() {
             )}
             {fileError && <InlineMessage tone="danger" title="Workbook not accepted">{fileError}</InlineMessage>}
           </>}
-          {step === 2 && <>
-            <div className={cx("mb-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(42rem,1.6fr)] xl:items-center xl:gap-6")}>
-            <div className={cx(importStageHeadingClass, "mb-0 max-w-none")}>
-              <span className={cx(stageIconClass)}><FileSpreadsheet size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 3 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Review and edit imported requirements</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the parsed workbook data, deselect anything not ready to apply, or open a requirement to edit it.</p></div>
-            </div>
-            <div className={cx(inspectionGridClass, "mb-0")}>
-              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{new Set(plan?.rows.map((row) => row.sheet)).size || 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Workbook sheet{new Set(plan?.rows.map((row) => row.sheet)).size === 1 ? "" : "s"} read</span></div>
-              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.sourceRows ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Source rows</span></div>
-              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.upserts.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Affected requirements</span></div>
-              <div className={cx(inspectionTileClass)}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.issues.length ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Validation findings</span></div>
-            </div>
-            </div>
-            <div className={cx("mt-5 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700")} style={{ maxHeight: "65vh" }} onCopy={handleWorkbookCopy} onPaste={handleWorkbookPaste}>
-              <div className={cx("sticky top-0 left-0 z-20 flex min-w-full flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900")}><div><strong className={cx("text-slate-900 dark:text-slate-100")}>Workbook rows</strong><p className={cx("mt-0.5 text-xs text-slate-500 dark:text-slate-400")}>Edit any import-template value, add a row, or remove a row before release. Select multiple rows to apply together, or drag/shift-click across cells to copy and paste a range.</p></div><div className={cx("flex flex-wrap items-center gap-2")}><span className={cx("text-xs font-semibold text-slate-600 dark:text-slate-300")}>{selectedRowNumbers.length} of {editableRows.length} selected</span><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers(editableRows.map((row) => row.rowNumber))}>Select all</Button><Button variant="tertiary" size="compact" onClick={() => setSelectedRowNumbers([])}>Clear</Button><Button variant="secondary" size="compact" icon={<Plus size={16} />} onClick={() => updatePreviewRows([...editableRows, { ...Object.fromEntries(importTemplateColumns.map((column) => [column, ""])), rowNumber: Math.max(4, ...editableRows.map((row) => row.rowNumber)) + 1 } as ImportTemplateRow])}>Add row</Button></div></div>
-              <table className={cx("w-full text-left text-xs select-none")}><thead className={cx("bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}><tr><th className={cx("sticky left-0 bg-slate-50 p-2 dark:bg-slate-800")}>Include</th><th className={cx("p-2 font-bold")}>#</th>{importTemplateColumns.map((column) => <th key={column} className={cx(workbookColumnWidthClass(column), "p-2 font-bold")}>{column}</th>)}<th className={cx("p-2")}>Actions</th></tr></thead><tbody>{editableRows.map((row, rowIndex) => {
-                const rowIssues = selectedRowNumbers.includes(row.rowNumber) ? selectedErrorIssues.filter((issue) => issue.row === row.rowNumber) : [];
-                return <tr key={`${row.rowNumber}-${rowIndex}`} className={cx("border-t align-top", rowIssues.length ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/40" : "border-slate-100 dark:border-slate-800")}><td className={cx("sticky left-0 p-2", rowIssues.length ? "bg-red-50 dark:bg-red-950/40" : "bg-white dark:bg-slate-900")}><input className={cx("size-4 accent-kc-blue-600")} type="checkbox" checked={selectedRowNumbers.includes(row.rowNumber)} onChange={(event) => togglePreviewRow(row.rowNumber, event.target.checked, false)} /></td><td className={cx("p-2 font-semibold", rowIssues.length ? "text-red-700 dark:text-red-300" : "text-slate-500 dark:text-slate-400")}><span className={cx("inline-flex items-center gap-1")}>{rowIssues.length > 0 && <AlertCircle size={13} className={cx("flex-none")} aria-label={rowIssues.map((issue) => issue.message).join(" ")} />}{rowIndex + 1}</span></td>{importTemplateColumns.map((column, colIndex) => {
-                  const selected = isCellSelected(rowIndex, colIndex);
-                  return <td key={column} className={cx("p-1.5")}><textarea
-                    rows={2}
-                    className={cx(
-                      "w-full resize-y rounded-md border p-1.5 text-xs text-slate-900 outline-none dark:bg-slate-900 dark:text-slate-100",
-                      workbookColumnWidthClass(column),
-                      rowIssues.some((issue) => issue.field === column) ? "border-red-400 dark:border-red-700" : "border-slate-200 bg-white dark:border-slate-600",
-                      // A selection ring stays on regardless of :focus; a plain single-cell click
-                      // instead gets the ordinary focus ring — never both at once on the same
-                      // property, so there's nothing for Tailwind's cascade order to arbitrate.
-                      selected ? "ring-2 ring-inset ring-kc-blue-500 dark:ring-kc-blue-400" : "focus:border-kc-blue-600 focus:ring-2 focus:ring-kc-blue-100",
-                    )}
-                    value={row[column]}
-                    onChange={(event) => updatePreviewRows(editableRows.map((item, index) => index === rowIndex ? { ...item, [column]: event.target.value } : item))}
-                    onMouseDown={(event) => startCellSelection(rowIndex, colIndex, event.shiftKey)}
-                    onMouseEnter={() => extendCellSelection(rowIndex, colIndex)}
-                  /></td>;
-                })}<td className={cx("p-2")}><Button variant="tertiary" size="compact" icon={<Trash2 size={15} />} aria-label={`Remove row ${rowIndex + 1}`} onClick={() => updatePreviewRows(editableRows.filter((_, index) => index !== rowIndex))} /></td></tr>;
-              })}</tbody></table>
-            </div>
-            {selectedErrorIssues.length > 0 && (
-              <InlineMessage tone="danger" title={`${selectedErrorRows.size} selected row${selectedErrorRows.size === 1 ? "" : "s"} can't be imported yet`}>
-                <p className={cx("mb-1.5")}>Fix the flagged cells above (highlighted in red) or clear that row's checkbox to continue without it.</p>
-                <ul className={cx("m-0 grid list-disc gap-1 pl-4")}>
-                  {selectedErrorIssues.slice(0, 5).map((issue, index) => (
-                    <li key={index}>Row {editableRows.findIndex((row) => row.rowNumber === issue.row) + 1}{issue.field ? ` · ${issue.field}` : ""}: {issue.message}</li>
-                  ))}
-                </ul>
-                {selectedErrorIssues.length > 5 && <p className={cx("mt-1.5 text-xs")}>+{selectedErrorIssues.length - 5} more issue{selectedErrorIssues.length - 5 === 1 ? "" : "s"}.</p>}
-              </InlineMessage>
-            )}
-            {selectedWarningIssues.length > 0 && (
-              <InlineMessage tone="warning" title={`${selectedWarningIssues.length} warning${selectedWarningIssues.length === 1 ? "" : "s"} — won't block this import`}>
-                <ul className={cx("m-0 grid list-disc gap-1 pl-4")}>
-                  {selectedWarningIssues.slice(0, 5).map((issue, index) => (
-                    <li key={index}>Row {editableRows.findIndex((row) => row.rowNumber === issue.row) + 1}{issue.field ? ` · ${issue.field}` : ""}: {issue.message}</li>
-                  ))}
-                </ul>
-                {selectedWarningIssues.length > 5 && <p className={cx("mt-1.5 text-xs")}>+{selectedWarningIssues.length - 5} more warning{selectedWarningIssues.length - 5 === 1 ? "" : "s"}.</p>}
-              </InlineMessage>
-            )}
-          </>}
-          {step === 3 && <>
+          {step === 1 && <>
             <div className={cx(importStageHeadingClass)}>
               <span className={cx(stageIconClass)}><MapPin size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 4 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose which sites this batch applies to</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>This scope applies to every selected requirement in this batch.</p></div>
+              <div><p className={cx(eyebrowClasses)}>Step 2 of 3</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose which sites this batch applies to</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>This scope applies to every requirement in this batch.</p></div>
             </div>
             <div className={cx("grid gap-3 md:grid-cols-2")}>
               <button type="button" onClick={() => setSiteScope("all")} className={cx("rounded-xl border p-4 text-left", siteScope === "all" ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Apply to all sites</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Every requirement in this batch applies to every site.</span></button>
@@ -1191,50 +979,23 @@ export function AdminImportsScreen() {
               {scopedSiteIds.length === 0 && <InlineMessage className={cx("mt-3")} tone="warning" title="Choose at least one site">Select one or more sites, or switch to "Apply to all sites" to continue.</InlineMessage>}
             </div>}
           </>}
-          {step === 4 && <>
-            <div className={cx(importStageHeadingClass)}>
-              <span className={cx(stageIconClass)}><CheckCircle2 size={23} /></span>
-              <div><p className={cx(eyebrowClasses)}>Step 5 of 5</p><h2 className={cx("mt-0.5 mb-1 text-base font-bold text-slate-900 dark:text-slate-100")}>Choose how to release changes</h2><p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Apply the selected requirements now, then either publish them immediately or keep the batch in review.</p></div>
+          {step === 2 && <div className={cx(resultStateClass)}>
+            <span className={cx("result-state__icon mb-4 grid size-17 place-items-center rounded-full bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}><FileSearch size={34} /></span>
+            <p className={cx(eyebrowClasses)}>Step 3 of 3</p>
+            <h2 className={cx("mt-1 mb-2 text-xl font-bold text-slate-900 dark:text-slate-100")}>Review before you launch</h2>
+            <p className={cx("text-sm text-slate-600 dark:text-slate-400")}>Review the selected sites and requirement questions before launching.</p>
+            <div className={cx("result-summary mt-6 grid w-full grid-cols-3 gap-2.5")}>
+              <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-emerald-700 dark:text-emerald-400")}>{plan?.created ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Created</span></div>
+              <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-kc-blue-700 dark:text-kc-blue-400")}>{plan?.updated ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Updated</span></div>
+              <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{plan?.unchanged ?? 0}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Unchanged</span></div>
             </div>
-            <div className={cx("grid gap-3 md:grid-cols-2")}>
-              <button type="button" onClick={() => setPublishNow(false)} className={cx("rounded-xl border p-4 text-left", !publishNow ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Publish after review</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Stage the selected changes as Draft and publish later from the batch preview.</span></button>
-              <button type="button" onClick={() => setPublishNow(true)} className={cx("rounded-xl border p-4 text-left", publishNow ? "border-kc-blue-600 bg-kc-blue-50 ring-3 ring-kc-blue-100 dark:bg-kc-blue-950 dark:ring-kc-blue-900" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("block text-slate-900 dark:text-slate-100")}>Publish now</strong><span className={cx("mt-1 block text-sm text-slate-600 dark:text-slate-400")}>Stage and immediately publish the selected requirements after confirmation.</span></button>
+            <div className={cx("result-state__primary mt-5 flex flex-col items-stretch justify-center gap-2.5 md:flex-row md:flex-wrap")}>
+              <Button variant="tertiary" onClick={resetImport}>Import different file</Button>
+              <Button variant="primary" icon={<ArrowRight size={17} />} iconPosition="end" onClick={launchImport}>Review requirements</Button>
             </div>
-            <InlineMessage className={cx("mt-4")} tone="info" title={`${selectedRowNumbers.length} workbook row${selectedRowNumbers.length === 1 ? "" : "s"} selected`}>{publishNow ? "Selected changes will become live immediately after confirmation." : "Selected changes will remain Draft until an administrator publishes the batch."}</InlineMessage>
-          </>}
-          {step === 5 && result && (() => {
-            const latest = importHistory.find((record) => record.id === result.id) ?? result;
-            const published = latest.publishStatus === "Published";
-            const requirementCount = latest.created + latest.updated;
-            return (
-              <div className={cx(resultStateClass)}>
-                <span className={cx("result-state__icon mb-4 grid size-17 place-items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300", published && "result-state__icon--published bg-kc-blue-50 text-kc-blue-700 dark:bg-kc-blue-950 dark:text-kc-blue-300")}><CheckCircle2 size={34} /></span>
-                <p className={cx(eyebrowClasses)}>{published ? "Published" : "Import complete"}</p>
-                <h2 className={cx("mt-1 mb-2 text-xl font-bold text-slate-900 dark:text-slate-100")}>{published ? "Requirements are live" : "Review and publish this import"}</h2>
-                <p className={cx("text-sm text-slate-600 dark:text-slate-400")}>{published
-                  ? `All ${requirementCount} requirements from this import are now live in the master requirements catalog.`
-                  : `${requirementCount} requirements are staged as drafts. They stay invisible to sites until you publish them.`}</p>
-                <div className={cx("result-summary mt-6 grid w-full grid-cols-2 gap-2.5 md:grid-cols-4")}>
-                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.created}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Created</span></div>
-                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.updated}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Updated</span></div>
-                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.unchanged}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>Unchanged</span></div>
-                  <div className={cx("grid gap-0.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 dark:border-slate-700 dark:bg-slate-900")}><strong className={cx("text-xl text-slate-900 dark:text-slate-100")}>{latest.siteIds.length || "All"}</strong><span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{latest.siteIds.length === 1 ? "Site" : "Sites"}</span></div>
-                </div>
-                <p className={cx("result-state__audit mt-4 text-sm text-slate-600 dark:text-slate-400")}>Audit reference <strong className={cx("text-slate-800 dark:text-slate-200")}>{latest.id}</strong></p>
-                <div className={cx("result-state__primary mt-5 flex flex-col items-stretch justify-center gap-2.5 md:flex-row md:flex-wrap")}>
-                  {!published && <Button variant="primary" icon={<Check size={17} />} onClick={() => { publishImportBatch(latest.id); notifyBatchPublished(notify, latest, requirementCount, sites); }}>Publish {requirementCount} requirements</Button>}
-                  <Button variant="secondary" icon={<FileText size={17} />} onClick={() => navigate(`/admin/imports/${latest.id}/preview`)}>{published ? "View imported requirements" : "Review before publishing"}</Button>
-                </div>
-                <div className={cx("result-state__links mt-4 flex items-center justify-center gap-2.5")}>
-                  <button className={cx("border-0 bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} type="button" onClick={() => navigate("/admin/imports/history")}>View audit entry</button>
-                  <span className={cx("divider-dot hidden size-1 rounded-full bg-slate-400 md:block dark:bg-slate-500")} />
-                  <button className={cx("border-0 bg-transparent p-0 text-sm font-semibold text-kc-blue-700 hover:underline dark:text-kc-blue-300")} type="button" onClick={resetImport}>Import another file</button>
-                </div>
-              </div>
-            );
-          })()}
+          </div>}
         </div>
-        {step < 5 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !mode) || (step === 1 && !file) || (step === 2 && (needsReview || selectedRowNumbers.length === 0)) || (step === 3 && siteScope === "specific" && scopedSiteIds.length === 0) || (step === 4 && (needsReview || selectedRowNumbers.length === 0))} icon={<ArrowRight size={17} />} iconPosition="end">{step === 4 ? (publishNow ? "Publish selected changes" : "Stage for review") : "Continue"}</Button></div>}
+        {step < 2 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !file) || (step === 1 && siteScope === "specific" && scopedSiteIds.length === 0)} icon={<ArrowRight size={17} />} iconPosition="end">Continue</Button></div>}
       </section>
     </div>
   );
@@ -1245,6 +1006,10 @@ export function AdminImportsScreen() {
 // questions in the same visual language a contributor sees them in.
 // A master requirement IS the question (see the type-level note in shared/types.ts) — this edits
 // that single question directly on the requirement draft, rather than a list of many.
+// Overall priority is not a free rank — the program only recognizes these 5 fixed cross-batch
+// priority numbers, so the field is a closed choice rather than a number input.
+const overallPriorityOptions = [49, 87, 142, 167, 185];
+
 function QuestionEditor({ draft, onChange, submitted }: { draft: MasterRequirement; onChange: (patch: Partial<MasterRequirement>) => void; submitted: boolean }) {
   const invalid = submitted && !draft.text.trim();
   const evidenceRequired = draft.evidenceRequired ?? draft.expectedEvidence.length > 0;
@@ -1274,10 +1039,13 @@ function QuestionEditor({ draft, onChange, submitted }: { draft: MasterRequireme
         <div className={cx("min-w-0 flex-1")}>
           <p className={cx("flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400")}>
             <label className={cx("flex items-center gap-1 font-normal")}>Section priority
-              <input type="number" min={1} step={1} className={cx("min-h-6.5 w-14 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.sectionPriority ?? ""} onChange={(event) => onChange({ sectionPriority: event.target.value ? Number(event.target.value) : undefined })} aria-label="Section priority" />
+              <input type="number" min={1} max={64} step={1} className={cx("min-h-6.5 w-14 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.sectionPriority ?? ""} onChange={(event) => onChange({ sectionPriority: event.target.value ? Math.min(64, Math.max(1, Number(event.target.value))) : undefined })} aria-label="Section priority" />
             </label>
             <label className={cx("flex items-center gap-1 font-normal")}>Overall priority
-              <input type="number" min={1} step={1} className={cx("min-h-6.5 w-14 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.overallPriority ?? ""} onChange={(event) => onChange({ overallPriority: event.target.value ? Number(event.target.value) : undefined })} aria-label="Overall priority" />
+              <select className={cx("min-h-6.5 w-18 rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100")} value={draft.overallPriority ?? ""} onChange={(event) => onChange({ overallPriority: event.target.value ? Number(event.target.value) : undefined })} aria-label="Overall priority">
+                <option value="">Not set</option>
+                {overallPriorityOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
             </label>
           </p>
           <textarea rows={2} className={cx("question-text-input mt-1 w-full max-w-195 resize-y rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-base leading-relaxed text-slate-900 outline-none focus:border-kc-blue-600 focus:ring-3 focus:ring-kc-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-kc-blue-900")} value={draft.text} onChange={(event) => onChange({ text: event.target.value })} placeholder="For example, Is the site risk register current and approved?" />
@@ -1662,6 +1430,9 @@ export function AdminRequirementsScreen() {
   const [section, setSection] = useState("All sections");
   const [status, setStatus] = useState("Published and draft");
   const [siteFilter, setSiteFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [overallPriorityFilter, setOverallPriorityFilter] = useState("all");
+  const priorityOptions = [...new Set(masterRequirements.filter(inFramework).map((item) => item.sectionPriority).filter((value): value is number => value !== undefined))].sort((a, b) => a - b);
   const [menu, setMenu] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<MasterRequirement | null>(null);
   // Add/edit now happens on its own page (AdminRequirementDetailScreen); it hands the save
@@ -1687,7 +1458,9 @@ export function AdminRequirementsScreen() {
     (section === "All sections" || item.section === section) &&
     inFramework(item) &&
     (status === "Published and draft" || item.status === status) &&
-    (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)));
+    (siteFilter === "all" || item.siteIds.length === 0 || item.siteIds.includes(siteFilter)) &&
+    (priorityFilter === "all" || item.sectionPriority === Number(priorityFilter)) &&
+    (overallPriorityFilter === "all" || item.overallPriority === Number(overallPriorityFilter)));
   const operatingSystemCount = masterRequirements.filter((item) => sectionKindByName.get(item.section) === "operating-system").length;
   const performanceStandardCount = masterRequirements.filter((item) => sectionKindByName.get(item.section) === "performance-standard").length;
   function switchFramework(next: SectionKind) {
@@ -1730,6 +1503,8 @@ export function AdminRequirementsScreen() {
           <Select label="Filter section" icon={<Filter size={18} />} value={section} onChange={setSection} options={["All sections", ...masterSections].map((value) => ({ value, label: value }))} />
           <Select label="Filter publishing state" icon={<FileText size={18} />} value={status} onChange={setStatus} options={["Published and draft", "Published", "Draft"].map((value) => ({ value, label: value }))} />
           <Select label="Filter site" icon={<Building2 size={18} />} searchable value={siteFilter} onChange={setSiteFilter} options={[{ value: "all", label: "All sites" }, ...sites.map((site) => ({ value: site.id, label: site.name }))]} />
+          <Select label="Filter priority" value={priorityFilter} onChange={setPriorityFilter} options={[{ value: "all", label: "All priorities" }, ...priorityOptions.map((value) => ({ value: String(value), label: `Priority ${value}` }))]} />
+          <Select label="Filter overall priority" value={overallPriorityFilter} onChange={setOverallPriorityFilter} options={[{ value: "all", label: "All overall priorities" }, ...overallPriorityOptions.map((value) => ({ value: String(value), label: String(value) }))]} />
         </div>
         <div className={cx(tableCardHeaderClass)}><div><p className={cx(eyebrowClasses)}>Governed content</p><h2 className={cx(tableCardHeaderTitleClass)}>Requirements</h2></div><span className={cx(tableCardHeaderCountClass)}>{rows.length} records shown</span></div>
         {rows.length ? (
@@ -1740,7 +1515,8 @@ export function AdminRequirementsScreen() {
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/5")}>Requirement</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/4")}>Section</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Sites</th>
-                <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Priority</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Priority</th>
+                <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Overall Priority</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/12")}>Status</th>
                 <th className={cx(dataTableHeaderCellClass, "shell:w-1/6")}>Actions</th>
               </tr></thead>
@@ -1750,7 +1526,8 @@ export function AdminRequirementsScreen() {
                   <td className={cx(dataTableCellClass)} data-label="Requirement"><span className={cx(dataTableCellLabelClass)}>Requirement</span><span className={cx("block text-slate-900 dark:text-slate-100")}>{item.text}</span></td>
                   <td className={cx(dataTableCellClass)} data-label="Section"><span className={cx(dataTableCellLabelClass)}>Section</span><span className={cx("grid min-w-0 gap-0.5")}><span className={cx("block")}>{item.section}</span><span className={cx("block text-xs text-slate-500 dark:text-slate-400")}>{item.subsection}</span></span></td>
                   <td className={cx(dataTableCellClass)} data-label="Sites"><span className={cx(dataTableCellLabelClass)}>Sites</span><SiteCodesCell sites={sites} siteIds={item.siteIds} /></td>
-                  <td className={cx(dataTableCellClass)} data-label="Priority"><span className={cx(dataTableCellLabelClass)}>Priority</span>{item.sectionPriority !== undefined ? <span className={cx(pillBaseClass, pillTone.neutral)}>Priority {item.sectionPriority}{item.overallPriority !== undefined ? ` · ${item.overallPriority} overall` : ""}</span> : <span className={cx("text-xs text-amber-700 italic dark:text-amber-300")}>Not set</span>}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Priority"><span className={cx(dataTableCellLabelClass)}>Priority</span>{item.sectionPriority !== undefined ? <span className={cx(pillBaseClass, pillTone.neutral)}>{item.sectionPriority}</span> : <span className={cx("text-xs text-amber-700 italic dark:text-amber-300")}>Not set</span>}</td>
+                  <td className={cx(dataTableCellClass)} data-label="Overall Priority"><span className={cx(dataTableCellLabelClass)}>Overall Priority</span>{item.overallPriority !== undefined ? <span className={cx(pillBaseClass, pillTone.neutral)}>{item.overallPriority}</span> : <span className={cx("text-xs text-amber-700 italic dark:text-amber-300")}>Not set</span>}</td>
                   <td className={cx(dataTableCellClass)} data-label="Status"><span className={cx(dataTableCellLabelClass)}>Status</span><span className={cx(publishBadgeClass, item.status === "Draft" ? cx("publish-badge--draft", pillTone.provisional) : pillTone.success)}>{item.status}</span></td>
                   <td className={cx(dataTableLastCellClass)} data-label="Actions">
                     <span className={cx(rowActionsClass, "row-actions--menu relative")}>
@@ -1769,7 +1546,7 @@ export function AdminRequirementsScreen() {
               ))}</tbody>
             </table>
           </div>
-        ) : <EmptyState bare icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, or site." />}
+        ) : <EmptyState bare icon={<Search size={27} />} title="No requirements match" description="Try another ID, title, section, publishing state, site, or priority." />}
       </section>
       {deleting && <ConfirmDialog eyebrow="Master requirement" title={`Delete ${deleting.id}?`} body="This permanently removes the master requirement and its matching site-assessment requirement, including question-scoped evidence." confirmLabel="Delete requirement" cancelLabel="Keep requirement" onCancel={() => setDeleting(null)} onConfirm={() => { removeMasterRequirement(deleting.id); setFeedback(`${deleting.id} was deleted.`); setDeleting(null); }} />}
     </div>
@@ -1801,6 +1578,10 @@ function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; si
             <span className={cx(fieldLabelRowClass)}>Email <b className={cx(fieldRequiredMarkClass)}>Required</b></span>
             <input className={cx(fieldInputClass, submitted && !emailValid && fieldInvalidClass)} type="email" value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
             {submitted && !emailValid && <small className={cx(fieldErrorClass)}>Enter a valid email address.</small>}
+          </label>
+          <label className={cx(fieldWideWrapClass)}>
+            <span className={cx(fieldLabelRowClass)}>Role</span>
+            <Select label="Role" value={draft.role} onChange={(value) => setDraft((current) => ({ ...current, role: value as SiteUserRole }))} options={[{ value: "site-contributor", label: roleLabels["site-contributor"] }, { value: "administrator", label: roleLabels.administrator }]} />
           </label>
           <label className={cx(fieldWideWrapClass)}>
             <span className={cx(fieldLabelRowClass)}>Status</span>
