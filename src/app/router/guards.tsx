@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useApplicationData } from "../providers/ApplicationDataProvider";
 import { useAuth } from "../../features/auth";
 import { roleProfiles } from "../../features/onboarding";
 import type { UserRole } from "../../shared/types";
@@ -15,4 +16,12 @@ export function RequireRole({ allowed }: { allowed: readonly UserRole[] }) {
   return user && allowed.includes(user.role)
     ? <Outlet />
     : <Navigate to={user ? roleProfiles[user.role].home : appPaths.login} replace />;
+}
+
+/** Site information and Program owners are only for the site-contributor's home site — viewing
+ *  a different site (via the sidebar switcher) drops them to "Site user" for that site and these
+ *  two routes redirect away, not just hide from the sidebar. */
+export function RequireHomeSite() {
+  const { currentSiteId, homeSiteId } = useApplicationData();
+  return currentSiteId === homeSiteId ? <Outlet /> : <Navigate to={appPaths.overview} replace />;
 }

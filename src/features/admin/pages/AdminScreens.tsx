@@ -995,7 +995,7 @@ export function AdminImportsScreen() {
             </div>
           </div>}
         </div>
-        {step < 2 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} disabled={(step === 0 && !file) || (step === 1 && siteScope === "specific" && scopedSiteIds.length === 0)} icon={<ArrowRight size={17} />} iconPosition="end">Continue</Button></div>}
+        {step < 2 && <div className={cx(importCardFooterClass)}><Button variant="tertiary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</Button><Button variant="primary" onClick={advance} icon={<ArrowRight size={17} />} iconPosition="end">Continue</Button></div>}
       </section>
     </div>
   );
@@ -1596,7 +1596,7 @@ function SiteUserDialog({ user, siteId, onClose, onSave }: { user?: SiteUser; si
 
 export function AdminSiteDetailScreen() {
   const { siteId } = useParams();
-  const { siteUsers, ownerRecords, siteContacts, sites, addSiteUser, updateSiteUser, removeSiteUser, notify } = useAdministration();
+  const { siteUsers, ownerRecordsBySite, siteContactsBySite, sites, addSiteUser, updateSiteUser, removeSiteUser, notify } = useAdministration();
   const [editing, setEditing] = useState<SiteUser | "new" | null>(null);
   const [removing, setRemoving] = useState<SiteUser | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -1612,10 +1612,9 @@ export function AdminSiteDetailScreen() {
   // Narrowed `site` does not survive into the callbacks below, so capture it once.
   const currentSite = site;
   const users = siteUsers.filter((user) => user.siteId === currentSite.id);
-  // Owners and contacts are still single global records rather than per-site, so only the one
-  // site with real recorded data shows them; everything else gets an honest empty state rather
-  // than another site's people presented as its own.
-  const hasRealSiteRecords = currentSite.id === "northstar";
+  // Only sites with their own real, seeded owner/contact records show them; every other site
+  // gets an honest empty state rather than another site's people presented as its own.
+  const hasRealSiteRecords = Boolean(siteContactsBySite[currentSite.id]);
 
   function saveUser(user: SiteUser) {
     const isNew = editing === "new";
@@ -1676,12 +1675,12 @@ export function AdminSiteDetailScreen() {
 
       <section className={cx("page-section mt-9")}>
         <div className={cx(sectionTitleRowClass)}><div><p className={cx(eyebrowClasses)}>Read-only</p><h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Program &amp; standard owners</h2></div></div>
-        <OwnersPanel owners={hasRealSiteRecords ? ownerRecords : null} />
+        <OwnersPanel owners={hasRealSiteRecords ? ownerRecordsBySite[currentSite.id] : null} />
       </section>
 
       <section className={cx("page-section mt-9")}>
         <div className={cx(sectionTitleRowClass)}><div><p className={cx(eyebrowClasses)}>Read-only</p><h2 className={cx("mt-1 text-lg font-bold text-slate-900 dark:text-slate-100")}>Site information</h2></div></div>
-        <ContactsPanel contacts={hasRealSiteRecords ? siteContacts : null} />
+        <ContactsPanel contacts={hasRealSiteRecords ? siteContactsBySite[currentSite.id] : null} />
       </section>
 
       {editing && <SiteUserDialog user={editing === "new" ? undefined : editing} siteId={site.id} onClose={() => setEditing(null)} onSave={saveUser} />}

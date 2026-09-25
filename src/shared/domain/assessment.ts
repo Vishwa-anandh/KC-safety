@@ -1,4 +1,4 @@
-import type { ActionItem, Performance, ResponseValue, SectionSummary } from "../types";
+import type { ActionItem, Performance, Requirement, ResponseValue, SectionSummary } from "../types";
 
 export function actionComplete(response: ResponseValue, action?: ActionItem) {
   void action;
@@ -67,4 +67,28 @@ export function performanceLabel(performance: Performance) {
 export function responseLabel(response: ResponseValue) {
   if (!response) return "Not answered";
   return { no: "No", partial: "Partial", yes: "Yes" }[response];
+}
+
+/** The one rollup formula (per-section stats, overall completion/performance/gaps) shared by
+ *  every site's assessment — pulled out so a specific site's requirements and the currently
+ *  selected site's requirements are always scored the same way, not two copies of this math. */
+export function computeSiteStats(sections: SectionSummary[], requirements: Requirement[]) {
+  const sectionSummaries = sections.map((section) => {
+    const questions = requirements.filter((requirement) => requirement.sectionId === section.id);
+    if (!questions.length) return section;
+    const completed = questions.filter((question) => actionComplete(question.response, question.action)).length;
+    return {
+      ...section,
+      completion: Math.round((completed / questions.length) * 100),
+      performance: rollupPerformance(questions.map((question) => question.response)),
+      questions: questions.length,
+      gaps: questions.filter((question) => isGap(question.response)).length,
+    };
+  });
+  const completed = requirements.filter((question) => actionComplete(question.response, question.action)).length;
+  const overallCompletion = requirements.length ? Math.round((completed / requirements.length) * 100) : 0;
+  const overallPerformance = rollupPerformance(requirements.map((question) => question.response));
+  const gapCount = requirements.filter((question) => isGap(question.response)).length;
+  const missingActionCount = requirements.filter((question) => isGap(question.response) && (isActionMissingOwner(question.action) || isActionMissingDescription(question.action))).length;
+  return { sectionSummaries, overallCompletion, overallPerformance, gapCount, missingActionCount };
 }

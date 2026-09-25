@@ -1,5 +1,6 @@
 import { useApplicationData } from "../../../app/providers/ApplicationDataProvider";
-import type { Requirement, ResponseValue } from "../../../shared/types";
+import { computeSiteStats } from "../../../shared/domain/assessment";
+import type { Requirement, ResponseValue, SectionSummary } from "../../../shared/types";
 
 const responsePatterns: ResponseValue[][] = [
   ["yes", "partial", "yes"],
@@ -53,16 +54,28 @@ export function useDashboard() {
     dashboardSiteRows,
     sectionSummaries,
     requirements,
+    requirementsBySite,
+    siteContactsBySite,
+    homeSiteId,
     assignedSite,
     sections,
     siteContacts,
     siteUsers,
   } = useApplicationData();
+  // Every site with a real, seeded slice (currently Northstar/Riverbend/Cedar Grove) shows its
+  // own genuine assessment; every other site is read-only display sugar fabricated from
+  // Northstar's questions, since no real per-question data exists for it.
+  function hasRealDataForSite(siteId: string) {
+    return siteId in requirementsBySite;
+  }
   function requirementsForSite(siteId: string) {
-    if (siteId === "northstar") return requirements;
+    if (requirementsBySite[siteId]) return requirementsBySite[siteId];
     const site = dashboardSiteRows.find((item) => item.id === siteId);
     const contributor = siteUsers.find((user) => user.siteId === siteId && user.role === "site-contributor" && user.status === "Active");
     return demoHistoryForSite(siteId, requirements, site?.name ?? "this site", contributor?.name ?? "Site contributor");
   }
-  return { dashboardSiteRows, sectionSummaries, requirements, requirementsForSite, assignedSite, sections, siteContacts, siteUsers };
+  function sectionSummariesForSite(siteId: string): SectionSummary[] {
+    return requirementsBySite[siteId] ? computeSiteStats(sections, requirementsBySite[siteId]).sectionSummaries : sections;
+  }
+  return { dashboardSiteRows, sectionSummaries, requirements, requirementsForSite, sectionSummariesForSite, hasRealDataForSite, siteContactsBySite, homeSiteId, assignedSite, sections, siteContacts, siteUsers };
 }

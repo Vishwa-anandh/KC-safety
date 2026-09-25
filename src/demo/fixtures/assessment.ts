@@ -1,6 +1,8 @@
 import type {
+  ActionItem,
   AssessmentPeriod,
   DashboardSite,
+  EvidenceItem,
   OwnerRecord,
   MasterRequirement,
   Performance,
@@ -596,6 +598,93 @@ export const requirements: Requirement[] = [
   },
 ];
 
+export const homeSiteId = "northstar";
+
+interface SiteResponseOverride {
+  response: ResponseValue;
+  action?: Pick<ActionItem, "description" | "owner" | "status" | "followUp">;
+  evidence?: Array<Pick<EvidenceItem, "type" | "title" | "detail" | "note" | "uploadedBy" | "uploadedAt">>;
+  respondedBy: string;
+  respondedAt: string;
+}
+
+/**
+ * Riverbend Mill and Cedar Grove Operations answer the exact same 21-question catalog as
+ * Northstar (one shared master requirement set — see MasterRequirement.siteIds, which is
+ * metadata only and never filters this list). Only each site's own response/action/evidence
+ * layer differs, so each site is built as a transform over `requirements` rather than duplicating
+ * every shared title/section/guidance/priority field by hand. Any id missing from `overrides` is
+ * unanswered — this is also what keeps a site honestly "behind" (Cedar Grove) instead of every
+ * site converging on the same numbers.
+ */
+function buildSiteRequirements(prefix: string, overrides: Partial<Record<string, SiteResponseOverride>>): Requirement[] {
+  return requirements.map((requirement) => {
+    const override = overrides[requirement.id];
+    if (!override) return { ...requirement, response: null, action: undefined, evidence: [], history: undefined, respondedAt: undefined, respondedBy: undefined };
+    return {
+      ...requirement,
+      response: override.response,
+      action: override.action ? { ...override.action } : undefined,
+      evidence: (override.evidence ?? []).map((item, index) => ({ ...item, id: `${prefix}-ev-${requirement.id}-${index + 1}`, questionId: requirement.id })),
+      history: undefined,
+      respondedAt: override.respondedAt,
+      respondedBy: override.respondedBy,
+    };
+  });
+}
+
+// Model site: every question answered Yes. Five (spread across sections) carry no action or
+// evidence, which the demo history seeder (see demo/repositories/application.ts) reads as an
+// earlier Partial response corrected to Yes — "gaps closed this quarter," not zero history. The
+// other sixteen carry confident, evidence-backed answers from Riverbend's own site team.
+const riverbendOverrides: Record<string, SiteResponseOverride> = {
+  "q-1": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-05T09:10:00.000Z", evidence: [{ type: "file", title: "Leadership accountability matrix", detail: "KC-RBM-EHS-RACI-v6.pdf · 1.2 MB", note: "Matrix current for all site leaders, including two supervisors onboarded in July.", uploadedBy: "Priya Shah", uploadedAt: "5 Aug 2026" }] },
+  "q-2": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-06T11:20:00.000Z", evidence: [{ type: "link", title: "August operating review minutes", detail: "sharepoint.example.com/sites/riverbend/ehss/reviews", note: "EHS&S objectives reviewed monthly with every action closed on schedule.", uploadedBy: "Owen Marsh", uploadedAt: "6 Aug 2026" }] },
+  "q-3": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-07T10:00:00.000Z" },
+  "planning-q-1": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-08T09:30:00.000Z", evidence: [{ type: "file", title: "Risk and opportunity register", detail: "KC-RBM-Risk-Register-2026Q3.xlsx · 640 KB", note: "Register reviewed and approved by site leadership this quarter.", uploadedBy: "Priya Shah", uploadedAt: "8 Aug 2026" }] },
+  "planning-q-2": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-08T14:00:00.000Z" },
+  "support-q-1": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-09T09:00:00.000Z", evidence: [{ type: "file", title: "Competence matrix", detail: "KC-RBM-Competence-Matrix-v3.pdf · 900 KB", note: "All safety-critical roles have defined competence requirements on file.", uploadedBy: "Owen Marsh", uploadedAt: "9 Aug 2026" }] },
+  "support-q-2": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-10T09:00:00.000Z", evidence: [{ type: "file", title: "Training effectiveness review", detail: "KC-RBM-Training-Eval-2026.pdf · 540 KB", note: "Post-training assessments show consistent effectiveness across every crew.", uploadedBy: "Priya Shah", uploadedAt: "10 Aug 2026" }] },
+  "operation-q-1": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-11T09:00:00.000Z", evidence: [{ type: "file", title: "Change review log", detail: "KC-RBM-Change-Log-2026.xlsx · 310 KB", note: "Every operational change this year carries a completed pre-implementation risk review.", uploadedBy: "Owen Marsh", uploadedAt: "11 Aug 2026" }] },
+  "operation-q-2": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-11T15:00:00.000Z" },
+  "evaluation-q-1": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-12T09:00:00.000Z", evidence: [{ type: "file", title: "KPI tracker", detail: "KC-RBM-EHS-KPI-2026Q3.xlsx · 220 KB", note: "Leading and lagging indicators defined with named owners and quarterly targets.", uploadedBy: "Priya Shah", uploadedAt: "12 Aug 2026" }] },
+  "evaluation-q-2": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-13T09:00:00.000Z", evidence: [{ type: "link", title: "Trend review minutes", detail: "sharepoint.example.com/sites/riverbend/ehss/trends", note: "Adverse trends escalated and closed within the same review cycle.", uploadedBy: "Owen Marsh", uploadedAt: "13 Aug 2026" }] },
+  "improvement-q-1": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-14T09:00:00.000Z", evidence: [{ type: "file", title: "Cause analysis log", detail: "KC-RBM-RCA-Log-2026.xlsx · 410 KB", note: "Every significant event carries a completed cause analysis with sign-off.", uploadedBy: "Priya Shah", uploadedAt: "14 Aug 2026" }] },
+  "improvement-q-2": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-15T09:00:00.000Z", evidence: [{ type: "file", title: "Action effectiveness log", detail: "KC-RBM-Action-Verify-2026.xlsx · 280 KB", note: "Effectiveness checks completed before every action closure this year.", uploadedBy: "Owen Marsh", uploadedAt: "15 Aug 2026" }] },
+  "machine-q-1": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-16T09:00:00.000Z", evidence: [{ type: "file", title: "Machine safeguarding assessments", detail: "KC-RBM-Safeguard-Assess-2026.pdf · 2.1 MB", note: "All in-scope machines carry a current safeguarding assessment.", uploadedBy: "Owen Marsh", uploadedAt: "16 Aug 2026" }] },
+  "machine-q-2": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-16T14:00:00.000Z" },
+  "occupational-q-1": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-17T09:00:00.000Z", evidence: [{ type: "file", title: "Exposure inventory", detail: "KC-RBM-Exposure-Inventory-2026.xlsx · 300 KB", note: "Inventory refreshed this quarter with no unassessed roles.", uploadedBy: "Priya Shah", uploadedAt: "17 Aug 2026" }] },
+  "occupational-q-2": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-18T09:00:00.000Z", evidence: [{ type: "file", title: "Sampling reports", detail: "KC-RBM-Sampling-2026Q3.pdf · 1.4 MB", note: "Sampling complete for every priority similar exposure group.", uploadedBy: "Owen Marsh", uploadedAt: "18 Aug 2026" }] },
+  "machine-q-3": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-19T09:00:00.000Z", evidence: [{ type: "file", title: "Lockout/tagout procedure library", detail: "KC-RBM-LOTO-Library-v5.pdf · 1.8 MB", note: "Isolation points documented for every machine requiring energy isolation.", uploadedBy: "Priya Shah", uploadedAt: "19 Aug 2026" }] },
+  "machine-q-4": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-20T09:00:00.000Z", evidence: [{ type: "file", title: "Lockout/tagout audit log", detail: "KC-RBM-LOTO-Audit-2026.xlsx · 260 KB", note: "Quarterly practice audits completed with no repeat findings.", uploadedBy: "Owen Marsh", uploadedAt: "20 Aug 2026" }] },
+  "occupational-q-3": { response: "yes", respondedBy: "Priya Shah", respondedAt: "2026-08-21T09:00:00.000Z", evidence: [{ type: "file", title: "Medical surveillance roster", detail: "KC-RBM-MedSurv-Roster-2026.pdf · 480 KB", note: "All qualifying roles enrolled, including recent transfers.", uploadedBy: "Priya Shah", uploadedAt: "21 Aug 2026" }] },
+  "occupational-q-4": { response: "yes", respondedBy: "Owen Marsh", respondedAt: "2026-08-22T09:00:00.000Z" },
+};
+
+// Struggling site: 12 of 21 unanswered (Planning and Performance Evaluation are each fully
+// unanswered sections), 2 Yes, 4 Partial, 3 No. Of the 7 gap actions, 3 are missing an owner
+// and/or description (surfaces in Overview's Needs Attention panel and Actions' "Unassigned"
+// filter) and 4 are genuinely in progress with thin follow-up notes.
+const cedarGroveOverrides: Record<string, SiteResponseOverride> = {
+  "q-1": { response: "partial", respondedBy: "Ines Duarte", respondedAt: "2026-08-06T09:00:00.000Z", action: { description: "", owner: "", status: "Open" } },
+  "q-3": { response: "no", respondedBy: "Tomas Berger", respondedAt: "2026-08-07T10:00:00.000Z", action: { description: "Introduce a standard action log for monthly leadership reviews.", owner: "", status: "Open" } },
+  "support-q-1": { response: "yes", respondedBy: "Ines Duarte", respondedAt: "2026-08-09T09:00:00.000Z", evidence: [{ type: "file", title: "Competence matrix", detail: "KC-CGO-Competence-Matrix-v2.pdf · 610 KB", note: "Covers safety-critical roles on the main production line.", uploadedBy: "Ines Duarte", uploadedAt: "9 Aug 2026" }] },
+  "operation-q-1": { response: "no", respondedBy: "Tomas Berger", respondedAt: "2026-08-11T09:00:00.000Z", action: { description: "", owner: "Tomas Berger", status: "Open" } },
+  "improvement-q-1": { response: "partial", respondedBy: "Ines Duarte", respondedAt: "2026-08-14T09:00:00.000Z", action: { description: "Standardize cause-analysis reviews for significant events.", owner: "Ines Duarte", status: "In progress", followUp: "Draft review checklist circulated; awaiting sign-off from operations." } },
+  "machine-q-1": { response: "partial", respondedBy: "Tomas Berger", respondedAt: "2026-08-16T09:00:00.000Z", action: { description: "Complete overdue safeguarding assessments for the packaging line.", owner: "Tomas Berger", status: "In progress", followUp: "Two of five machines reassessed; remainder scheduled next month." }, evidence: [{ type: "file", title: "Partial safeguarding assessment", detail: "KC-CGO-Safeguard-Partial-2026.pdf · 780 KB", note: "Covers two of five packaging-line machines; remaining assessments still in progress.", uploadedBy: "Tomas Berger", uploadedAt: "16 Aug 2026" }] },
+  "occupational-q-1": { response: "yes", respondedBy: "Ines Duarte", respondedAt: "2026-08-17T09:00:00.000Z", evidence: [{ type: "file", title: "Exposure inventory", detail: "KC-CGO-Exposure-Inventory-2026.xlsx · 260 KB", note: "Covers the main production hall; two smaller work areas still pending.", uploadedBy: "Ines Duarte", uploadedAt: "17 Aug 2026" }] },
+  "machine-q-3": { response: "partial", respondedBy: "Tomas Berger", respondedAt: "2026-08-19T09:00:00.000Z", action: { description: "Finish documenting isolation points for the remaining machines.", owner: "Ines Duarte", status: "In progress", followUp: "Isolation diagrams drafted for roughly 60% of machines in scope." } },
+  "occupational-q-4": { response: "no", respondedBy: "Ines Duarte", respondedAt: "2026-08-22T09:00:00.000Z", action: { description: "Route overdue medical surveillance results to the provider for review.", owner: "Tomas Berger", status: "In progress", followUp: "Provider contacted; results review scheduled for next week." } },
+};
+
+export const riverbendRequirements: Requirement[] = buildSiteRequirements("rb", riverbendOverrides);
+export const cedarGroveRequirements: Requirement[] = buildSiteRequirements("cg", cedarGroveOverrides);
+export const requirementsBySite: Record<string, Requirement[]> = {
+  northstar: requirements,
+  riverbend: riverbendRequirements,
+  "cedar-grove": cedarGroveRequirements,
+};
+
 export const ownerRecords: OwnerRecord[] = [
   {
     id: "owner-1",
@@ -671,6 +760,74 @@ export const ownerRecords: OwnerRecord[] = [
   },
 ];
 
+const riverbendContacts: SiteContacts = {
+  siteManager: "Priya Shah",
+  siteManagerEmail: "priya.shah@example.com",
+  environmentalLeader: "Owen Marsh",
+  environmentalLeaderEmail: "owen.marsh@example.com",
+  healthSafetyLeader: "Priya Shah",
+  healthSafetyLeaderEmail: "priya.shah@example.com",
+  occupationalHealthNurse: "Grace Whitfield",
+  occupationalHealthNurseEmail: "grace.whitfield@example.com",
+  regionalHealthSafetyLeader: "Noah Williams",
+  regionalHealthSafetyEmail: "noah.williams@example.com",
+  regionalEnvironmentalLeader: "Sofia Chen",
+  regionalEnvironmentalEmail: "sofia.chen@example.com",
+  regionalOccupationalHealthLeader: "Priya Nair",
+  regionalOccupationalHealthEmail: "priya.nair@example.com",
+};
+
+const cedarGroveContacts: SiteContacts = {
+  siteManager: "Tomas Berger",
+  siteManagerEmail: "tomas.berger@example.com",
+  environmentalLeader: "Ines Duarte",
+  environmentalLeaderEmail: "ines.duarte@example.com",
+  healthSafetyLeader: "Ines Duarte",
+  healthSafetyLeaderEmail: "ines.duarte@example.com",
+  occupationalHealthNurse: "Lena Voss",
+  occupationalHealthNurseEmail: "lena.voss@example.com",
+  regionalHealthSafetyLeader: "Noah Williams",
+  regionalHealthSafetyEmail: "noah.williams@example.com",
+  regionalEnvironmentalLeader: "Sofia Chen",
+  regionalEnvironmentalEmail: "sofia.chen@example.com",
+  regionalOccupationalHealthLeader: "Priya Nair",
+  regionalOccupationalHealthEmail: "priya.nair@example.com",
+};
+
+export const siteContactsBySite: Record<string, SiteContacts> = {
+  northstar: initialSiteContacts,
+  riverbend: riverbendContacts,
+  "cedar-grove": cedarGroveContacts,
+};
+
+const riverbendOwners: OwnerRecord[] = [
+  { id: "rb-owner-1", program: "Leadership & Engagement", category: "Operating System", primaryName: "Priya Shah", primaryEmail: "priya.shah@example.com", backupName: "Owen Marsh", backupEmail: "owen.marsh@example.com" },
+  { id: "rb-owner-2", program: "Planning", category: "Operating System", primaryName: "Owen Marsh", primaryEmail: "owen.marsh@example.com", backupName: "Priya Shah", backupEmail: "priya.shah@example.com" },
+  { id: "rb-owner-support", program: "Support", category: "Operating System", primaryName: "Priya Shah", primaryEmail: "priya.shah@example.com", backupName: "Owen Marsh", backupEmail: "owen.marsh@example.com" },
+  { id: "rb-owner-operation", program: "Operation", category: "Operating System", primaryName: "Owen Marsh", primaryEmail: "owen.marsh@example.com", backupName: "Priya Shah", backupEmail: "priya.shah@example.com" },
+  { id: "rb-owner-evaluation", program: "Performance Evaluation", category: "Operating System", primaryName: "Priya Shah", primaryEmail: "priya.shah@example.com", backupName: "Owen Marsh", backupEmail: "owen.marsh@example.com" },
+  { id: "rb-owner-improvement", program: "Improvement", category: "Operating System", primaryName: "Owen Marsh", primaryEmail: "owen.marsh@example.com", backupName: "Priya Shah", backupEmail: "priya.shah@example.com" },
+  { id: "rb-owner-3", program: "Machine Safety", category: "Performance Standard", primaryName: "Owen Marsh", primaryEmail: "owen.marsh@example.com", backupName: "Priya Shah", backupEmail: "priya.shah@example.com" },
+  { id: "rb-owner-4", program: "Occupational Health", category: "Performance Standard", primaryName: "Priya Shah", primaryEmail: "priya.shah@example.com", backupName: "Owen Marsh", backupEmail: "owen.marsh@example.com" },
+];
+
+const cedarGroveOwners: OwnerRecord[] = [
+  { id: "cg-owner-1", program: "Leadership & Engagement", category: "Operating System", primaryName: "Tomas Berger", primaryEmail: "tomas.berger@example.com", backupName: "Ines Duarte", backupEmail: "ines.duarte@example.com" },
+  { id: "cg-owner-2", program: "Planning", category: "Operating System", primaryName: "Ines Duarte", primaryEmail: "ines.duarte@example.com", backupName: "Tomas Berger", backupEmail: "tomas.berger@example.com" },
+  { id: "cg-owner-support", program: "Support", category: "Operating System", primaryName: "Tomas Berger", primaryEmail: "tomas.berger@example.com", backupName: "Ines Duarte", backupEmail: "ines.duarte@example.com" },
+  { id: "cg-owner-operation", program: "Operation", category: "Operating System", primaryName: "Ines Duarte", primaryEmail: "ines.duarte@example.com", backupName: "Tomas Berger", backupEmail: "tomas.berger@example.com" },
+  { id: "cg-owner-evaluation", program: "Performance Evaluation", category: "Operating System", primaryName: "Tomas Berger", primaryEmail: "tomas.berger@example.com", backupName: "Ines Duarte", backupEmail: "ines.duarte@example.com" },
+  { id: "cg-owner-improvement", program: "Improvement", category: "Operating System", primaryName: "Ines Duarte", primaryEmail: "ines.duarte@example.com", backupName: "Tomas Berger", backupEmail: "tomas.berger@example.com" },
+  { id: "cg-owner-3", program: "Machine Safety", category: "Performance Standard", primaryName: "Ines Duarte", primaryEmail: "ines.duarte@example.com", backupName: "Tomas Berger", backupEmail: "tomas.berger@example.com" },
+  { id: "cg-owner-4", program: "Occupational Health", category: "Performance Standard", primaryName: "Tomas Berger", primaryEmail: "tomas.berger@example.com", backupName: "Ines Duarte", backupEmail: "ines.duarte@example.com" },
+];
+
+export const ownerRecordsBySite: Record<string, OwnerRecord[]> = {
+  northstar: ownerRecords,
+  riverbend: riverbendOwners,
+  "cedar-grove": cedarGroveOwners,
+};
+
 export const dashboardSites: DashboardSite[] = [
   {
     id: "northstar",
@@ -691,8 +848,8 @@ export const dashboardSites: DashboardSite[] = [
     segment: "Family Care",
     completion: 100,
     performance: "performing",
-    gaps: 5,
-    updated: "13 Aug 2026",
+    gaps: 0,
+    updated: "22 Aug 2026",
   },
   {
     id: "lakeview",
@@ -711,10 +868,10 @@ export const dashboardSites: DashboardSite[] = [
     code: "KC-CGO-103",
     region: "EMEA",
     segment: "Personal Care",
-    completion: 44,
+    completion: 43,
     performance: "initial",
-    gaps: 42,
-    updated: "9 Aug 2026",
+    gaps: 7,
+    updated: "22 Aug 2026",
   },
   {
     id: "solstice",

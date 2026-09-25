@@ -3,10 +3,9 @@ import type { DataSourceKind } from "../contracts";
 import { demoApplicationRepository } from "../../demo/repositories/application";
 
 const emptySnapshot: AppSnapshot = {
-  requirements: [], sections: [], siteContacts: {
-    siteManager: "", siteManagerEmail: "", environmentalLeader: "", environmentalLeaderEmail: "", healthSafetyLeader: "", healthSafetyLeaderEmail: "", occupationalHealthNurse: "", occupationalHealthNurseEmail: "", regionalHealthSafetyLeader: "", regionalHealthSafetyEmail: "", regionalEnvironmentalLeader: "", regionalEnvironmentalEmail: "", regionalOccupationalHealthLeader: "", regionalOccupationalHealthEmail: "",
-  }, ownerRecords: [], masterRequirements: [], requirementAuditLog: [], importHistory: [], siteUsers: [], sites: [], notifications: [],
-  assignedSite: { name: "", code: "", region: "", segment: "", updated: "" }, lastUpdated: new Date().toISOString(),
+  requirementsBySite: {}, siteContactsBySite: {}, ownerRecordsBySite: {}, homeSiteId: "",
+  sections: [], masterRequirements: [], requirementAuditLog: [], importHistory: [], siteUsers: [], sites: [], notifications: [],
+  lastUpdated: new Date().toISOString(),
   regions: [], segments: [], sectionNames: [], subsectionNames: [],
 };
 

@@ -104,7 +104,7 @@ interface TourStep {
 
 const tours: Record<UserRole, TourStep[]> = {
   "site-contributor": [
-    { path: "/overview", targets: ["site-context"], eyebrow: "Your fixed work context", title: "Confirm your assigned site", description: "Every editable page belongs to this one assigned site. The site context remains visible and cannot be switched here.", action: "Next: continue your work" },
+    { path: "/overview", targets: ["site-context"], eyebrow: "Your work context", title: "Confirm or switch your site", description: "Your home site keeps full access. Switching to another site from this dropdown drops Site information and Program owners until you switch back.", action: "Next: continue your work" },
     { path: "/overview", targets: ["continue-assessment"], eyebrow: "Recommended work", title: "Resume from the next incomplete requirement", description: "The overview always points you to the most useful next assessment task, including missing corrective-action details.", action: "Next: maintain contacts" },
     { path: "/site-information", targets: ["site-contacts-form", "site-save"], eyebrow: "Site setup", title: "Maintain site and regional contacts", description: "Keep required leadership names and email addresses current. Site identity remains protected and read-only.", action: "Next: assign owners" },
     { path: "/owners", targets: ["owner-list", "owners-controls"], eyebrow: "Accountability", title: "Confirm Primary and Backup Owners", description: "Both owners can edit the assigned site. Use search and category filters to find the program or standard you need.", action: "Next: open the assessment" },

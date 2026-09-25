@@ -23,7 +23,7 @@ import {
   OwnersScreen,
   SiteInformationScreen,
 } from "../../features/sites";
-import { RequireAuth, RequireRole } from "./guards";
+import { RequireAuth, RequireHomeSite, RequireRole } from "./guards";
 import { appPaths, settingsSegments } from "./route-manifest";
 
 function ShellLayout() {
@@ -68,11 +68,13 @@ export default function App() {
             <Route index element={<AuthenticatedLanding />} />
             <Route element={<RequireRole allowed={["site-contributor"]} />}>
               <Route path={appPaths.overview} element={<OverviewScreen />} />
-              <Route path={appPaths.siteInformation} element={<SiteInformationScreen />} />
-              <Route path={appPaths.owners} element={<OwnersScreen />} />
               <Route path={appPaths.assessment} element={<AssessmentHomeScreen />} />
               <Route path={appPaths.assessmentRequirement} element={<RequirementWorkspace />} />
               <Route path={appPaths.actions} element={<ActionsScreen />} />
+              <Route element={<RequireHomeSite />}>
+                <Route path={appPaths.siteInformation} element={<SiteInformationScreen />} />
+                <Route path={appPaths.owners} element={<OwnersScreen />} />
+              </Route>
             </Route>
             <Route element={<RequireRole allowed={["administrator"]} />}>
               <Route path={appPaths.dashboard} element={<DashboardScreen />} />

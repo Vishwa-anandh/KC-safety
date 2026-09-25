@@ -38,26 +38,26 @@ export interface RequirementImportPreview {
   changes: Array<{ requirementId: string; questionId?: string; field: string; before?: string; after?: string }>;
 }
 
-export interface AssignedSite {
-  name: string;
-  code: string;
-  region: string;
-  segment: string;
-  updated: string;
-}
+/** A flat display record for whichever site is currently in view — derived from `DashboardSite`
+ *  (see ApplicationDataProvider's `derived` memo), not stored on its own. */
+export type AssignedSite = Pick<DashboardSite, "name" | "code" | "region" | "segment" | "updated">;
 
 export interface AppSnapshot {
-  requirements: Requirement[];
+  /** Every site with its own real, mutable assessment data (currently "northstar", "riverbend",
+   *  "cedar-grove") — every other `DashboardSite` id is summary-only (see `sites` below). */
+  requirementsBySite: Record<string, Requirement[]>;
+  siteContactsBySite: Record<string, SiteContacts>;
+  ownerRecordsBySite: Record<string, OwnerRecord[]>;
+  /** The one site every site-contributor session starts on and always keeps full access to —
+   *  see ApplicationDataProvider's `currentSiteId`/`switchSite` for the site actually in view. */
+  homeSiteId: string;
   sections: SectionSummary[];
-  siteContacts: SiteContacts;
-  ownerRecords: OwnerRecord[];
   masterRequirements: MasterRequirement[];
   requirementAuditLog: RequirementAuditEntry[];
   importHistory: ImportHistoryRecord[];
   siteUsers: SiteUser[];
   sites: DashboardSite[];
   notifications: AppNotification[];
-  assignedSite: AssignedSite;
   lastUpdated: string;
   /** Admin-curated dropdown values shown on the site form — see the Config screen. */
   regions: string[];

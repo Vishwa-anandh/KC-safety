@@ -1,16 +1,16 @@
 import {
-  assignedSite,
   currentAssessmentPeriod,
   dashboardSites,
-  initialSiteContacts,
+  homeSiteId,
   masterRequirements,
   notifications,
-  ownerRecords,
+  ownerRecordsBySite,
   regions,
-  requirements,
+  requirementsBySite,
   sectionNames,
   sections,
   segments,
+  siteContactsBySite,
   siteUsers,
   subsectionNames,
 } from "../fixtures/assessment";
@@ -18,10 +18,10 @@ import type { AppDataRepository, AppSnapshot } from "../../data-access/contracts
 import { createdRequirementAuditChanges } from "../../shared/domain/requirement-audit";
 import type { ActionItem, AssessmentHistoryEntry, EvidenceItem, MasterRequirement, Requirement, RequirementAuditEntry } from "../../shared/types";
 
-// Bumped alongside the requirement/question data-model flatten (a requirement is now a single
-// question, not a nested list) — old snapshots under the previous key are simply left alone and
-// a fresh one is seeded, rather than migrating an incompatible shape in place.
-const STORAGE_KEY = "ehss-phase-one-state-v2";
+// Bumped alongside the switch to per-site assessment data (requirements/contacts/owners are now
+// keyed by site id instead of one flat record) — old snapshots under a previous key are simply
+// left alone and a fresh one is seeded, rather than migrating an incompatible shape in place.
+const STORAGE_KEY = "ehss-phase-one-state-v3";
 
 function seededQuestionHistory(requirement: Requirement, action: ActionItem | undefined, evidence: EvidenceItem[]): AssessmentHistoryEntry[] {
   if (!requirement.response) return [];
@@ -74,7 +74,7 @@ function seededQuestionHistory(requirement: Requirement, action: ActionItem | un
   return entries;
 }
 
-function normalizeActionMetadata(records: AppSnapshot["requirements"]) {
+function normalizeActionMetadata(records: Requirement[]) {
   return records.map((requirement) => {
     const action = requirement.action ?? (requirement.response === "no" || requirement.response === "partial"
       ? { description: "", owner: "", status: "Open" as const, followUp: "" }
@@ -256,18 +256,21 @@ function requirementAuditDemoEvents(requirementsToRecord: MasterRequirement[]): 
 
 function freshSnapshot(): AppSnapshot {
   const masterRequirementRecords = structuredClone(masterRequirements);
+  const requirementsForSite = Object.fromEntries(
+    Object.entries(requirementsBySite).map(([siteId, records]) => [siteId, normalizeActionMetadata(structuredClone(records))]),
+  );
   return {
-    requirements: normalizeActionMetadata(structuredClone(requirements)),
+    requirementsBySite: requirementsForSite,
+    siteContactsBySite: structuredClone(siteContactsBySite),
+    ownerRecordsBySite: structuredClone(ownerRecordsBySite),
+    homeSiteId,
     sections: structuredClone(sections),
-    siteContacts: structuredClone(initialSiteContacts),
-    ownerRecords: structuredClone(ownerRecords),
     masterRequirements: masterRequirementRecords,
     requirementAuditLog: [...requirementAuditBaseline(masterRequirementRecords), ...requirementAuditDemoEvents(masterRequirementRecords)],
     importHistory: [],
     siteUsers: structuredClone(siteUsers),
     sites: structuredClone(dashboardSites),
     notifications: structuredClone(notifications),
-    assignedSite: structuredClone(assignedSite),
     lastUpdated: new Date().toISOString(),
     regions: structuredClone(regions),
     segments: structuredClone(segments),
@@ -286,6 +289,34 @@ function restoreMasterRequirements(records: AppSnapshot["masterRequirements"] | 
   }));
 }
 
+function restoreSiteRequirements(records: Requirement[] | undefined, fallback: Requirement[]) {
+  if (!records?.length) return fallback;
+  return normalizeActionMetadata(records.map((requirement) => {
+    const fallbackRequirement = fallback.find((item) => item.id === requirement.id);
+    const expectedEvidence = requirement.expectedEvidence ?? fallbackRequirement?.expectedEvidence ?? [];
+    return {
+      ...requirement,
+      expectedEvidence,
+      evidenceRequired: requirement.evidenceRequired ?? fallbackRequirement?.evidenceRequired ?? expectedEvidence.length > 0,
+      period: requirement.period ?? currentAssessmentPeriod,
+      respondedAt: requirement.response ? requirement.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
+      respondedBy: requirement.response ? requirement.respondedBy ?? "Maya Patel" : undefined,
+      evidence: (requirement.evidence ?? []).map((item) => ({ ...item })),
+      action: requirement.action ? {
+        ...requirement.action,
+        status: requirement.action.status ?? "Open",
+        followUp: requirement.action.followUp ?? "",
+        createdAt: requirement.action.createdAt ?? "2026-08-01T09:00:00.000Z",
+        createdBy: requirement.action.createdBy ?? "Maya Patel",
+        updatedAt: requirement.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
+        updatedBy: requirement.action.updatedBy ?? "Maya Patel",
+      } : requirement.response === "no" || requirement.response === "partial"
+        ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
+        : undefined,
+    };
+  }));
+}
+
 function restoreSnapshot(): AppSnapshot {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -296,33 +327,12 @@ function restoreSnapshot(): AppSnapshot {
     return {
       ...fallback,
       ...parsed,
-      requirements: parsed.requirements?.length
-        ? normalizeActionMetadata(parsed.requirements.map((requirement) => {
-          const fallbackRequirement = fallback.requirements.find((item) => item.id === requirement.id);
-          const expectedEvidence = requirement.expectedEvidence ?? fallbackRequirement?.expectedEvidence ?? [];
-          return {
-            ...requirement,
-            expectedEvidence,
-            evidenceRequired: requirement.evidenceRequired ?? fallbackRequirement?.evidenceRequired ?? expectedEvidence.length > 0,
-            period: requirement.period ?? currentAssessmentPeriod,
-            respondedAt: requirement.response ? requirement.respondedAt ?? "2026-08-01T09:00:00.000Z" : undefined,
-            respondedBy: requirement.response ? requirement.respondedBy ?? "Maya Patel" : undefined,
-            evidence: (requirement.evidence ?? []).map((item) => ({ ...item })),
-            action: requirement.action ? {
-              ...requirement.action,
-              status: requirement.action.status ?? "Open",
-              followUp: requirement.action.followUp ?? "",
-              createdAt: requirement.action.createdAt ?? "2026-08-01T09:00:00.000Z",
-              createdBy: requirement.action.createdBy ?? "Maya Patel",
-              updatedAt: requirement.action.updatedAt ?? "2026-08-01T09:00:00.000Z",
-              updatedBy: requirement.action.updatedBy ?? "Maya Patel",
-            } : requirement.response === "no" || requirement.response === "partial"
-              ? { description: "", owner: "", status: "Open", followUp: "", createdAt: "2026-08-01T09:00:00.000Z", createdBy: "Maya Patel", updatedAt: "2026-08-01T09:00:00.000Z", updatedBy: "Maya Patel" }
-              : undefined,
-          };
-        }))
-        : fallback.requirements,
-      ownerRecords: parsed.ownerRecords?.length ? parsed.ownerRecords : fallback.ownerRecords,
+      requirementsBySite: Object.fromEntries(
+        Object.entries(fallback.requirementsBySite).map(([siteId, fallbackRecords]) => [siteId, restoreSiteRequirements(parsed.requirementsBySite?.[siteId], fallbackRecords)]),
+      ),
+      siteContactsBySite: parsed.siteContactsBySite ?? fallback.siteContactsBySite,
+      ownerRecordsBySite: parsed.ownerRecordsBySite ?? fallback.ownerRecordsBySite,
+      homeSiteId: parsed.homeSiteId ?? fallback.homeSiteId,
       masterRequirements: restoredMasterRequirements,
       requirementAuditLog: (() => {
         const restoredEntries = parsed.requirementAuditLog ?? requirementAuditBaseline(restoredMasterRequirements);
@@ -334,7 +344,6 @@ function restoreSnapshot(): AppSnapshot {
       siteUsers: parsed.siteUsers ?? fallback.siteUsers,
       sites: parsed.sites?.length ? parsed.sites : fallback.sites,
       notifications: (parsed.notifications ?? fallback.notifications).map((record) => ({ ...record, audience: record.audience ?? [], readBy: record.readBy ?? [] })),
-      assignedSite: parsed.assignedSite ?? fallback.assignedSite,
       sections: parsed.sections?.length ? parsed.sections : fallback.sections,
     };
   } catch {

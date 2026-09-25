@@ -431,9 +431,9 @@ export function DashboardScreen() {
 
 export function SiteSectionDetailScreen() {
   const { siteId, sectionId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirementsForSite, sections } = useDashboard();
+  const { dashboardSiteRows, sectionSummariesForSite, requirementsForSite } = useDashboard();
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
-  const siteSections = site.id === "northstar" ? sectionSummaries : sections;
+  const siteSections = sectionSummariesForSite(site.id);
   const section = siteSections.find((item) => item.id === sectionId);
   const sectionRequirements = requirementsForSite(site.id).filter((item) => item.sectionId === sectionId);
 
@@ -522,12 +522,12 @@ const sectionFilterCountClass = "inline-grid h-5.5 min-w-5.5 place-items-center 
 
 export function SiteDrilldownScreen() {
   const { siteId } = useParams();
-  const { dashboardSiteRows, sectionSummaries, requirementsForSite, siteContacts, siteUsers, sections } = useDashboard();
+  const { dashboardSiteRows, sectionSummariesForSite, requirementsForSite, siteContactsBySite, siteUsers, homeSiteId } = useDashboard();
   const { role } = useGuidedSetup();
   const [sectionFilter, setSectionFilter] = useState<"all" | "attention" | "complete">("all");
   const site = dashboardSiteRows.find((item) => item.id === siteId) ?? dashboardSiteRows[0];
-  const siteSections = site.id === "northstar" ? sectionSummaries : sections;
-  const canEditAssignedSite = role === "site-contributor" && site.id === "northstar";
+  const siteSections = sectionSummariesForSite(site.id);
+  const canEditAssignedSite = role === "site-contributor" && site.id === homeSiteId;
   const siteRequirements = requirementsForSite(site.id);
   const assessmentSections = siteSections.filter((section) => section.kind === "operating-system" || section.kind === "performance-standard");
   const assignedUsers = siteUsers.filter((user) => user.siteId === site.id);
@@ -546,11 +546,10 @@ export function SiteDrilldownScreen() {
     : needsAttention.length > 0
       ? `${needsAttention.length} ${needsAttention.length === 1 ? "area needs" : "areas need"} attention`
       : "Assessment complete";
-  // Only "northstar" has real seeded contact data (siteContacts is a single global record, not
-  // yet keyed by site) — every other mock dashboard site shows the empty state rather than
-  // fabricated placeholder contacts, which would misleadingly imply fictitious people are real
-  // site leadership in a compliance app.
-  const hasRealContacts = site.id === "northstar";
+  // Every site with its own real, seeded assessment also has real contacts — every other mock
+  // dashboard site shows the empty state rather than fabricated placeholder contacts, which would
+  // misleadingly imply fictitious people are real site leadership in a compliance app.
+  const hasRealContacts = Boolean(siteContactsBySite[site.id]);
   return (
     <div className={cx(pageContainerClass)}>
       <nav className={cx(breadcrumbsClass)} aria-label="Breadcrumb"><Link className={cx(breadcrumbLinkClass)} to="/dashboard">Dashboard</Link><ChevronRight size={15} /><span aria-current="page">{site.name}</span></nav>
@@ -704,7 +703,7 @@ export function SiteDrilldownScreen() {
             <div className={cx(sectionTitleRowClass)}>
               <div><p className={cx(eyebrowClasses)}>Read-only</p><h2 id="site-contacts-title" className={cx("mt-1")}>Site contacts</h2></div>
             </div>
-            <ContactsPanel contacts={hasRealContacts ? siteContacts : null} />
+            <ContactsPanel contacts={hasRealContacts ? siteContactsBySite[site.id] : null} />
           </section>
         </div>
       </details>

@@ -29,7 +29,7 @@ import { useGuidedSetup, type UserRole } from "../../features/onboarding";
 import { useNotifications } from "../../features/notifications";
 import type { AppNotification, NotificationCategory } from "../../shared/types";
 import { ThemeSelector, useTheme } from "../../features/settings";
-import { Avatar, IconButton, KcLogo } from "../../shared/ui/UI";
+import { Avatar, IconButton, KcLogo, Select } from "../../shared/ui/UI";
 import { cx } from "../../shared/utils";
 import { appPaths } from "../router/route-manifest";
 
@@ -39,8 +39,11 @@ const navigation = [
     roles: ["site-contributor"] as UserRole[],
     items: [
       { to: appPaths.overview, label: "Overview", icon: LayoutDashboard, matches: [appPaths.overview] },
-      { to: appPaths.siteInformation, label: "Site information", icon: Building2, matches: [appPaths.siteInformation] },
-      { to: appPaths.owners, label: "Program owners", icon: UsersRound, matches: [appPaths.owners] },
+      // Only available on the site-contributor's home site — a non-home site drops them to
+      // "Site user" for that site and these two hide (see RequireHomeSite for the matching
+      // route-level enforcement, not just this cosmetic hide).
+      { to: appPaths.siteInformation, label: "Site information", icon: Building2, matches: [appPaths.siteInformation], homeOnly: true },
+      { to: appPaths.owners, label: "Program owners", icon: UsersRound, matches: [appPaths.owners], homeOnly: true },
       { to: appPaths.assessment, label: "Self-assessment", icon: ClipboardCheck, matches: [appPaths.assessment] },
       { to: appPaths.actions, label: "Actions summary", icon: Activity, matches: [appPaths.actions] },
     ],
@@ -133,7 +136,7 @@ function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: 
   );
 }
 
-function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: UserRole; onNavigate?: () => void }) {
+function SideNav({ collapsed, role, isHomeSite, onNavigate }: { collapsed: boolean; role: UserRole; isHomeSite: boolean; onNavigate?: () => void }) {
   const location = useLocation();
   return (
     <nav
@@ -166,7 +169,7 @@ function SideNav({ collapsed, role, onNavigate }: { collapsed: boolean; role: Us
           >
             {group.label}
           </p>
-          {group.items.map((item) => {
+          {group.items.filter((item) => !("homeOnly" in item && item.homeOnly) || isHomeSite).map((item) => {
             const Icon = item.icon;
             const tooltipId = `nav-tooltip-${item.to.replaceAll("/", "-").replace(/^-/, "")}`;
             const routeMatches = item.matches?.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`)) ?? false;
@@ -413,12 +416,17 @@ function NotificationMenu({ menuPlacement = "down" }: { menuPlacement?: "down" |
 
 function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = false }: { compact?: boolean; menuPlacement?: "down" | "up"; collapsed?: boolean }) {
   const { role, profile, startTour } = useGuidedSetup();
+  const { isHomeSite } = useApplicationData();
   const { user, demoEnabled, signOut } = useAuth();
   const { preference, resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
+  // A site-contributor's role label reflects which site is currently in view, not just the
+  // account's fixed persona — "Site admin" on their home site, "Site user" anywhere else (see
+  // RequireHomeSite for the matching route-level restriction on Site information/Program owners).
+  const roleLabel = role === "site-contributor" ? (isHomeSite ? "Site admin" : "Site user") : profile.label;
 
   /* "up" placement is only used from the sidebar footer, so it also selects the nav-tinted
      trigger treatment that used to come from the `.sidebar-footer &` descendant rule. */
@@ -458,7 +466,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
         <Avatar src={user?.avatarUrl} initials={profile.initials} className="size-9 md:size-10" />
         <span className={cx("profile-button__copy grid", (compact || collapsed) && "hidden")}>
           <strong className={cx("text-sm", inSidebar ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-slate-200")}>{profile.name}</strong>
-          <small className={cx("text-xs", inSidebar ? "text-slate-500 dark:text-white/65" : "text-slate-500 dark:text-slate-400")}>{profile.label}</small>
+          <small className={cx("text-xs", inSidebar ? "text-slate-500 dark:text-white/65" : "text-slate-500 dark:text-slate-400")}>{roleLabel}</small>
         </span>
         <ChevronDown
           className={cx(
@@ -490,7 +498,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
             <Avatar src={user?.avatarUrl} initials={profile.initials} className="size-9 md:size-10" />
             <div className={cx("grid min-w-0")}>
               <strong className={cx("text-base text-slate-900 dark:text-slate-100")}>{profile.name}</strong>
-              <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{profile.label}</span>
+              <span className={cx("text-xs text-slate-500 dark:text-slate-400")}>{roleLabel}</span>
             </div>
           </div>
           <div className={cx("profile-menu__section grid gap-3 p-4")}>
@@ -539,7 +547,7 @@ function ProfileMenu({ compact = false, menuPlacement = "down", collapsed = fals
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { assignedSite, dataSourceStatus } = useApplicationData();
+  const { assignedSite, dataSourceStatus, dashboardSiteRows, requirementsBySite, currentSiteId, homeSiteId, isHomeSite, switchSite } = useApplicationData();
   const { role, profile, openHelp } = useGuidedSetup();
   const [collapsed, setCollapsed] = useState(() => window.localStorage.getItem("ehss-navigation-collapsed") === "true");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -548,10 +556,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const moreTabActive = mobileOpen || [appPaths.siteInformation, appPaths.owners, "/admin/", appPaths.settings].some((path) => location.pathname.startsWith(path));
   const availableBottomTabs = bottomTabs.filter((tab) => tab.roles.includes(role));
   const ScopeIcon = role === "site-contributor" ? Building2 : ShieldCheck;
+  // Only sites with their own real, seeded assessment are reachable from the switcher.
+  const switchableSites = dashboardSiteRows.filter((site) => site.id in requirementsBySite);
 
   useEffect(() => {
     window.localStorage.setItem("ehss-navigation-collapsed", String(collapsed));
   }, [collapsed]);
+
+  // Switching sites is a site-contributor-only concept — if a demo session switches role while
+  // viewing a non-home site, land back on home rather than silently carrying a stale site
+  // selection into the administrator's own screens (ApplicationDataProvider has no access to the
+  // signed-in role itself, so this reset lives here instead).
+  useEffect(() => {
+    if (role !== "site-contributor" && currentSiteId !== homeSiteId) switchSite(homeSiteId);
+  }, [role, currentSiteId, homeSiteId, switchSite]);
 
   return (
     <div
@@ -578,11 +596,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
           data-tour="site-context"
         >
           <ScopeIcon className={cx("text-kc-blue-700 dark:text-kc-blue-300", !collapsed && "hidden")} size={17} />
-          <div className={cx("grid", collapsed && "hidden")}>
+          <div className={cx("grid min-w-0 flex-1", collapsed && "hidden")}>
             <span className={cx("text-xs leading-none text-slate-500 dark:text-white/65")}>{role === "site-contributor" ? "Assigned site" : "Authorized scope"}</span>
-            <strong className={cx("overflow-hidden text-sm leading-snug text-ellipsis whitespace-nowrap text-slate-900 dark:text-white")}>{role === "site-contributor" ? assignedSite.name : profile.scope}</strong>
+            {role === "site-contributor" ? (
+              <Select
+                label="Assigned site"
+                value={currentSiteId}
+                onChange={switchSite}
+                options={switchableSites.map((site) => ({ value: site.id, label: site.name }))}
+                className="site-context__select mt-1 w-full min-w-0 md:w-full md:min-w-0"
+              />
+            ) : (
+              <strong className={cx("overflow-hidden text-sm leading-snug text-ellipsis whitespace-nowrap text-slate-900 dark:text-white")}>{profile.scope}</strong>
+            )}
           </div>
-          {role === "site-contributor" && <span className={cx("site-context__code w-full text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65", collapsed && "hidden")}>{assignedSite.code}</span>}
+          {role === "site-contributor" && !collapsed && (
+            <div className={cx("site-context__meta flex w-full flex-wrap items-center justify-between gap-1.5")}>
+              <span className={cx("site-context__code text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65")}>{assignedSite.code}</span>
+              {!isHomeSite && <span className={cx("text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65")}>Limited access</span>}
+            </div>
+          )}
           <span
             className={cx(
               navTooltipBase,
@@ -596,7 +629,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {role === "site-contributor" ? `${assignedSite.name} · ${assignedSite.code}` : profile.scope}
           </span>
         </div>
-        <SideNav collapsed={collapsed} role={role} />
+        <SideNav collapsed={collapsed} role={role} isHomeSite={isHomeSite} />
         <div className={cx("sidebar-footer mt-auto flex min-w-0 items-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3.5 dark:border-white/10", collapsed && "flex-col")}>
           <NotificationMenu menuPlacement="up" />
           <ProfileMenu menuPlacement="up" collapsed={collapsed} />
@@ -643,7 +676,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <X size={20} />
               </IconButton>
             </div>
-            <SideNav collapsed={false} role={role} onNavigate={() => setMobileOpen(false)} />
+            {role === "site-contributor" && (
+              <div className={cx("site-context sidebar-context mx-4.5 mt-3.5 mb-1 grid gap-1.5 rounded-md border border-kc-blue-700/15 bg-white/5 px-3.5 py-3 text-slate-600 dark:border-white/10 dark:text-white/70")}>
+                <span className={cx("text-xs leading-none text-slate-500 dark:text-white/65")}>Assigned site</span>
+                <Select label="Assigned site" value={currentSiteId} onChange={switchSite} options={switchableSites.map((site) => ({ value: site.id, label: site.name }))} className="w-full min-w-0" />
+                <div className={cx("flex flex-wrap items-center justify-between gap-1.5")}>
+                  <span className={cx("text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65")}>{assignedSite.code}</span>
+                  {!isHomeSite && <span className={cx("text-xs font-semibold whitespace-nowrap text-slate-500 dark:text-white/65")}>Limited access</span>}
+                </div>
+              </div>
+            )}
+            <SideNav collapsed={false} role={role} isHomeSite={isHomeSite} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
