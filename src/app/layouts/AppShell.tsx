@@ -119,7 +119,6 @@ function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: 
         <div className={cx("brand-lockup__logo grid min-w-0 gap-1.5 overflow-hidden")}>
           <img className={cx("h-7 w-auto flex-none dark:hidden")} src="/brand/logo-ehs360.png" alt="EHS360" />
           <img className={cx("hidden h-7 w-auto flex-none dark:block")} src="/brand/logo-ehs360-dark.png" alt="EHS360" />
-          <span className={cx("text-sm whitespace-nowrap text-slate-500 dark:text-white/65")}>Self-Assessment</span>
         </div>
       )}
       {collapsed && onToggle && (
