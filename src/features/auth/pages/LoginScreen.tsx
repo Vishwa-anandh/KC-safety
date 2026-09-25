@@ -165,7 +165,7 @@ export default function LoginScreen() {
           {/* Wrapped in a white pill rather than sitting directly on the hero gradient — the
               wordmark's navy lettering would lose contrast against the gradient's darker tones. */}
           <span className={cx("inline-flex items-center rounded-xl bg-white px-3 py-2 shadow-sm")}>
-            <img className={cx("h-7 w-auto sm:h-8")} src="/brand/logo-ehs360.png" alt="EHS360" />
+            <img className={cx("h-7 w-auto sm:h-8")} src="/brand/logo-ehs360.webp" alt="EHS360" />
           </span>
           <span className={cx("text-xs text-white/70")}>Self-Assessment</span>
         </div>

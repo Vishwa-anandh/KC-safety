@@ -117,8 +117,8 @@ function BrandLockup({ collapsed, onToggle }: { collapsed?: boolean; onToggle?: 
         </span>
       ) : (
         <div className={cx("brand-lockup__logo grid min-w-0 gap-1.5 overflow-hidden")}>
-          <img className={cx("h-7 w-auto flex-none dark:hidden")} src="/brand/logo-ehs360.png" alt="EHS360" />
-          <img className={cx("hidden h-7 w-auto flex-none dark:block")} src="/brand/logo-ehs360-dark.png" alt="EHS360" />
+          <img className={cx("h-11 w-auto flex-none dark:hidden")} src="/brand/logo-ehs360.webp" alt="EHS360" />
+          <img className={cx("hidden h-11 w-auto flex-none dark:block")} src="/brand/logo-ehs360-dark.webp" alt="EHS360" />
         </div>
       )}
       {collapsed && onToggle && (
@@ -636,7 +636,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {!collapsed && (
           <div className={cx("brand-footer flex items-center justify-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3 dark:border-white/10")}>
             <span className={cx("text-xs whitespace-nowrap text-slate-500 dark:text-white/65")}>Powered by</span>
-            <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.png" alt="Kimberly-Clark" />
+            <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.webp" alt="Kimberly-Clark" />
           </div>
         )}
         {!collapsed && <button
@@ -694,7 +694,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <SideNav collapsed={false} role={role} isHomeSite={isHomeSite} onNavigate={() => setMobileOpen(false)} />
             <div className={cx("brand-footer mt-auto flex items-center justify-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3 dark:border-white/10")}>
               <span className={cx("text-xs whitespace-nowrap text-slate-500 dark:text-white/65")}>Powered by</span>
-              <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.png" alt="Kimberly-Clark" />
+              <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.webp" alt="Kimberly-Clark" />
             </div>
           </aside>
         </div>
