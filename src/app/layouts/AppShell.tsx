@@ -634,6 +634,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <NotificationMenu menuPlacement="up" />
           <ProfileMenu menuPlacement="up" collapsed={collapsed} />
         </div>
+        {!collapsed && (
+          <div className={cx("brand-footer flex items-center justify-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3 dark:border-white/10")}>
+            <span className={cx("text-xs whitespace-nowrap text-slate-500 dark:text-white/65")}>Powered by</span>
+            <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.png" alt="Kimberly-Clark" />
+          </div>
+        )}
         {!collapsed && <button
           className={cx("collapse-control group/collapse absolute top-14 -right-4 z-35 grid size-8 place-items-center rounded-full border border-slate-200 bg-white text-kc-blue-800 shadow-lg shadow-slate-900/20 transition-all duration-150 ease-out hover:-translate-y-px hover:text-kc-blue-600 hover:shadow-xl active:translate-y-0 active:scale-95 dark:border-slate-700 dark:bg-slate-900 dark:text-kc-blue-200 dark:hover:text-kc-blue-400")}
           onClick={() => setCollapsed(true)}
@@ -687,6 +693,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </div>
             )}
             <SideNav collapsed={false} role={role} isHomeSite={isHomeSite} onNavigate={() => setMobileOpen(false)} />
+            <div className={cx("brand-footer mt-auto flex items-center justify-center gap-1.5 border-t border-kc-blue-700/10 px-4.5 py-3 dark:border-white/10")}>
+              <span className={cx("text-xs whitespace-nowrap text-slate-500 dark:text-white/65")}>Powered by</span>
+              <img className={cx("h-3.5 w-auto flex-none")} src="/brand/kimberly-clark-logo.png" alt="Kimberly-Clark" />
+            </div>
           </aside>
         </div>
       )}
